@@ -36,9 +36,7 @@ jobs:
           cd firestack
           bun install
           bun run build
-          bun ./publish.ts
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN=${{ secrets.NPM_TOKEN }} bun ./publish.ts
 
       - name: Commit version bump
         run: |

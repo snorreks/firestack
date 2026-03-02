@@ -44,13 +44,15 @@ async function main() {
   await cp(join(rootDir, "README.md"), join(distDir, "README.md"));
 
   console.log("Publishing to npm...");
-  const env = process.env.NPM_TOKEN
-    ? { ...process.env, NPM_TOKEN: process.env.NPM_TOKEN }
-    : process.env;
+  if (process.env.NPM_TOKEN) {
+    await Bun.write(
+      join(distDir, ".npmrc"),
+      `//registry.npmjs.org/:_authToken=${process.env.NPM_TOKEN}\n`
+    );
+  }
   execSync("npm publish --access public", {
     cwd: distDir,
     stdio: "inherit",
-    env,
   });
 
   console.log("Done!");
