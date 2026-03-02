@@ -1,6 +1,6 @@
 {
   "name": "@snorreks/firestack",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "CLI tool for deploying Firebase Cloud Functions with ease",
   "type": "module",
   "main": "index.js",
@@ -17,12 +17,12 @@
     "node": ">=20.0.0"
   },
   "publishConfig": {
-      "access": "public"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/snorreks/firestack.git"
-    },
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/snorreks/firestack.git"
+  },
   "bugs": {
     "url": "https://github.com/snorreks/firestack/issues"
   },
