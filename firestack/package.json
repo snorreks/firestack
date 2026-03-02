@@ -16,10 +16,13 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/snorreks/firestack.git"
-  },
+  "publishConfig": {
+      "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/snorreks/firestack.git"
+      },
   "bugs": {
     "url": "https://github.com/snorreks/firestack/issues"
   },
