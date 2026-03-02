@@ -43,6 +43,9 @@ async function main() {
   console.log("Copying README.md to dist...");
   await cp(join(rootDir, "README.md"), join(distDir, "README.md"));
 
+  console.log("Copying index.d.ts to dist...");
+  await cp(join(rootDir, "src/index.d.ts"), join(distDir, "index.d.ts"));
+
   console.log("Publishing to npm...");
   if (process.env.NPM_TOKEN) {
     await Bun.write(
