@@ -1,7 +1,7 @@
 import { execa } from 'execa';
-import { exitCode } from '../../../node-shim.js';
-import { logger } from '../../../utils/logger.js';
-import type { DeployOptions } from '../../deploy/utils/options.js';
+import type { DeployOptions } from '$commands/deploy/utils/options.js';
+import { logger } from '$logger';
+import { exitCode } from '$utils/node-shim.js';
 
 export async function deleteFunctions(
   options: DeployOptions,

@@ -1,12 +1,13 @@
 import { Command } from 'commander';
 import { execa } from 'execa';
-import { logger } from '../utils/logger.js';
+import { logger } from '$logger';
 import { type DeployOptions, getOptions } from './deploy/utils/options.js';
 
 interface LogsOptions extends DeployOptions {
   only?: string;
   lines?: string;
   since?: string;
+  open?: boolean;
 }
 
 export const logsCommand = new Command('logs')

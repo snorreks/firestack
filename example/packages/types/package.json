@@ -4,5 +4,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@snorreks/firestack": "file:../../../firestack/dist"
   }
 }

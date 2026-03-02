@@ -1,7 +1,6 @@
 import type { Change, ParamsOf } from 'firebase-functions/v2/core';
 import type { DatabaseEvent, DataSnapshot } from 'firebase-functions/v2/database';
-import type { ReferenceOptions } from '../types/index.js';
-
+import type { ReferenceOptions } from '$types';
 /**
  * Event handler that fires every time new data is created in Firebase Realtime
  * Database.

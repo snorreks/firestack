@@ -1,9 +1,9 @@
 import type { Buffer } from 'node:buffer';
 import type { Response } from 'express';
 import type { CallableRequest, Request } from 'firebase-functions/v2/https';
-import type { CallableFunctions, HttpsOptions, RequestFunctions } from '../types/index.js';
+import type { CallableFunctions, HttpsOptions, RequestFunctions } from '$types';
 
-interface FirebaseRequest<
+export interface FirebaseRequest<
   T extends Record<string, string> = Record<string, string>,
   _ResBody = unknown,
   ReqBody = unknown,
@@ -14,39 +14,46 @@ interface FirebaseRequest<
   params: T;
 }
 
+export type RequestHandler<
+  AllFunctions extends RequestFunctions,
+  FunctionName extends keyof AllFunctions,
+  Params extends Record<string, string> = Record<string, string>
+> = (
+  request: FirebaseRequest<Params, AllFunctions[FunctionName][1], AllFunctions[FunctionName][0]>,
+  response: Response<AllFunctions[FunctionName][1]>
+) => Promise<void> | void;
+
 /**
  * Handles HTTPS requests.
- *
- * @param handler - A function that takes a {@link https.Request} and response
- *   object, same signature as an Express app.
- * @param _options - Options to set on this function
- * @returns A function that you can export and deploy.
+ * ...
  */
 export const onRequest = <
   AllFunctions extends RequestFunctions,
   FunctionName extends keyof AllFunctions,
   Params extends Record<string, string> = Record<string, string>,
 >(
-  handler: (
-    request: FirebaseRequest<Params, AllFunctions[FunctionName][1], AllFunctions[FunctionName][0]>,
-    response: Response<AllFunctions[FunctionName][1]>
-  ) => Promise<void> | void,
+  // 2. UPDATE THIS: Use the new RequestHandler type for the parameter and explicit return type
+  handler: RequestHandler<AllFunctions, FunctionName, Params>,
   _options?: HttpsOptions<FunctionName>
-) => handler;
+): RequestHandler<AllFunctions, FunctionName, Params> => handler;
+
+
+export type CallHandler<
+  AllFunctions extends CallableFunctions,
+  FunctionName extends keyof AllFunctions
+> = (
+  request: CallableRequest<AllFunctions[FunctionName][0]>
+) => Promise<AllFunctions[FunctionName][1]> | AllFunctions[FunctionName][1];
 
 /**
  * Declares a callable method for clients to call using a Firebase SDK.
- *
- * @param handler - A function that takes a {@link https.CallableRequest}.
- * @param _options - Options to set on this function.
- * @returns A function that you can export and deploy.
+ * ...
  */
 export const onCall = <
   AllFunctions extends CallableFunctions,
   FunctionName extends keyof AllFunctions,
 >(
-  handler: (
-    request: CallableRequest<AllFunctions[FunctionName][0]>
-  ) => Promise<AllFunctions[FunctionName][1]> | AllFunctions[FunctionName][1],
+  // 4. UPDATE THIS: Use the new CallHandler type
+  handler: CallHandler<AllFunctions, FunctionName>,
   _options?: HttpsOptions<FunctionName>
-) => handler;
+): CallHandler<AllFunctions, FunctionName> => handler;

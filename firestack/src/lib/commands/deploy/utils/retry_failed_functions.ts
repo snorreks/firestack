@@ -1,6 +1,6 @@
-import { deriveFunctionName } from '../../../utils/function_naming.js';
-import { logger } from '../../../utils/logger.js';
-import { runFunctions } from '../../../utils/run-functions.js';
+import { logger } from '$logger';
+import { deriveFunctionName } from '$utils/function_naming.js';
+import { runFunctions } from '$utils/run-functions.js';
 import type { DeployOptions } from './options.js';
 import { processFunction } from './process_function.js';
 

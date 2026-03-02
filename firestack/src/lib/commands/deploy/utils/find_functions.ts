@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { readDir } from '../../../node-shim.js';
+import { readDir } from '$utils/node-shim.js';
 
 export async function findFunctions(dir: string): Promise<string[]> {
   const functions: string[] = [];

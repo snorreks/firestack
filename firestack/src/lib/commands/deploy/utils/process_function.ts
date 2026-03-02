@@ -1,17 +1,17 @@
 import { copyFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { Command, cwdDir, mkdir, readTextFile, remove, writeTextFile } from '../../../node-shim.js';
-import { buildFunction } from '../../../utils/build_utils.js';
-import { cacheChecksumLocal, checkForChanges } from '../../../utils/checksum.js';
-import { findProjectRoot } from '../../../utils/common.js';
+import { logger } from '$logger';
+import { buildFunction } from '$utils/build_utils.js';
+import { cacheChecksumLocal, checkForChanges } from '$utils/checksum.js';
+import { findProjectRoot } from '$utils/common.js';
 import {
   createFirebaseConfig,
   createPackageJson,
   toDotEnvironmentCode,
-} from '../../../utils/firebase_utils.js';
-import { deriveFunctionName } from '../../../utils/function_naming.js';
-import { logger } from '../../../utils/logger.js';
-import { getEnvironmentNeeded } from '../../../utils/read-compiled-file.js';
+} from '$utils/firebase_utils.js';
+import { deriveFunctionName } from '$utils/function_naming.js';
+import { Command, cwdDir, mkdir, readTextFile, remove, writeTextFile } from '$utils/node-shim.js';
+import { getEnvironmentNeeded } from '$utils/read-compiled-file.js';
 import { createTemporaryIndexFunctionFile } from './create_deploy_index.js';
 import type { DeployOptions } from './options.js';
 

@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { logger } from './logger.js';
+import { logger } from '$logger';
 
 export async function getScriptEnvironment(flavor: string): Promise<Record<string, string>> {
   const envPath = join(process.cwd(), `.env.${flavor}`);

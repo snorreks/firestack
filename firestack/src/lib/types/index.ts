@@ -1,4 +1,5 @@
 export * from './build.js';
+export * from './checksum.js';
 export * from './core.js';
 export * from './deploy.js';
 export * from './firebase-auth-v2.js';

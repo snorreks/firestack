@@ -2,10 +2,10 @@ import { join } from 'node:path';
 import { Command } from 'commander';
 import { execa } from 'execa';
 import prompts from 'prompts';
-import { cwdDir, exitCode, readDir, readTextFile } from '../node-shim.js';
-import { findProjectRoot } from '../utils/common.js';
-import { getScriptEnvironment } from '../utils/env.js';
-import { logger } from '../utils/logger.js';
+import { logger } from '$logger';
+import { findProjectRoot } from '$utils/common.js';
+import { getScriptEnvironment } from '$utils/env.js';
+import { cwdDir, exitCode, readDir, readTextFile } from '$utils/node-shim.js';
 
 interface ScriptsOptions {
   flavor: string;

@@ -5,7 +5,7 @@ import type {
   FirestoreEvent,
   QueryDocumentSnapshot,
 } from 'firebase-functions/v2/firestore';
-import type { CoreData, DocumentOptions } from '../types/index.js';
+import type { CoreData, DocumentOptions } from '$types';
 
 /** Respond only to document creations. */
 export const onDocumentCreated = <Document extends string = string>(

@@ -1,5 +1,5 @@
 import type { StorageEvent } from 'firebase-functions/v2/storage';
-import type { ObjectTriggerOptions } from '../types/index.js';
+import type { ObjectTriggerOptions } from '$types';
 
 /**
  * Event handler sent only when a bucket has enabled object versioning. This

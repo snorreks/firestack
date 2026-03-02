@@ -1,5 +1,5 @@
 import { dirname } from 'node:path';
-import { cwdDir, readDir } from '../node-shim.js';
+import { cwdDir, readDir } from './node-shim.js';
 
 export async function findProjectRoot(): Promise<string> {
   let current = cwdDir();

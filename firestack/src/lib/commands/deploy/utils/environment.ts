@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { cwdDir, readTextFile } from '../../../node-shim.js';
+import { cwdDir, readTextFile } from '$utils/node-shim.js';
 
 export async function getEnvironment(flavor: string): Promise<Record<string, string>> {
   const envPath = join(cwdDir(), `.env.${flavor}`);

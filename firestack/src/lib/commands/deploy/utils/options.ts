@@ -1,7 +1,7 @@
 import { join } from 'node:path';
-import { cwdDir, exitCode, readTextFile } from '../../../node-shim.js';
-import { logger } from '../../../utils/logger.js';
-import { DEFAULT_NODE_VERSION } from '../../utils/constants.js';
+import { DEFAULT_NODE_VERSION } from '$constants';
+import { logger } from '$logger';
+import { cwdDir, exitCode, readTextFile } from '$utils/node-shim.js';
 
 export interface DeployOptions {
   flavor: string;

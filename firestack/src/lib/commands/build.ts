@@ -3,7 +3,7 @@ import { basename, join } from 'node:path';
 import { cwd, exit } from 'node:process';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { buildFunction } from '../utils/build_utils.js';
+import { buildFunction } from '$utils/build_utils.js';
 
 function cwdDir(): string {
   return cwd();

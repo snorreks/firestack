@@ -2,8 +2,8 @@ import { copyFileSync, existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Command } from 'commander';
 import { execa } from 'execa';
-import { cwdDir, exitCode, mkdir } from '../node-shim.js';
-import { logger } from '../utils/logger.js';
+import { logger } from '$logger';
+import { cwdDir, exitCode, mkdir } from '$utils/node-shim.js';
 import { type DeployOptions, getOptions } from './deploy/utils/options.js';
 import { findRuleFiles } from './rules/utils/rule_files.js';
 

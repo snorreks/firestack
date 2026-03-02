@@ -1,12 +1,11 @@
 import { basename, join } from 'node:path';
 import { cwd, exit } from 'node:process';
 import { Command } from 'commander';
-import { logger } from '../../utils/logger.js';
-import { runFunctions } from '../../utils/run-functions.js';
+import { logger } from '$logger';
+import { runFunctions } from '$utils/run-functions.js';
 import { getEnvironment } from './utils/environment.js';
 import { findFunctions } from './utils/find_functions.js';
 import { type DeployOptions, getOptions } from './utils/options.js';
-// import { prepareDependencies } from './utils/prepare_dependencies.js';
 import { processFunction } from './utils/process_function.js';
 import { retryFailedFunctions } from './utils/retry_failed_functions.js';
 
@@ -46,8 +45,6 @@ export const deployCommand = new Command('deploy')
       );
       exitCode(1);
     }
-
-    // await prepareDependencies(cwdDir());
 
     const functionsPath = join(cwdDir(), options.functionsDirectory!);
     let functionFiles = await findFunctions(functionsPath);

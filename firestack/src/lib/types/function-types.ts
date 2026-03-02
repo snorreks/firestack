@@ -7,7 +7,7 @@ import type {
   httpsFunctions,
   schedulerFunctions,
   storageFunctions,
-} from '../constants/index.js';
+} from '$constants';
 
 export type DatabaseFunction = (typeof databaseFunctions)[number];
 

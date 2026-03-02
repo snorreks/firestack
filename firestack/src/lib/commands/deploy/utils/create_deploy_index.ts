@@ -13,11 +13,11 @@ import {
   ScriptTarget,
   SyntaxKind,
 } from 'typescript';
-import { functions } from '../../../constants/function-types.js';
-import { readTextFile, writeTextFile } from '../../../node-shim.js';
-import type { DeployFunction, FunctionBuilder } from '../../../types/index.js';
-import { extractDatabaseRef, extractDocumentPath } from '../../../utils/function_naming.js';
-import { logger } from '../../../utils/logger.js';
+import { functions } from '$constants';
+import { logger } from '$logger';
+import type { DeployFunction, FunctionBuilder } from '$types';
+import { extractDatabaseRef, extractDocumentPath } from '$utils/function_naming.js';
+import { readTextFile, writeTextFile } from '$utils/node-shim.js';
 
 interface BuildFunctionData {
   functionName: string;

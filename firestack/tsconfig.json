@@ -11,10 +11,17 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "isolatedModules": true,
+    "lib": ["ESNext"],
     "baseUrl": ".",
     "paths": {
-      "*": ["src/*"]
+      "$lib/*": ["src/lib/*"],
+      "$constants": ["src/lib/constants/index.ts"],
+      "$commands/*": ["src/lib/commands/*"],
+      "$helpers/*": ["src/lib/helpers/*"],
+      "$types": ["src/lib/types/index.ts"],
+      "$utils/*": ["src/lib/utils/*"],
+      "$logger": ["src/lib/utils/logger.js"]
     }
   },
-  "include": ["src/index.ts", "src/lib/helpers/*.ts", "src/lib/types/*.ts"]
+  "include": ["src"]
 }

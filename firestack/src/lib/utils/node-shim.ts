@@ -6,7 +6,7 @@ import { cwd, exit } from 'node:process';
 
 export { spawn } from 'node:child_process';
 export { existsSync, mkdirSync, watch } from 'node:fs';
-export { readdir, readFile, rm, stat } from 'node:fs/promises';
+export { mkdir as mkdirProm, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 export { dirname } from 'node:path';
 export { cwd, exit } from 'node:process';
 export { TextDecoder, TextEncoder } from 'node:util';
@@ -58,13 +58,37 @@ export async function remove(path: string, options?: { recursive?: boolean }): P
 
 export function watchFs(path: string): AsyncIterable<{ kind: string; paths: string[] }> {
   const watcher = watch(path, { recursive: true });
-  return new AsyncIterable(
-    (async function* () {
-      for await (const event of watcher) {
-        yield { kind: event.eventType, paths: [event.filename] };
-      }
-    })()
-  );
+  const events: { kind: string; paths: string[] }[] = [];
+  let resolveNext: ((value: IteratorResult<{ kind: string; paths: string[] }>) => void) | null =
+    null;
+
+  const processEvent = (eventType: string, filename: string | Buffer | null) => {
+    const event = { kind: eventType, paths: [filename?.toString() ?? ''] };
+    events.push(event);
+    if (resolveNext) {
+      resolveNext({ done: false, value: event });
+      resolveNext = null;
+    }
+  };
+
+  watcher.on('change', (filename) => processEvent('change', filename));
+  watcher.on('add', (filename) => processEvent('add', filename));
+  watcher.on('unlink', (filename) => processEvent('unlink', filename));
+
+  return {
+    [Symbol.asyncIterator]() {
+      return {
+        async next() {
+          if (events.length > 0) {
+            return { done: false, value: events.shift()! };
+          }
+          return new Promise((resolve) => {
+            resolveNext = resolve;
+          });
+        },
+      };
+    },
+  };
 }
 
 export class Command {

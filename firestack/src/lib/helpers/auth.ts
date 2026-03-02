@@ -6,7 +6,7 @@ import type {
   AuthTriggerOptions,
   BeforeCreateResponse,
   BeforeSignInResponse,
-} from '../types/index.js';
+} from '$types';
 
 /**
  * Responds to the creation of a Firebase Auth user.
