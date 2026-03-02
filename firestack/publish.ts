@@ -44,9 +44,13 @@ async function main() {
   await cp(join(rootDir, "README.md"), join(distDir, "README.md"));
 
   console.log("Publishing to npm...");
+  const env = process.env.NPM_TOKEN
+    ? { ...process.env, NPM_TOKEN: process.env.NPM_TOKEN }
+    : process.env;
   execSync("npm publish --access public", {
     cwd: distDir,
     stdio: "inherit",
+    env,
   });
 
   console.log("Done!");
