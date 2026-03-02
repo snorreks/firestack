@@ -34,6 +34,7 @@ jobs:
       - name: Build and Publish
         run: |
           cd firestack
+          bun install
           bun run build
           bun ./publish.ts
         env:
