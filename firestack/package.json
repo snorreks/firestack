@@ -1,22 +1,36 @@
 {
   "name": "@snorreks/firestack",
-  "version": "0.0.1",
+  "version": "0.0.11",
   "description": "CLI tool for deploying Firebase Cloud Functions with ease",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "index.js",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    }
+  },
   "bin": {
     "firestack": "main.js"
   },
-  "files": [
-    "dist"
-  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/snorreks/firestack.git"
+  },
+  "bugs": {
+    "url": "https://github.com/snorreks/firestack/issues"
+  },
+  "homepage": "https://github.com/snorreks/firestack#readme",
   "scripts": {
-    "build": "esbuild src/main.ts src/index.ts --bundle --platform=node --format=esm --outdir=dist --packages=external --banner:js=\"#!/usr/bin/env node\"",
+    "build": "bun run ./build.ts",
+    "build:types": "tsc --declaration --declarationDir dist --emitDeclarationOnly --outDir dist --skipLibCheck --noEmit false",
     "lint": "biome lint .",
     "format": "biome format --write .",
     "check": "tsc --noEmit",
-    "publish": "bun run ./publish.ts",
-    "prepublishOnly": "bun run build"
+    "publish": "bun run ./build.ts && cd dist && npm publish --access public"
   },
   "dependencies": {
     "commander": "^14.0.3",
@@ -39,7 +53,9 @@
     "firebase",
     "cloud-functions",
     "gcp",
-    "deploy"
+    "deploy",
+    "esbuild",
+    "typescript"
   ],
   "author": "Snorreks",
   "license": "MIT"

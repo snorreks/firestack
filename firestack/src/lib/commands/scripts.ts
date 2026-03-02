@@ -126,7 +126,7 @@ export const scriptsCommand = new Command('scripts')
           type: 'select',
           name: 'script',
           message: 'Please select a script to run:',
-          choices: scriptFiles.map(script => ({ title: script, value: script })),
+          choices: scriptFiles.map((script) => ({ title: script, value: script })),
         });
 
         if (!response.script) {

@@ -20,16 +20,16 @@ jobs:
       - name: Get current version
         id: version
         run: |
-          VERSION=$(node -p "require('./firestack/package.json').version")
+          VERSION=$(node -e "console.log(JSON.parse(require('fs').readFileSync('./firestack/package.json')).version)")
           echo "current=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Bump version
         id: bump
         run: |
           cd firestack
-          NEW_VERSION=$(node -e "const v=require('$GITHUB_WORKSPACE/firestack/package.json').version; const p=v.split('.'); p[2]++; console.log(p.join('.'))")
+          NEW_VERSION=$(node -e "const fs=require('fs'); const pkg=JSON.parse(fs.readFileSync('./package.json')); const p=pkg.version.split('.'); p[2]++; console.log(p.join('.'));")
           echo "new=$NEW_VERSION" >> $GITHUB_OUTPUT
-          node -e "const pkg=require('./package.json'); pkg.version='$NEW_VERSION'; require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2)+'\n')"
+          node -e "const fs=require('fs'); const pkg=JSON.parse(fs.readFileSync('./package.json')); pkg.version='$NEW_VERSION'; fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2)+'\n');"
 
       - name: Build and Publish
         run: |
