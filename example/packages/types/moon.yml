@@ -1,0 +1,8 @@
+# https://moonrepo.dev/docs/config/project
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+tasks:
+  lint:
+    command: 'biome check ./src'
+    inputs:
+      - 'src/**/*'

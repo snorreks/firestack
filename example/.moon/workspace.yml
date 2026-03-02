@@ -1,0 +1,8 @@
+# https://moonrepo.dev/docs/config/workspace
+$schema: "https://moonrepo.dev/schemas/workspace.json"
+
+# Projects
+projects:
+  functions: "apps/functions"
+  utils: "packages/utils"
+  types: "packages/types"

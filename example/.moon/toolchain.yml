@@ -1,0 +1,12 @@
+# https://moonrepo.dev/docs/config/toolchain
+$schema: "https://moonrepo.dev/schemas/toolchain.json"
+
+# Bun
+bun:
+  version: "system"
+
+# TypeScript
+typescript:
+  routeOutDirToCache: true
+  syncProjectReferences: true
+  syncProjectReferencesToRuntime: true

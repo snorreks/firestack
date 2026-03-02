@@ -1,0 +1,13 @@
+{
+  "flavors": {
+    "development": "aikami-prod",
+    "production": "aikami-prod"
+  },
+  "region": "us-central1",
+  "functionsDirectory": "src/controllers",
+  "rulesDirectory": "src/rules",
+  "scriptsDirectory": "scripts",
+  "initScript": "init.ts",
+  "minify": false,
+  "nodeVersion": "20"
+}

@@ -1,0 +1,11 @@
+{
+  "name": "functions",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@snorreks/firestack": "file:../../../firestack",
+    "@shared/utils": "file:../../packages/utils",
+    "firebase-admin": "^13.7.0",
+    "firebase-functions": "^7.0.6"
+  }
+}

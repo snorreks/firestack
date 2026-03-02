@@ -1,0 +1,33 @@
+{
+  "name": "firestack-example",
+  "version": "1.0.0",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "moon": "moon",
+    "build": "moon run functions:build",
+    "deploy": "moon run functions:deploy",
+    "delete": "moon run functions:delete",
+    "emulate": "moon run functions:emulate",
+    "rules": "moon run functions:rules",
+    "scripts": "moon run functions:scripts",
+    "logs": "moon run functions:logs",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@snorreks/firestack": "file:../firestack",
+    "firebase-admin": "^13.7.0",
+    "firebase-functions": "^7.0.6",
+    "firebase-tools": "^15.8.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@moonrepo/cli": "^2.0.3",
+    "@biomejs/biome": "^2.4.4"
+  }
+}

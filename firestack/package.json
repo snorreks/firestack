@@ -1,0 +1,46 @@
+{
+  "name": "@snorreks/firestack",
+  "version": "0.0.1",
+  "description": "CLI tool for deploying Firebase Cloud Functions with ease",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "firestack": "dist/main.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "esbuild src/main.ts src/index.ts --bundle --platform=node --format=esm --outdir=dist --packages=external --banner:js=\"#!/usr/bin/env node\"",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "check": "tsc --noEmit",
+    "publish": "bun run ./publish.ts",
+    "prepublishOnly": "bun run build"
+  },
+  "dependencies": {
+    "commander": "^14.0.3",
+    "chalk": "^5.6.2",
+    "esbuild": "^0.27.3",
+    "firebase-functions": "^7.0.6",
+    "firebase-tools": "^15.8.0",
+    "execa": "^9.6.1",
+    "ora": "^9.3.0",
+    "prompts": "^2.4.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.4",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.3.3",
+    "@types/prompts": "^2.4.9",
+    "typescript": "^5.9.3"
+  },
+  "keywords": [
+    "firebase",
+    "cloud-functions",
+    "gcp",
+    "deploy"
+  ],
+  "author": "Snorreks",
+  "license": "MIT"
+}
