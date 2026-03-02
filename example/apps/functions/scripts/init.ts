@@ -16,7 +16,7 @@ export default async function (context: InitContext): Promise<void> {
 
   // Create sample users
   const usersCollection = db.collection('users');
-  
+
   await usersCollection.doc('user1').set({
     name: 'John Doe',
     email: 'john@example.com',

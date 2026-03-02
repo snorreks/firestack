@@ -5,7 +5,7 @@ import type { CallableFunctions, HttpsOptions, RequestFunctions } from '../types
 
 interface FirebaseRequest<
   T extends Record<string, string> = Record<string, string>,
-  ResBody = unknown,
+  _ResBody = unknown,
   ReqBody = unknown,
 > extends Request {
   /** The wire format representation of the request body. */

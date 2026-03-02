@@ -26,9 +26,9 @@
   "homepage": "https://github.com/snorreks/firestack#readme",
   "scripts": {
     "build": "bun run ./build.ts",
-    "build:types": "tsc --declaration --declarationDir dist --emitDeclarationOnly --outDir dist --skipLibCheck --noEmit false",
     "lint": "biome lint .",
     "format": "biome format --write .",
+    "fix": "biome check --write .",
     "check": "tsc --noEmit",
     "publish": "bun run ./build.ts && cd dist && npm publish --access public"
   },

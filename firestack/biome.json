@@ -12,10 +12,15 @@
     "rules": {
       "recommended": true,
       "complexity": {
-        "noForEach": "off"
+        "noForEach": "off",
+        "noStaticOnlyClass": "off"
       },
       "suspicious": {
-        "noExplicitAny": "warn"
+        "noExplicitAny": "warn",
+        "noAssignInExpressions": "off"
+      },
+      "correctness": {
+        "noInvalidUseBeforeDeclaration": "off"
       },
       "style": {
         "useImportType": "off",
@@ -39,5 +44,9 @@
       "bracketSpacing": true,
       "arrowParentheses": "always"
     }
+  },
+  "files": {
+    "maxSize": 1000000,
+    "ignoreUnknown": true
   }
 }

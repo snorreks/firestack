@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { cwdDir, exitCode, readTextFile } from '../../../node-shim.js';
 import { logger } from '../../../utils/logger.js';
+import { DEFAULT_NODE_VERSION } from '../../utils/constants.js';
 
 export interface DeployOptions {
   flavor: string;
@@ -57,7 +58,7 @@ export async function getOptions(cliOptions: DeployOptions): Promise<DeployOptio
     scriptsDirectory: cliOptions.scriptsDirectory || config.scriptsDirectory || 'scripts',
     initScript: cliOptions.initScript || config.initScript || 'init.ts',
     region: cliOptions.region || config.region,
-    nodeVersion: cliOptions.nodeVersion || config.nodeVersion || '20',
+    nodeVersion: cliOptions.nodeVersion || config.nodeVersion || DEFAULT_NODE_VERSION,
     projectId: cliOptions.projectId || config.flavors?.[cliOptions.flavor],
   };
 

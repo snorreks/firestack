@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      id-token: write # REQUIRED for npm provenance (trusted package)
+      id-token: write # REQUIRED for OIDC tokenless publishing
     steps:
       - uses: actions/checkout@v4
 
@@ -33,16 +33,12 @@ jobs:
           node -e "const fs=require('fs'); const pkg=JSON.parse(fs.readFileSync('./package.json')); pkg.version='$NEW_VERSION'; fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2)+'\n');"
 
       - name: Build and Publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} # Map the secret to an environment variable
         run: |
           cd firestack
           bun install
           bun run build
           cd dist
-          # Tell npm to use the token for authentication
-          echo "//registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN" > .npmrc
-          # Publish with provenance for the trusted package check
+          # Publish using OIDC (no token needed!)
           npm publish --access public --provenance
 
       - name: Commit version bump

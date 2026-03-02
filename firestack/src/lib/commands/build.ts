@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { cwd, exit } from 'node:process';
 import chalk from 'chalk';
@@ -13,11 +13,11 @@ function exitCode(code: number): never {
   return exit(code);
 }
 
-async function readTextFile(path: string): Promise<string> {
+async function _readTextFile(path: string): Promise<string> {
   return readFile(path, 'utf-8');
 }
 
-async function writeTextFile(path: string, contents: string): Promise<void> {
+async function _writeTextFile(path: string, contents: string): Promise<void> {
   await writeFile(path, contents, 'utf-8');
 }
 

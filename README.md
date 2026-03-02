@@ -49,13 +49,16 @@ Create a file in your functions directory (default: `src/controllers`):
 
 ```typescript
 // src/controllers/api/hello.ts
-import { onRequest } from '@snorreks/firestack';
+import { onRequest } from "@snorreks/firestack";
 
-export default onRequest((req, res) => {
-  res.send({ message: "Hello from Firestack!" });
-}, {
-  region: 'europe-west1'
-});
+export default onRequest(
+  (req, res) => {
+    res.send({ message: "Hello from Firestack!" });
+  },
+  {
+    region: "europe-west1",
+  },
+);
 ```
 
 ### 3. Deploy
@@ -66,15 +69,15 @@ firestack deploy --flavor development
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `firestack build` | Build functions for local development |
-| `firestack deploy` | Build and deploy functions to Firebase |
-| `firestack delete` | Delete unused functions |
+| Command             | Description                             |
+| ------------------- | --------------------------------------- |
+| `firestack build`   | Build functions for local development   |
+| `firestack deploy`  | Build and deploy functions to Firebase  |
+| `firestack delete`  | Delete unused functions                 |
 | `firestack emulate` | Run Firebase emulators with live reload |
-| `firestack rules` | Deploy Firestore and Storage rules |
-| `firestack scripts` | Run scripts from the scripts directory |
-| `firestack logs` | View function logs |
+| `firestack rules`   | Deploy Firestore and Storage rules      |
+| `firestack scripts` | Run scripts from the scripts directory  |
+| `firestack logs`    | View function logs                      |
 
 ## Folder Structure
 
@@ -85,11 +88,11 @@ src/
 │   ├── firestore/   # Firestore triggers
 │   ├── scheduler/   # Scheduled tasks
 │   └── auth/        # Auth triggers
-├── rules/           # Firestore & Storage rules
-│   ├── firestore.rules
-│   ├── firestore.indexes.json
-│   └── storage.rules
-└── scripts/         # Deployment scripts
+└── rules/           # Firestore & Storage rules
+    ├── firestore.rules
+    ├── firestore.indexes.json
+    └── storage.rules
+scripts/         # Deployment scripts
     └── init.ts      # Emulator init script
 ```
 
@@ -97,16 +100,16 @@ src/
 
 ### firestack.json Options
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `flavors` | object | `{}` | Map of flavor names to project IDs |
-| `region` | string | `us-central1` | Default region for functions |
-| `functionsDirectory` | string | `src/controllers` | Where functions are located |
-| `rulesDirectory` | string | `src/rules` | Where rules files are located |
-| `scriptsDirectory` | string | `scripts` | Where scripts are located |
-| `initScript` | string | `init.ts` | Script to run before emulator |
-| `nodeVersion` | string | `20` | Node.js runtime version |
-| `minify` | boolean | `true` | Minify bundled functions |
+| Option               | Type    | Default           | Description                        |
+| -------------------- | ------- | ----------------- | ---------------------------------- |
+| `flavors`            | object  | `{}`              | Map of flavor names to project IDs |
+| `region`             | string  | `us-central1`     | Default region for functions       |
+| `functionsDirectory` | string  | `src/controllers` | Where functions are located        |
+| `rulesDirectory`     | string  | `src/rules`       | Where rules files are located      |
+| `scriptsDirectory`   | string  | `scripts`         | Where scripts are located          |
+| `initScript`         | string  | `init.ts`         | Script to run before emulator      |
+| `nodeVersion`        | string  | `20`              | Node.js runtime version            |
+| `minify`             | boolean | `true`            | Minify bundled functions           |
 
 ### Common CLI Options
 
@@ -118,11 +121,13 @@ src/
 ## Emulator
 
 Run emulators with:
+
 ```bash
 firestack emulate
 ```
 
 The emulator will:
+
 1. Run your init script (if exists) to populate Firestore
 2. Build all functions
 3. Start Firebase emulators with live reload

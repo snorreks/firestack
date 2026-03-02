@@ -1,10 +1,11 @@
 import { existsSync, watch } from 'node:fs';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { basename, join, relative } from 'node:path';
 import { Command } from 'commander';
 import { execa } from 'execa';
 import { buildFunction } from '../utils/build_utils.js';
 import { findProjectRoot } from '../utils/common.js';
+import { DEFAULT_NODE_VERSION } from '../utils/constants.js';
 import { deriveFunctionName } from '../utils/function_naming.js';
 import { logger } from '../utils/logger.js';
 import { createTemporaryIndexFunctionFile } from './deploy/utils/create_deploy_index.js';
@@ -104,7 +105,7 @@ async function buildEmulatorFunctions(
     name: 'functions',
     type: 'module',
     main: 'index.js',
-    engines: { node: `${options.nodeVersion || '20'}` },
+    engines: { node: `${options.nodeVersion || DEFAULT_NODE_VERSION}` },
   };
   await writeFile(join(outputDir, 'src', 'package.json'), JSON.stringify(packageJson, null, 2));
 
@@ -114,7 +115,7 @@ async function buildEmulatorFunctions(
       cwd: join(outputDir, 'src'),
       stdio: 'inherit',
     });
-  } catch (error) {
+  } catch (_error) {
     throw new Error('Failed to install dependencies');
   }
   logger.info('Dependencies installed.');
@@ -133,7 +134,7 @@ async function generateFirebaseJson(outputDir: string, options: EmulateOptions):
       {
         source: 'src',
         codebase: 'default',
-        runtime: `nodejs${options.nodeVersion || '20'}`,
+        runtime: `nodejs${options.nodeVersion || DEFAULT_NODE_VERSION}`,
       },
     ],
     emulators: {
@@ -238,7 +239,7 @@ export const emulateCommand = new Command('emulate')
           options.initScript || 'init.ts',
           options.projectId
         );
-      } catch (error) {
+      } catch (_error) {
         logger.error('Failed to run init script, continuing without initialization...');
       }
     }

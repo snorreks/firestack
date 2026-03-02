@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, watch } from 'node:fs';
-import { mkdir as mkdirProm, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir as mkdirProm, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { cwd, exit } from 'node:process';
 
@@ -9,7 +9,7 @@ export { existsSync, mkdirSync, watch } from 'node:fs';
 export { readdir, readFile, rm, stat } from 'node:fs/promises';
 export { dirname } from 'node:path';
 export { cwd, exit } from 'node:process';
-export { TextDecoder, TextEncoder } from 'util';
+export { TextDecoder, TextEncoder } from 'node:util';
 
 export const errors = {
   NotFound: class NotFound extends Error {

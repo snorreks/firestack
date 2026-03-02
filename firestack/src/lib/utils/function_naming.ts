@@ -3,7 +3,7 @@
  * @license MIT
  */
 
-import { basename, dirname, relative } from 'node:path';
+import { relative } from 'node:path';
 
 /**
  * Derives a function name from a file path relative to the controllers directory.

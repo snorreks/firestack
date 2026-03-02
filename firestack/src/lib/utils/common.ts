@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { cwdDir, readDir } from '../node-shim.js';
 

@@ -1,8 +1,8 @@
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Command } from 'commander';
 import { execa } from 'execa';
-import { Command as BunCommand, cwdDir, exitCode, mkdir } from '../node-shim.js';
+import { cwdDir, exitCode, mkdir } from '../node-shim.js';
 import { logger } from '../utils/logger.js';
 import { type DeployOptions, getOptions } from './deploy/utils/options.js';
 import { findRuleFiles } from './rules/utils/rule_files.js';
@@ -27,7 +27,7 @@ export const rulesCommand = new Command('rules')
       exitCode(1);
     }
 
-    const rulesDir = join(cwdDir(), options.rulesDirectory || 'src/rules');
+    const _rulesDir = join(cwdDir(), options.rulesDirectory || 'src/rules');
     const ruleFiles = await findRuleFiles(options.rulesDirectory || 'src/rules');
 
     if (ruleFiles.length === 0) {

@@ -17,7 +17,8 @@
     "logs": "moon run functions:logs",
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "fix": "biome check --write ."
   },
   "dependencies": {
     "@snorreks/firestack": "file:../firestack",

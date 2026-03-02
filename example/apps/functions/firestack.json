@@ -9,5 +9,5 @@
   "scriptsDirectory": "scripts",
   "initScript": "init.ts",
   "minify": false,
-  "nodeVersion": "20"
+  "nodeVersion": "22"
 }

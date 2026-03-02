@@ -28,7 +28,7 @@ const getApp = () => {
     return app;
   }
 
-  const serviceAccountString = process.env['FIREBASE_SERVICE_ACCOUNT'];
+  const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT;
 
   const options: AppOptions = {};
 
@@ -36,7 +36,7 @@ const getApp = () => {
     options.credential = cert(parseServiceAccount(serviceAccountString));
   }
 
-  const projectId = process.env['GCP_PROJECT_ID'];
+  const projectId = process.env.GCP_PROJECT_ID;
 
   if (projectId) {
     options.storageBucket = `${projectId}.firebasestorage.app`;

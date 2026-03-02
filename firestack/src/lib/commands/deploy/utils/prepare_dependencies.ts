@@ -22,7 +22,7 @@ async function getDependencyVersions(cwd: string): Promise<Record<string, string
       if (versions['firebase-admin'] && versions['firebase-functions']) {
         return versions;
       }
-    } catch (error) {
+    } catch (_error) {
       // Ignore if file doesn't exist
     }
     currentDir = dirname(currentDir);
@@ -39,7 +39,7 @@ export async function prepareDependencies(cwd: string): Promise<void> {
     await stat(nodeModulesPath);
     logger.debug('Shared dependencies already exist, skipping installation.');
     return;
-  } catch (error) {
+  } catch (_error) {
     // Continue if not found
   }
 
@@ -68,9 +68,9 @@ export async function prepareDependencies(cwd: string): Promise<void> {
       cwd: dependenciesDir,
       stdio: 'inherit',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to install shared dependencies:');
-    logger.error(error.message);
+    logger.error((error as Error).message);
     exitCode(1);
   }
   logger.info('Shared dependencies installed successfully.');

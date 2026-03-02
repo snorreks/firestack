@@ -25,9 +25,9 @@ async function executeFirebaseFunctionsDelete(options: DeployOptions, functionNa
         stdio: 'inherit',
       }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to delete functions:');
-    logger.error(error.message);
+    logger.error((error as Error).message);
     exitCode(1);
   }
 }

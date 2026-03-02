@@ -119,6 +119,7 @@ class LoggerService implements LoggerInterface {
   }
 }
 
+// biome ignore noStaticOnlyClass: Factory pattern is intentional for singleton
 class LoggerFactory {
   private static logger: LoggerInterface = new LoggerService();
   static getLogger(): LoggerInterface {
