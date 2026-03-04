@@ -1,8 +1,12 @@
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import { cwd } from 'node:process';
 import type { DeployOptions } from '$commands/deploy/utils/options.js';
 import { logger } from '$logger';
-import { cwdDir } from '$utils/node-shim.js';
+
+function cwdDir(): string {
+  return cwd();
+}
 
 export interface RuleFile {
   name: string;

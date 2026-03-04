@@ -1,7 +1,11 @@
+import { exit } from 'node:process';
 import { execa } from 'execa';
 import type { DeployOptions } from '$commands/deploy/utils/options.js';
 import { logger } from '$logger';
-import { exitCode } from '$utils/node-shim.js';
+
+function exitCode(code: number): never {
+  return exit(code);
+}
 
 export async function deleteFunctions(
   options: DeployOptions,

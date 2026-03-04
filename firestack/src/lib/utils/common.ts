@@ -1,5 +1,21 @@
+import { readdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { cwdDir, readDir } from './node-shim.js';
+import { cwd } from 'node:process';
+
+function cwdDir(): string {
+  return cwd();
+}
+
+async function readDir(
+  path: string
+): Promise<{ name: string; isDirectory: () => boolean; isFile: () => boolean }[]> {
+  const entries = await readdir(path, { withFileTypes: true });
+  return entries.map((entry) => ({
+    name: entry.name,
+    isDirectory: () => entry.isDirectory(),
+    isFile: () => entry.isFile(),
+  }));
+}
 
 export async function findProjectRoot(): Promise<string> {
   let current = cwdDir();

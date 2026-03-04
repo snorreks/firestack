@@ -1,11 +1,24 @@
 import { copyFileSync, existsSync, writeFileSync } from 'node:fs';
+import { mkdir as mkdirProm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { cwd, exit } from 'node:process';
 import { Command } from 'commander';
 import { execa } from 'execa';
 import { logger } from '$logger';
-import { cwdDir, exitCode, mkdir } from '$utils/node-shim.js';
 import { type DeployOptions, getOptions } from './deploy/utils/options.js';
 import { findRuleFiles } from './rules/utils/rule_files.js';
+
+function cwdDir(): string {
+  return cwd();
+}
+
+function exitCode(code: number): never {
+  return exit(code);
+}
+
+async function mkdir(path: string, options?: { recursive?: boolean }): Promise<void> {
+  await mkdirProm(path, { recursive: options?.recursive ?? false });
+}
 
 interface RulesOptions extends DeployOptions {
   only?: string;

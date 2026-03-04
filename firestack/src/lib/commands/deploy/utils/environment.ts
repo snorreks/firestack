@@ -1,5 +1,14 @@
+import { readFile as readFileProm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { cwdDir, readTextFile } from '$utils/node-shim.js';
+import { cwd } from 'node:process';
+
+function cwdDir(): string {
+  return cwd();
+}
+
+async function readTextFile(path: string): Promise<string> {
+  return readFileProm(path, 'utf-8');
+}
 
 export async function getEnvironment(flavor: string): Promise<Record<string, string>> {
   const envPath = join(cwdDir(), `.env.${flavor}`);

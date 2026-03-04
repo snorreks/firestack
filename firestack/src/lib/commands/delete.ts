@@ -1,9 +1,13 @@
+import { exit } from 'node:process';
 import { Command } from 'commander';
 import { logger } from '$logger';
-import { exitCode } from '$utils/node-shim.js';
 import { deleteFunctions } from './delete/utils/delete_functions.js';
 import { getOnlineFunctionNames, getUnusedFunctionNames } from './delete/utils/read_functions.js';
 import { type DeployOptions, getOptions } from './deploy/utils/options.js';
+
+function exitCode(code: number): never {
+  return exit(code);
+}
 
 interface DeleteOptions extends DeployOptions {
   all?: boolean;

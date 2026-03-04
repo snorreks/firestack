@@ -1,8 +1,15 @@
-import { copyFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
+import {
+  mkdir as mkdirProm,
+  readFile as readFileProm,
+  rm,
+  writeFile as writeFileProm,
+} from 'node:fs/promises';
 import { join } from 'node:path';
+import { cwd, exit } from 'node:process';
 import { logger } from '$logger';
 import { buildFunction } from '$utils/build_utils.js';
 import { cacheChecksumLocal, checkForChanges } from '$utils/checksum.js';
+import { Command } from '$utils/command.js';
 import { findProjectRoot } from '$utils/common.js';
 import {
   createFirebaseConfig,
@@ -10,10 +17,33 @@ import {
   toDotEnvironmentCode,
 } from '$utils/firebase_utils.js';
 import { deriveFunctionName } from '$utils/function_naming.js';
-import { Command, cwdDir, mkdir, readTextFile, remove, writeTextFile } from '$utils/node-shim.js';
 import { getEnvironmentNeeded } from '$utils/read-compiled-file.js';
 import { createTemporaryIndexFunctionFile } from './create_deploy_index.js';
 import type { DeployOptions } from './options.js';
+
+function cwdDir(): string {
+  return cwd();
+}
+
+function exitCode(code: number): never {
+  return exit(code);
+}
+
+async function readTextFile(path: string): Promise<string> {
+  return readFileProm(path, 'utf-8');
+}
+
+async function writeTextFile(path: string, contents: string): Promise<void> {
+  await writeFileProm(path, contents, 'utf-8');
+}
+
+async function mkdir(path: string, options?: { recursive?: boolean }): Promise<void> {
+  await mkdirProm(path, { recursive: options?.recursive ?? false });
+}
+
+async function remove(path: string, options?: { recursive?: boolean }): Promise<void> {
+  await rm(path, { recursive: options?.recursive ?? false, force: true });
+}
 
 export async function processFunction(
   funcPath: string,
@@ -86,37 +116,19 @@ export async function processFunction(
   }
 
   if (!options.dryRun) {
-    logger.debug('Copying shared dependencies...');
-    try {
-      const dependenciesDir = join(cwdDir(), 'tmp', 'dependencies');
-      const outputNodeModules = join(outputDir, 'node_modules');
-      await remove(outputNodeModules, { recursive: true });
-
-      // Copy node_modules
-      if (existsSync(join(dependenciesDir, 'node_modules'))) {
-        copyDirRecursive(join(dependenciesDir, 'node_modules'), outputNodeModules);
-      }
-      // Copy package.json
-      if (existsSync(join(dependenciesDir, 'package.json'))) {
-        copyFileSync(join(dependenciesDir, 'package.json'), join(outputDir, 'src', 'package.json'));
-      }
-    } catch (error) {
-      logger.error('Failed to copy shared dependencies:', error);
-      return { functionName, status: 'failed' };
-    }
-
-    logger.debug('Installing dependencies...');
-    const npmInstall = new Command('npm', {
-      args: ['install'],
-      cwd: join(outputDir, 'src'),
-    });
-    const { code: npmCode, stderr: npmStderr } = await npmInstall.output();
-    if (npmCode !== 0) {
-      logger.error('Failed to install dependencies:');
-      logger.error(new TextDecoder().decode(npmStderr));
-      return { functionName, status: 'failed' };
-    }
-    logger.debug('Dependencies installed successfully.');
+    // TODO check if they have external options, then install the external depndenvies
+    // logger.debug('Installing dependencies...');
+    // const npmInstall = new Command('npm', {
+    //   args: ['install'],
+    //   cwd: join(outputDir, 'src'),
+    // });
+    // const { code: npmCode, stderr: npmStderr } = await npmInstall.output();
+    // if (npmCode !== 0) {
+    //   logger.error('Failed to install dependencies:');
+    //   logger.error(new TextDecoder().decode(npmStderr));
+    //   return { functionName, status: 'failed' };
+    // }
+    // logger.debug('Dependencies installed successfully.');
   }
 
   const deployArgs = [
@@ -153,19 +165,5 @@ export async function processFunction(
   } else {
     logger.info(`Dry run: skipped deployment of ${functionName}.`);
     return { functionName, status: 'dry-run' };
-  }
-}
-
-function copyDirRecursive(src: string, dest: string): void {
-  mkdirSync(dest, { recursive: true });
-  const entries = readdirSync(src, { withFileTypes: true });
-  for (const entry of entries) {
-    const srcPath = join(src, entry.name);
-    const destPath = join(dest, entry.name);
-    if (entry.isDirectory()) {
-      copyDirRecursive(srcPath, destPath);
-    } else {
-      copyFileSync(srcPath, destPath);
-    }
   }
 }

@@ -1,17 +1,62 @@
+import { existsSync } from 'node:fs';
+import { readdir, readFile as readFileProm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { cwd, exit } from 'node:process';
 import { Command } from 'commander';
 import { execa } from 'execa';
 import prompts from 'prompts';
 import { logger } from '$logger';
 import { findProjectRoot } from '$utils/common.js';
 import { getScriptEnvironment } from '$utils/env.js';
-import { cwdDir, exitCode, readDir, readTextFile } from '$utils/node-shim.js';
+
+function cwdDir(): string {
+  return cwd();
+}
+
+function exitCode(code: number): never {
+  return exit(code);
+}
+
+async function readTextFile(path: string): Promise<string> {
+  return readFileProm(path, 'utf-8');
+}
+
+async function readDir(
+  path: string
+): Promise<{ name: string; isDirectory: () => boolean; isFile: () => boolean }[]> {
+  const entries = await readdir(path, { withFileTypes: true });
+  return entries.map((entry) => ({
+    name: entry.name,
+    isDirectory: () => entry.isDirectory(),
+    isFile: () => entry.isFile(),
+  }));
+}
 
 interface ScriptsOptions {
   flavor: string;
   scriptsDirectory?: string;
   verbose?: boolean;
   silent?: boolean;
+}
+
+interface ScriptConfig {
+  config?: Record<string, unknown>;
+}
+
+async function getScriptConfig(flavor: string): Promise<Record<string, unknown>> {
+  const configPath = join(cwdDir(), `script-config.${flavor}.ts`);
+
+  if (!existsSync(configPath)) {
+    return {};
+  }
+
+  try {
+    const configModule = (await import(configPath)) as ScriptConfig;
+    return configModule.config ?? {};
+  } catch (error) {
+    logger.debug(`Failed to load script-config.${flavor}.ts:`, error);
+    return {};
+  }
 }
 
 interface FirestackConfig {
@@ -75,6 +120,12 @@ async function runScript(scriptName: string, options: ScriptsOptions, projectRoo
   logger.debug('  packageJsonPath:', packageJsonPath);
 
   const env = await getScriptEnvironment(options.flavor);
+  const scriptConfig = await getScriptConfig(options.flavor);
+
+  if (Object.keys(scriptConfig).length > 0) {
+    env.SCRIPT_CONFIG = JSON.stringify(scriptConfig);
+    logger.debug('Script config loaded:', scriptConfig);
+  }
 
   logger.debug(`Running command: bun run "${scriptPath}"`);
 

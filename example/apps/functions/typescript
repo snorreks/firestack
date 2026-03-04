@@ -1,0 +1,64 @@
+Script started on 2026-03-04 21:48:25+01:00 [TERM="xterm-256color" TTY="/dev/pts/3" COLUMNS="228" LINES="15"]
+]4;0;rgb:1a/1b/26\]4;1;rgb:c0/ca/f5\]4;2;rgb:9e/ce/6a\]4;3;rgb:0d/b9/d7\]4;4;rgb:2a/c3/de\]4;5;rgb:bb/9a/f7\]4;6;rgb:b4/f9/f8\]4;7;rgb:a9/b1/d6\]4;8;rgb:44/4b/6a\]4;9;rgb:c0/ca/f5\]4;10;rgb:9e/ce/6a\]4;11;rgb:0d/b9/d7\]4;12;rgb:2a/c3/de\]4;13;rgb:bb/9a/f7\]4;14;rgb:b4/f9/f8\]4;15;rgb:d5/d6/db\]4;16;rgb:a9/b1/d6\]4;17;rgb:f7/76/8e\]4;18;rgb:16/16/1e\]4;19;rgb:2f/35/49\]4;20;rgb:78/7c/99\]4;21;rgb:cb/cc/d1\]10;rgb:a9/b1/d6\]11;rgb:1a/1b/26\]12;7\[?u[>0q]11;?\[?1049hP+q696e646e\P+q71756572792d6f732d6e616d65\[?1049l[0c[34m Distro:  NixOS
+[37m Langs:   Rust  Zig  Go  JS 󰛦 TS  Python  Lua  Wasm
+[32m Shell:  󰈺 Fish
+[33m󰟶 Mood:   👨‍💻
+[5 q]7;file://sonny-laptop/home/sonny/Development/Projects/passion/firestack/example/apps/functions]0;~/D/P/p/f/e/a/functions[m]11;?\[6n[0c[?2004h[?2031h[>4;1m=[K]133;A;click_events=1\[J
+[K[1;38;2;180;249;248mexample/apps/functions[0m on [1;38;2;187;154;247m master[0m [1;38;2;192;202;245m[✘!?⇡][0m is [1;38;5;208m📦 v1.0.0[0m via [1;38;2;158;206;106m v24.13.0 [0mon [1;38;2;42;195;222m☁️  snorre@mailvideo.com[0m 
+[1;38;2;158;206;106m❯[0m ]133;B[K[2C[?2004l[?2031l[>4;0m>[?2004h[?2031h[>4;1m=bun run script[16C[14D[32mbun[m [38;2;120;124;153mrun[m [38;2;120;124;153;4mscript[m[16C[38;2;120;124;153;4ms[m[17C[17C[?2004l[?2031l[>4;0m>[17C
+[m]133;C;cmdline_url=bun%20run%20scripts[1 q]0;bun run scripts ~/D/P/p/f/e/a/functions[m[0m[31merror[0m[2m:[0m [1mScript not found "[1mscripts[0m"
+]133;D;1[5 q[?25h[2m⏎[m                                                                                                                                                                                                                                   ⏎ ]7;file://sonny-laptop/home/sonny/Development/Projects/passion/firestack/example/apps/functions]0;~/D/P/p/f/e/a/functions[m]11;?\[6n[0c[?2004h[?2031h[>4;1m=[K]133;A;click_events=1[J
+[K[1;38;2;180;249;248mexample/apps/functions[0m on [1;38;2;187;154;247m master[0m [1;38;2;192;202;245m[✘!?⇡][0m is [1;38;5;208m📦 v1.0.0[0m via [1;38;2;158;206;106m v24.13.0 [0mon [1;38;2;42;195;222m☁️  snorre@mailvideo.com[0m 
+[1;38;2;192;202;245m❯[0m ]133;B[K[2C[?2004l[?2031l[>4;0m>[?2004h[?2031h[>4;1m=bun run scripts[17C[15D[32mbun[m [38;2;120;124;153mrun[m [38;2;120;124;153;4mscripts[m[17C[?2004l[?2031l[>4;0m>[17C
+[m]133;C;cmdline_url=bun%20run%20scripts[1 q]0;bun run scripts ~/D/P/p/f/e/a/functions[m[0m[2m[35m$[0m [2m[1mfirestack scripts[0m
+[?25l[36m?[39m [1mPlease select a script to run:[22m [90m›[39m [90m- Use arrow-keys. Return to submit.[39m
+[36m❯[39m   [36m[4mget_user[39m[24m[90m[39m
+    test_api[90m[39m
+[2K[1A[2K[1A[2K[1A[2K[G[32m✔[39m [1mPlease select a script to run:[22m [90m›[39m get_user
+[?25hEnter the user ID to fetch: 32
+[0m[1m67 |[0m                 [0m[31mdelete[0m json[key][0m[2m;[0m
+[0m[1m68 |[0m             })[0m[2m;[0m
+[0m[1m69 |[0m         }
+[0m[1m70 |[0m         [0m[35mconst[0m decoder = [0m[35mnew[0m [0m[1mGoogleErrorDecoder[0m()[0m[2m;[0m
+[0m[1m71 |[0m         [0m[35mconst[0m proto3Error = decoder[0m[3m[1m.decodeHTTPError[0m(json[[0m[32m'error'[0m])[0m[2m;[0m
+[0m[1m72 |[0m         [0m[35mconst[0m error = Object[0m[3m[1m.assign[0m([0m[35mnew[0m [0m[1mGoogleError[0m(json[[0m[32m'error'[0m][[0m[32m'message'[0m]), proto3Error)[0m[2m;[0m
+                                             [31m[1m^[0m
+[0m[31merror[0m[2m:[0m [1mRequest had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project.[0m
+ details[0m[2m:[0m [][0m[2m,[0m
+    code[0m[2m:[0m [0m[33m16[0m[0m[2m,[0m
+
+[0m      [2mat [0mparseHttpError[2m ([0m[0m[36m/home/sonny/Development/Projects/passion/firestack/example/node_modules/.bun/google-gax@4.6.1/node_modules/google-gax/build/src/googleError.js[0m[2m:[0m[33m72[0m[2m:[33m41[0m[2m)[0m
+[0m      [2mat [0mdecodeResponse[2m ([0m[0m[36m/home/sonny/Development/Projects/passion/firestack/example/node_modules/.bun/google-gax@4.6.1/node_modules/google-gax/build/src/fallbackRest.js[0m[2m:[0m[33m69[0m[2m:[33m49[0m[2m)[0m
+[0m      [2mat [0m[0m[36m/home/sonny/Development/Projects/passion/firestack/example/node_modules/.bun/google-gax@4.6.1/node_modules/google-gax/build/src/fallbackServiceStub.js[0m[2m:[0m[33m104[0m[2m:[33m42[0m
+[0m      [2mat [0mprocessTicksAndRejections[2m ([0m[0m[36mnative[0m[2m:[0m[33m7[0m[2m:[33m39[0m[2m)[0m
+[0m      [2mat [0m[0m[36m/home/sonny/Development/Projects/passion/firestack/example/node_modules/.bun/@google-cloud+firestore@7.11.6/node_modules/@google-cloud/firestore/build/src/index.js[0m[2m:[0m[33m1040[0m[2m:[33m27[0m
+[0m      [2mat [0m[0m[36m/home/sonny/Development/Projects/passion/firestack/example/node_modules/.bun/@google-cloud+firestore@7.11.6/node_modules/@google-cloud/firestore/build/src/telemetry/enabled-trace-util.js[0m[2m:[0m[33m110[0m[2m:[33m30[0m
+[0m      [2mat [0m[0m[36m/home/sonny/Development/Projects/passion/firestack/example/node_modules/.bun/@google-cloud+firestore@7.11.6/node_modules/@google-cloud/firestore/build/src/reference/document-reference.js[0m[2m:[0m[33m182[0m[2m:[33m36[0m
+[0m      [2mat [0m[0m[36m/home/sonny/Development/Projects/passion/firestack/example/node_modules/.bun/@google-cloud+firestore@7.11.6/node_modules/@google-cloud/firestore/build/src/telemetry/enabled-trace-util.js[0m[2m:[0m[33m110[0m[2m:[33m30[0m
+[0m
+[2mBun v1.3.10 (Linux x64)[0m
+[31m[39m
+[31m❌ Error running script. Exit code: 1[39m
+[0m[31merror[0m[2m:[0m script [1m"scripts"[0m exited with code 1[0m
+]133;D;1[5 q[?25h[2m⏎[m                                                                                                                                                                                                                                   ⏎ ]7;file://sonny-laptop/home/sonny/Development/Projects/passion/firestack/example/apps/functions]0;~/D/P/p/f/e/a/functions[m]11;?\[6n[0c[?2004h[?2031h[>4;1m=[K]133;A;click_events=1[J
+[K[1;38;2;180;249;248mexample/apps/functions[0m on [1;38;2;187;154;247m master[0m [1;38;2;192;202;245m[✘!?⇡][0m is [1;38;5;208m📦 v1.0.0[0m via [1;38;2;158;206;106m v24.13.0 [0mon [1;38;2;42;195;222m☁️  snorre@mailvideo.com[0m 
+[1;38;2;192;202;245m❯[0m ]133;B[K[220Ctook [1;38;2;13;185;215m4s[0m [220C[2C[?2004l[?2031l[>4;0m>]0;~/D/P/p/f/e/a/functions[m[?2004h[?2031h[>4;1m=[A[A[K]133;A;click_events=1[J
+[K[1;38;2;180;249;248mexample/apps/functions[0m on [1;38;2;187;154;247m master[0m [1;38;2;192;202;245m[✘!?⇡][0m is [1;38;5;208m📦 v1.0.0[0m via [1;38;2;158;206;106m v24.13.0 [0mon [1;38;2;42;195;222m☁️  snorre@mailvideo.com[0m 
+[1;38;2;192;202;245m❯[0m ]133;B[J[228Ctook [1;38;2;13;185;215m4s[0m [228C[2C[?2004l[?2031l[>4;0m>]0;~/D/P/p/f/e/a/functions[m[?2004h[?2031h[>4;1m=[A[A[K]133;A;click_events=1[J
+[K[1;38;2;180;249;248mexample/apps/functions[0m on [1;38;2;187;154;247m master[0m [1;38;2;192;202;245m[✘!?⇡][0m is [1;38;5;208m📦 v1.0.0[0m via [1;38;2;158;206;106m v24.13.0 [0mon [1;38;2;42;195;222m☁️  snorre@mailvideo.com[0m 
+[1;38;2;192;202;245m❯[0m ]133;B[J[241Ctook [1;38;2;13;185;215m4s[0m [241C[2C[?2004l[?2031l[>4;0m>]0;~/D/P/p/f/e/a/functions[m[?2004h[?2031h[>4;1m=[A[A[K]133;A;click_events=1[J
+[K[1;38;2;180;249;248mexample/apps/functions[0m on [1;38;2;187;154;247m master[0m [1;38;2;192;202;245m[✘!?⇡][0m is [1;38;5;208m📦 v1.0.0[0m via [1;38;2;158;206;106m v24.13.0 [0mon [1;38;2;42;195;222m☁️  snorre@mailvideo.com[0m 
+[1;38;2;192;202;245m❯[0m ]133;B[J[244Ctook [1;38;2;13;185;215m4s[0m [244C[2C[?2004l[?2031l[>4;0m>]0;~/D/P/p/f/e/a/functions[m[?2004h[?2031h[>4;1m=[A[A[K]133;A;click_events=1[J
+[K[1;38;2;180;249;248mexample/apps/functions[0m on [1;38;2;187;154;247m master[0m [1;38;2;192;202;245m[✘!?⇡][0m is [1;38;5;208m📦 v1.0.0[0m via [1;38;2;158;206;106m v24.13.0 [0mon [1;38;2;42;195;222m☁️  snorre@mailvideo.com[0m 
+[1;38;2;192;202;245m❯[0m ]133;B[J[246Ctook [1;38;2;13;185;215m4s[0m [246C[2C[?2004l[?2031l[>4;0m>
+[m[2m⏎[m                                                                                                                                                                                                                                                             ⏎ ]7;file://sonny-laptop/home/sonny/Development/Projects/passion/firestack/example/apps/functions]0;~/D/P/p/f/e/a/functions[m]11;?\[6n[0c[?2004h[?2031h[>4;1m=[K]133;A;click_events=1[J
+[K[1;38;2;180;249;248mexample/apps/functions[0m on [1;38;2;187;154;247m master[0m [1;38;2;192;202;245m[✘!?⇡][0m is [1;38;5;208m📦 v1.0.0[0m via [1;38;2;158;206;106m v24.13.0 [0mon [1;38;2;42;195;222m☁️  snorre@mailvideo.com[0m 
+[1;38;2;192;202;245m❯[0m ]133;B[K[246Ctook [1;38;2;13;185;215m4s[0m [246C[2C[?2004l[?2031l[>4;0m>[?2004h[?2031h[>4;1m=bun run scripts[246Ctook [1;38;2;13;185;215m4s[0m [246C[17C[15D[32mbun[m [38;2;120;124;153mrun[m [38;2;120;124;153;4mscripts[m[246Ctook [1;38;2;13;185;215m4s[0m [246C[17C[?2004l[?2031l[>4;0m>]0;~/D/P/p/f/e/a/functions[m[?2004h[?2031h[>4;1m=[A[A[K]133;A;click_events=1[J
+[K[1;38;2;180;249;248mexample/apps/functions[0m on [1;38;2;187;154;247m master[0m [1;38;2;192;202;245m[✘!?⇡][0m is [1;38;5;208m📦 v1.0.0[0m via [1;38;2;158;206;106m v24.13.0 [0mon [1;38;2;42;195;222m☁️  snorre@mailvideo.com[0m 
+[1;38;2;192;202;245m❯[0m ]133;B[32mbun[m [38;2;120;124;153mrun[m [38;2;120;124;153;4mscripts[m[J[220Ctook [1;38;2;13;185;215m4s[0m [220C[17C[?2004l[?2031l[>4;0m>]0;~/D/P/p/f/e/a/functions[m[?2004h[?2031h[>4;1m=[A[A[K]133;A;click_events=1[J
+[K[1;38;2;180;249;248mexample/apps/functions[0m on [1;38;2;187;154;247m master[0m [1;38;2;192;202;245m[✘!?⇡][0m is [1;38;5;208m📦 v1.0.0[0m via [1;38;2;158;206;106m v24.13.0 [0mon [1;38;2;42;195;222m☁️  snorre@mailvideo.com[0m 
+[1;38;2;192;202;245m❯[0m ]133;B[32mbun[m [38;2;120;124;153mrun[m [38;2;120;124;153;4mscripts[m[J[202Ctook [1;38;2;13;185;215m4s[0m [202C[17C[?2004l[?2031l[>4;0m>]0;~/D/P/p/f/e/a/functions[m[?2004h[?2031h[>4;1m=[A[A[K]133;A;click_events=1[J
+[K[1;38;2;180;249;248mexample/apps/functions[0m on [1;38;2;187;154;247m master[0m [1;38;2;192;202;245m[✘!?⇡][0m is [1;38;5;208m📦 v1.0.0[0m via [1;38;2;158;206;106m v24.13.0 [0mon [1;38;2;42;195;222m☁️  snorre@mailvideo.com[0m 
+[1;38;2;192;202;245m❯[0m ]133;B[32mbun[m [38;2;120;124;153mrun[m [38;2;120;124;153;4mscripts[m[J[191Ctook [1;38;2;13;185;215m4s[0m [191C[17C[?2004l[?2031l[>4;0m>]0;~/D/P/p/f/e/a/functions[m[?2004h[?2031h[>4;1m=[A[A[K]133;A;click_events=1[J
+[K[1;38;2;180;249;248mexample/apps/functions[0m on [1;38;2;187;154;247m master[0m [1;38;2;192;202;245m[✘!?⇡][0m is [1;38;5;208m📦 v1.0.0[0m via [1;38;2;158;206;106m v24.13.0 [0mon [1;38;2;42;195;222m☁️  snorre@mailvideo.com[0m 
+[1;38;2;192;202;245m❯[0m ]133;B[32mbun[m [38;2;120;124;153mrun[m [38;2;120;124;153;4mscripts[m[J[190Ctook [1;38;2;13;185;215m4s[0m [190C[17C[?2004l[?2031l[>4;0m>]0;~/D/P/p/f/e/a/functions[m[?2004h[?2031h[>4;1m=[A[A[K]133;A;click_event

@@ -1,7 +1,20 @@
+import { readFile as readFileProm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { cwd, exit } from 'node:process';
 import { DEFAULT_NODE_VERSION } from '$constants';
 import { logger } from '$logger';
-import { cwdDir, exitCode, readTextFile } from '$utils/node-shim.js';
+
+function cwdDir(): string {
+  return cwd();
+}
+
+function exitCode(code: number): never {
+  return exit(code);
+}
+
+async function readTextFile(path: string): Promise<string> {
+  return readFileProm(path, 'utf-8');
+}
 
 export interface DeployOptions {
   flavor: string;

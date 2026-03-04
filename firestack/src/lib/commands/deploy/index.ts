@@ -5,6 +5,11 @@ import { logger } from '$logger';
 import { runFunctions } from '$utils/run-functions.js';
 import { getEnvironment } from './utils/environment.js';
 import { findFunctions } from './utils/find_functions.js';
+import {
+  fetchFunctionsCache,
+  getFunctionsCache,
+  updateFunctionsCache,
+} from './utils/functions_cache.js';
 import { type DeployOptions, getOptions } from './utils/options.js';
 import { processFunction } from './utils/process_function.js';
 import { retryFailedFunctions } from './utils/retry_failed_functions.js';
@@ -44,6 +49,14 @@ export const deployCommand = new Command('deploy')
         'Project ID not found. Please provide it using --projectId option or in firestack.json.'
       );
       exitCode(1);
+    }
+
+    const { get: getCache, update: updateCache } = await getFunctionsCache();
+    let previousCache: Record<string, string> | undefined;
+
+    if (getCache) {
+      previousCache = (await fetchFunctionsCache(getCache, options.flavor)) ?? {};
+      logger.debug('Previous functions cache:', previousCache);
     }
 
     const functionsPath = join(cwdDir(), options.functionsDirectory!);
@@ -91,6 +104,24 @@ export const deployCommand = new Command('deploy')
     if (failedFunctions.length > 0) {
       logger.error(`\nDeployment failed for ${failedFunctions.length} functions.`);
       exitCode(1);
+    }
+
+    if (updateCache) {
+      const newCache: Record<string, string> = { ...previousCache };
+      for (const result of results) {
+        if (result?.functionName && result?.status === 'deployed') {
+          const checksumPath = join(cwdDir(), 'dist', '.checksums', `${result.functionName}.json`);
+          try {
+            const { readFile } = await import('node:fs/promises');
+            const checksumData = JSON.parse(await readFile(checksumPath, 'utf-8'));
+            newCache[result.functionName] = checksumData.checksum;
+          } catch {
+            logger.debug(`No checksum found for ${result.functionName}`);
+          }
+        }
+      }
+      await updateFunctionsCache(updateCache, options.flavor, newCache);
+      logger.info('Functions cache updated.');
     }
 
     logger.info('\nDeployment process complete!');

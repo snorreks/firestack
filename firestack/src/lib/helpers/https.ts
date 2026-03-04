@@ -17,7 +17,7 @@ export interface FirebaseRequest<
 export type RequestHandler<
   AllFunctions extends RequestFunctions,
   FunctionName extends keyof AllFunctions,
-  Params extends Record<string, string> = Record<string, string>
+  Params extends Record<string, string> = Record<string, string>,
 > = (
   request: FirebaseRequest<Params, AllFunctions[FunctionName][1], AllFunctions[FunctionName][0]>,
   response: Response<AllFunctions[FunctionName][1]>
@@ -37,10 +37,9 @@ export const onRequest = <
   _options?: HttpsOptions<FunctionName>
 ): RequestHandler<AllFunctions, FunctionName, Params> => handler;
 
-
 export type CallHandler<
   AllFunctions extends CallableFunctions,
-  FunctionName extends keyof AllFunctions
+  FunctionName extends keyof AllFunctions,
 > = (
   request: CallableRequest<AllFunctions[FunctionName][0]>
 ) => Promise<AllFunctions[FunctionName][1]> | AllFunctions[FunctionName][1];

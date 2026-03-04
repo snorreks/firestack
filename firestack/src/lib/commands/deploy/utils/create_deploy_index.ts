@@ -1,3 +1,4 @@
+import { readFile as readFileProm, writeFile as writeFileProm } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import {
   createSourceFile,
@@ -17,7 +18,14 @@ import { functions } from '$constants';
 import { logger } from '$logger';
 import type { DeployFunction, FunctionBuilder } from '$types';
 import { extractDatabaseRef, extractDocumentPath } from '$utils/function_naming.js';
-import { readTextFile, writeTextFile } from '$utils/node-shim.js';
+
+async function readTextFile(path: string): Promise<string> {
+  return readFileProm(path, 'utf-8');
+}
+
+async function writeTextFile(path: string, contents: string): Promise<void> {
+  await writeFileProm(path, contents, 'utf-8');
+}
 
 interface BuildFunctionData {
   functionName: string;

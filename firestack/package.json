@@ -17,12 +17,12 @@
     "node": ">=20.0.0"
   },
   "publishConfig": {
-      "access": "public"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/snorreks/firestack.git"
-    },
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/snorreks/firestack.git"
+  },
   "bugs": {
     "url": "https://github.com/snorreks/firestack/issues"
   },
@@ -46,7 +46,7 @@
     "prompts": "^2.4.2"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.4",
+    "@biomejs/biome": "^2.4.5",
     "@types/express": "^5.0.6",
     "@types/node": "^25.3.3",
     "@types/prompts": "^2.4.9",

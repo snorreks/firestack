@@ -1,5 +1,16 @@
+import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { readDir } from '$utils/node-shim.js';
+
+async function readDir(
+  path: string
+): Promise<{ name: string; isDirectory: () => boolean; isFile: () => boolean }[]> {
+  const entries = await readdir(path, { withFileTypes: true });
+  return entries.map((entry) => ({
+    name: entry.name,
+    isDirectory: () => entry.isDirectory(),
+    isFile: () => entry.isFile(),
+  }));
+}
 
 export async function findFunctions(dir: string): Promise<string[]> {
   const functions: string[] = [];
