@@ -1,4 +1,4 @@
-import { readFile as readFileProm, writeFile as writeFileProm } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import {
   createSourceFile,
@@ -18,14 +18,6 @@ import { functions } from '$constants';
 import { logger } from '$logger';
 import type { DeployFunction, FunctionBuilder } from '$types';
 import { extractDatabaseRef, extractDocumentPath } from '$utils/function_naming.js';
-
-async function readTextFile(path: string): Promise<string> {
-  return readFileProm(path, 'utf-8');
-}
-
-async function writeTextFile(path: string, contents: string): Promise<void> {
-  await writeFileProm(path, contents, 'utf-8');
-}
 
 interface BuildFunctionData {
   functionName: string;
@@ -50,7 +42,7 @@ export async function createTemporaryIndexFunctionFile(
     buildFunctionData.functionName
   );
 
-  await writeTextFile(temporaryFilePath, code);
+  await writeFile(temporaryFilePath, code, 'utf8');
 
   return temporaryFilePath;
 }
@@ -63,7 +55,7 @@ async function toDeployIndexCode(
 ): Promise<string | undefined> {
   const { functionName, funcPath, temporaryDirectory } = buildFunctionData;
 
-  const fileContent = await readTextFile(funcPath);
+  const fileContent = await readFile(funcPath, 'utf8');
   const sourceFile = createSourceFile(funcPath, fileContent, ScriptTarget.ESNext, true);
 
   let deployFunction: DeployFunction | undefined;
@@ -130,7 +122,7 @@ const isDeployFunction = (functionName: string): functionName is DeployFunction 
 
 const parseOptions = (optionsNode: ObjectLiteralExpression) => {
   const options: Record<string, unknown> = {};
-  optionsNode.properties.forEach((prop) => {
+  for (const prop of optionsNode.properties) {
     if (isPropertyAssignment(prop) && prop.name) {
       const key = prop.name.getText();
       const value = getInitializerValue(prop.initializer);
@@ -138,7 +130,7 @@ const parseOptions = (optionsNode: ObjectLiteralExpression) => {
         options[key] = value;
       }
     }
-  });
+  }
   return options;
 };
 

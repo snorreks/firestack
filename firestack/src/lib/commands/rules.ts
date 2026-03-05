@@ -1,5 +1,5 @@
 import { copyFileSync, existsSync, writeFileSync } from 'node:fs';
-import { mkdir as mkdirProm } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { cwd, exit } from 'node:process';
 import { Command } from 'commander';
@@ -7,16 +7,6 @@ import { logger } from '$logger';
 import { executeCommand } from '$utils/command.js';
 import { type DeployOptions, getOptions } from './deploy/utils/options.js';
 import { findRuleFiles } from './rules/utils/rule_files.js';
-
-/**
- * Creates a directory, optionally recursively.
- * @param path - The path to the directory.
- * @param options - Options for directory creation.
- * @returns A promise that resolves when the directory is created.
- */
-async function mkdir(path: string, options?: { recursive?: boolean }): Promise<void> {
-  await mkdirProm(path, { recursive: options?.recursive ?? false });
-}
 
 /**
  * Options for the rules command.
@@ -114,7 +104,7 @@ export const rulesCommand = new Command('rules')
       '--only',
       deployTargets.join(','),
       '--project',
-      options.projectId!,
+      options.projectId,
     ];
 
     logger.info(`Deploying: ${deployTargets.join(', ')}`);

@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { readdir, readFile as readFileProm } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { cwd, exit } from 'node:process';
 import { Command } from 'commander';
@@ -8,10 +8,6 @@ import prompts from 'prompts';
 import { logger } from '$logger';
 import { findProjectRoot } from '$utils/common.js';
 import { getScriptEnvironment } from '$utils/env.js';
-
-async function readTextFile(path: string): Promise<string> {
-  return readFileProm(path, 'utf-8');
-}
 
 async function readDir(
   path: string
@@ -61,7 +57,7 @@ async function getOptions(cliOptions: ScriptsOptions): Promise<ScriptsOptions> {
   const configPath = join(cwd(), 'firestack.json');
   let config: FirestackConfig = {};
   try {
-    const configContent = await readTextFile(configPath);
+    const configContent = await readFile(configPath, 'utf-8');
     config = JSON.parse(configContent);
     logger.debug(`Using configuration from ${configPath}`);
   } catch (e) {
@@ -105,7 +101,10 @@ async function findScripts(dir: string): Promise<string[]> {
 }
 
 async function runScript(scriptName: string, options: ScriptsOptions, projectRoot: string) {
-  const scriptsPath = join(cwd(), options.scriptsDirectory!);
+  if (!options.scriptsDirectory) {
+    throw new Error('Scripts directory is not specified.');
+  }
+  const scriptsPath = join(cwd(), options.scriptsDirectory);
   const scriptPath = join(scriptsPath, `${scriptName}.ts`);
   const packageJsonPath = join(projectRoot, 'package.json');
 
@@ -155,7 +154,12 @@ export const scriptsCommand = new Command('scripts')
   .argument('[scriptName]', 'The name of the script to run.')
   .action(async (scriptName: string | undefined, cliOptions: ScriptsOptions) => {
     const options = await getOptions(cliOptions);
-    const scriptsPath = join(cwd(), options.scriptsDirectory!);
+
+    if (!options.scriptsDirectory) {
+      throw new Error('Scripts directory is not specified.');
+    }
+
+    const scriptsPath = join(cwd(), options.scriptsDirectory);
 
     let selectedScriptName: string;
 
@@ -176,7 +180,10 @@ export const scriptsCommand = new Command('scripts')
           type: 'select',
           name: 'script',
           message: 'Please select a script to run:',
-          choices: scriptFiles.map((script) => ({ title: script, value: script })),
+          choices: scriptFiles.map((script) => ({
+            title: script,
+            value: script,
+          })),
         });
 
         if (!response.script) {

@@ -1,4 +1,4 @@
-import { mkdir as mkdirProm, rm, writeFile as writeFileProm } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { cwd } from 'node:process';
 import { logger } from '$logger';
@@ -15,18 +15,6 @@ import { deriveFunctionName } from '$utils/function_naming.js';
 import { getEnvironmentNeeded } from '$utils/read-compiled-file.js';
 import { createTemporaryIndexFunctionFile } from './create_deploy_index.js';
 import type { DeployOptions } from './options.js';
-
-async function writeTextFile(path: string, contents: string): Promise<void> {
-  await writeFileProm(path, contents, 'utf-8');
-}
-
-async function mkdir(path: string, options?: { recursive?: boolean }): Promise<void> {
-  await mkdirProm(path, { recursive: options?.recursive ?? false });
-}
-
-async function remove(path: string, options?: { recursive?: boolean }): Promise<void> {
-  await rm(path, { recursive: options?.recursive ?? false, force: true });
-}
 
 interface ProcessResult {
   functionName: string;
@@ -101,19 +89,32 @@ export async function processFunction(
     return { functionName, status: 'failed' };
   } finally {
     if (!options.debug) {
-      await remove(temporaryDir, { recursive: true });
+      await rm(temporaryDir, { recursive: true, force: true });
     }
   }
 }
 
 async function setupDirectories(outputDir: string, temporaryDir: string, options: DeployOptions) {
+  if (!options.nodeVersion) {
+    throw new Error('Node version is required for deployment.');
+  }
+
+  // Delete specific function output and temporary directories before each build
+  await rm(outputDir, { recursive: true, force: true });
+  await rm(temporaryDir, { recursive: true, force: true });
+
   await mkdir(join(outputDir, 'src'), { recursive: true });
   await mkdir(temporaryDir, { recursive: true });
 
-  await writeTextFile(join(outputDir, 'firebase.json'), createFirebaseConfig(options.nodeVersion!));
-  await writeTextFile(
+  await writeFile(
+    join(outputDir, 'firebase.json'),
+    createFirebaseConfig(options.nodeVersion),
+    'utf-8'
+  );
+  await writeFile(
     join(outputDir, 'src', 'package.json'),
-    createPackageJson(options.nodeVersion!, options.external)
+    createPackageJson(options.nodeVersion, options.external),
+    'utf-8'
   );
 }
 
@@ -157,7 +158,7 @@ async function setupEnvironment(outputDir: string, environment: Record<string, s
   const envNeeded = await getEnvironmentNeeded(outputDir, environment);
   if (envNeeded) {
     const envCode = toDotEnvironmentCode(envNeeded);
-    await writeTextFile(join(outputDir, '.env'), envCode);
+    await writeFile(join(outputDir, '.env'), envCode, 'utf-8');
   }
   return envNeeded;
 }
@@ -190,12 +191,18 @@ async function deployFunction(
   outputDir: string,
   options: DeployOptions
 ): Promise<boolean> {
+  if (!options.projectId) {
+    throw new Error('Project ID is required for deployment.');
+  }
+
   const deployArgs = [
     'deploy',
+    '--config',
+    'firebase.json',
     '--only',
     `functions:${functionName}`,
     '--project',
-    options.projectId!,
+    options.projectId,
   ];
   if (options.force) {
     deployArgs.push('--force');

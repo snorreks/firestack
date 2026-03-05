@@ -39,7 +39,7 @@ export const deployCommand = new Command('deploy')
   .option(
     '--packageManager <packageManager>',
     'The package manager to use (npm, yarn, pnpm, bun, global).',
-    'npm'
+    'global'
   )
   .action(async (cliOptions: DeployOptions) => {
     const options = await getOptions(cliOptions);
@@ -59,7 +59,11 @@ export const deployCommand = new Command('deploy')
       logger.debug('Previous functions cache:', previousCache);
     }
 
-    const functionsPath = join(cwd(), options.functionsDirectory!);
+    if (!options.functionsDirectory) {
+      throw new Error('Functions directory is required for deployment.');
+    }
+
+    const functionsPath = join(cwd(), options.functionsDirectory);
     let functionFiles = await findFunctions(functionsPath);
 
     if (options.only) {

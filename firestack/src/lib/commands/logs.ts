@@ -37,7 +37,7 @@ export const logsCommand = new Command('logs')
       process.exit(1);
     }
 
-    const commandArgs = ['functions:log', '--project', options.projectId!];
+    const commandArgs = ['functions:log', '--project', options.projectId];
 
     if (cliOptions.only) {
       commandArgs.push('--only', cliOptions.only);

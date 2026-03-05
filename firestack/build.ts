@@ -1,7 +1,6 @@
 #!/usr/bin/env bun
 
-import { existsSync } from 'node:fs';
-import { cp, mkdir } from 'node:fs/promises';
+import { cp, mkdir, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as esbuild from 'esbuild';
@@ -9,6 +8,11 @@ import * as esbuild from 'esbuild';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 async function main() {
+  console.log('Cleaning dist folder...');
+  const distDir = join(__dirname, 'dist');
+  await rm(distDir, { recursive: true, force: true });
+  await mkdir(distDir, { recursive: true });
+
   console.log('Building...');
 
   const [mainResult, indexResult, typesResult] = await Promise.all([
@@ -31,20 +35,9 @@ async function main() {
     }),
     (async () => {
       console.log('Generating type definitions...');
-      const proc = Bun.spawn([
-        'bunx',
-        'tsc',
-        '--declaration',
-        '--declarationDir',
-        'dist',
-        '--emitDeclarationOnly',
-        '--outDir',
-        'dist',
-        '--skipLibCheck',
-        '--noEmit',
-        'false',
-      ]);
-      return await proc.exited;
+      const proc = Bun.spawn(['bun', 'x', 'tsc', '-p', 'tsconfig.build.json']);
+      const exitCode = await proc.exited;
+      return exitCode;
     })(),
   ]);
 
@@ -64,11 +57,6 @@ async function main() {
 
   // Destructure out the fields we DON'T want, keeping everything else in distPkg
   const { scripts, devDependencies, ...distPkg } = pkg;
-
-  const distDir = join(__dirname, 'dist');
-  if (!existsSync(distDir)) {
-    await mkdir(distDir, { recursive: true });
-  }
 
   console.log('Creating dist/package.json...');
   await Bun.write(join(distDir, 'package.json'), `${JSON.stringify(distPkg, null, 2)}\n`);

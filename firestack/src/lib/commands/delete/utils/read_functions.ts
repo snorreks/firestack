@@ -6,7 +6,10 @@ import { logger } from '$logger';
 
 export async function getLocalFunctionNames(options: DeployOptions): Promise<string[]> {
   try {
-    const functionsPath = join(process.cwd(), options.functionsDirectory!);
+    if (!options.functionsDirectory) {
+      throw new Error('Functions directory is required for getLocalFunctionNames.');
+    }
+    const functionsPath = join(process.cwd(), options.functionsDirectory);
     const localFunctionFiles = await findFunctions(functionsPath);
     const localFunctionNames = localFunctionFiles.map((file) =>
       basename(file).replace(/\.(ts|tsx|js)$/, '')
@@ -21,8 +24,11 @@ export async function getLocalFunctionNames(options: DeployOptions): Promise<str
 
 export async function getOnlineFunctionNames(options: DeployOptions): Promise<string[]> {
   try {
+    if (!options.projectId) {
+      throw new Error('Project ID is required for getOnlineFunctionNames.');
+    }
     const onlineFunctions = await client.functions.list({
-      project: options.projectId!,
+      project: options.projectId,
     });
     const onlineFunctionNames = onlineFunctions.map(
       (functionData: { id: string }) => functionData.id

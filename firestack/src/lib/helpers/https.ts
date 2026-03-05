@@ -2,6 +2,7 @@ import type { Buffer } from 'node:buffer';
 import type { Response } from 'express';
 import type { CallableRequest, Request } from 'firebase-functions/v2/https';
 import type { CallableFunctions, HttpsOptions, RequestFunctions } from '$types';
+import { FirestackError, HttpStatusCode, HttpsError } from './errors.js';
 
 export interface FirebaseRequest<
   T extends Record<string, string> = Record<string, string>,
@@ -25,17 +26,44 @@ export type RequestHandler<
 
 /**
  * Handles HTTPS requests.
- * ...
+ * @param handler - The request handler function.
+ * @param _options - Optional configuration for the HTTPS request.
+ * @returns The request handler wrapped in a try-catch block for standardized error handling.
  */
 export const onRequest = <
   AllFunctions extends RequestFunctions,
   FunctionName extends keyof AllFunctions,
   Params extends Record<string, string> = Record<string, string>,
 >(
-  // 2. UPDATE THIS: Use the new RequestHandler type for the parameter and explicit return type
   handler: RequestHandler<AllFunctions, FunctionName, Params>,
   _options?: HttpsOptions<FunctionName>
-): RequestHandler<AllFunctions, FunctionName, Params> => handler;
+): RequestHandler<AllFunctions, FunctionName, Params> => {
+  return async (request, response) => {
+    try {
+      await handler(request, response);
+    } catch (error) {
+      if (error instanceof HttpsError || error instanceof FirestackError) {
+        const statusCode = HttpStatusCode[error.code] || 500;
+        response.status(statusCode).send({
+          error: {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+          },
+        });
+        return;
+      }
+
+      console.error('Unhandled error in onRequest:', error);
+      response.status(500).send({
+        error: {
+          message: error instanceof Error ? error.message : 'Internal Server Error',
+          code: 'internal',
+        },
+      });
+    }
+  };
+};
 
 export type CallHandler<
   AllFunctions extends CallableFunctions,
@@ -46,13 +74,30 @@ export type CallHandler<
 
 /**
  * Declares a callable method for clients to call using a Firebase SDK.
- * ...
+ * @param handler - The call handler function.
+ * @param _options - Optional configuration for the callable function.
+ * @returns The call handler wrapped in a try-catch block for standardized error handling.
  */
 export const onCall = <
   AllFunctions extends CallableFunctions,
   FunctionName extends keyof AllFunctions,
 >(
-  // 4. UPDATE THIS: Use the new CallHandler type
   handler: CallHandler<AllFunctions, FunctionName>,
   _options?: HttpsOptions<FunctionName>
-): CallHandler<AllFunctions, FunctionName> => handler;
+): CallHandler<AllFunctions, FunctionName> => {
+  return async (request) => {
+    try {
+      return await handler(request);
+    } catch (error) {
+      if (error instanceof HttpsError || error instanceof FirestackError) {
+        throw error;
+      }
+
+      console.error('Unhandled error in onCall:', error);
+      throw new HttpsError(
+        'internal',
+        error instanceof Error ? error.message : 'Internal Server Error'
+      );
+    }
+  };
+};

@@ -17,20 +17,19 @@
     "rules": {
       "recommended": true,
       "complexity": {
-        "noForEach": "off",
+        "noForEach": "on",
         "noStaticOnlyClass": "off"
       },
       "suspicious": {
         "noExplicitAny": "warn",
-        "noAssignInExpressions": "off"
+        "noAssignInExpressions": "on"
       },
       "correctness": {
-        "noInvalidUseBeforeDeclaration": "off"
+        "noInvalidUseBeforeDeclaration": "on"
       },
       "style": {
-        "useImportType": "off",
-        "useExportType": "on",
-        "noNonNullAssertion": "off"
+        "useImportType": "on",
+        "useExportType": "on"
       }
     }
   },

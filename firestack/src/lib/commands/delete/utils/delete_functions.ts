@@ -28,9 +28,13 @@ export async function deleteFunctions(
  * @returns A promise that resolves when the command execution is complete.
  */
 async function executeFirebaseFunctionsDelete(options: DeployOptions, functionNames: string[]) {
+  if (!options.projectId) {
+    throw new Error('Project ID is required for delete command.');
+  }
+
   logger.info(`Deleting functions: ${functionNames.join(', ')}...`);
   const result = await executeCommand('firebase', {
-    args: ['functions:delete', ...functionNames, '--project', options.projectId!, '--force'],
+    args: ['functions:delete', ...functionNames, '--project', options.projectId, '--force'],
     stdio: 'inherit',
     packageManager: options.packageManager,
   });

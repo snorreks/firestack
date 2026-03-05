@@ -14,7 +14,7 @@ export async function executeCommand(
   cmd: string,
   options: CommandOptions = {}
 ): Promise<{ code: number; stdout: string; stderr: string; success: boolean }> {
-  const { args = [], packageManager = 'npm', ...execaOptions } = options;
+  const { args = [], packageManager = 'global', ...execaOptions } = options;
 
   let finalCmd = cmd;
   let finalArgs = [...args];
@@ -41,6 +41,9 @@ export async function executeCommand(
   }
 
   logger.debug(`Executing: ${finalCmd} ${finalArgs.join(' ')}`);
+  if (execaOptions.cwd) {
+    logger.debug(`Working directory: ${execaOptions.cwd}`);
+  }
 
   try {
     const result = await execa(finalCmd, finalArgs, {

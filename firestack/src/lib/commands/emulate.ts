@@ -270,7 +270,11 @@ export const emulateCommand = new Command('emulate')
       process.exit(1);
     }
 
-    const functionsPath = join(process.cwd(), options.functionsDirectory!);
+    if (!options.functionsDirectory) {
+      throw new Error('Functions directory is required for emulation.');
+    }
+
+    const functionsPath = join(process.cwd(), options.functionsDirectory);
     const functionFiles = await findFunctions(functionsPath);
 
     if (functionFiles.length === 0) {
@@ -289,7 +293,7 @@ export const emulateCommand = new Command('emulate')
 
     await generateFirebaseJson(outputDir, options);
 
-    const commandArgs = ['emulators:start', '--project', options.projectId!];
+    const commandArgs = ['emulators:start', '--project', options.projectId];
     if (cliOptions.only) {
       commandArgs.push('--only', cliOptions.only);
     }
@@ -309,12 +313,15 @@ export const emulateCommand = new Command('emulate')
       // Run it in the background after waiting for the port
       (async () => {
         try {
+          if (!options.projectId) {
+            throw new Error('Project ID is missing for emulator initialization.');
+          }
           // Wait for Firestore emulator port
           await waitForPort(8080);
           await runInitScript(
             options.scriptsDirectory || 'scripts',
             options.initScript || 'on_emulate.ts',
-            options.projectId!,
+            options.projectId,
             options.engine
           );
         } catch (error) {

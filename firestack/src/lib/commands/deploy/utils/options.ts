@@ -1,12 +1,8 @@
-import { readFile as readFileProm } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { cwd, exit } from 'node:process';
 import { DEFAULT_NODE_VERSION } from '$constants';
 import { logger } from '$logger';
-
-async function readTextFile(path: string): Promise<string> {
-  return readFileProm(path, 'utf-8');
-}
 
 export type PackageManager = 'npm' | 'yarn' | 'pnpm' | 'bun' | 'global';
 
@@ -57,7 +53,7 @@ export async function getOptions(cliOptions: DeployOptions): Promise<DeployOptio
   const configPath = join(cwd(), 'firestack.json');
   let config: FirestackConfig = {};
   try {
-    const configContent = await readTextFile(configPath);
+    const configContent = await readFile(configPath, 'utf-8');
     config = JSON.parse(configContent);
     logger.debug(`Using configuration from ${configPath}`);
   } catch (e) {

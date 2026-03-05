@@ -1,29 +1,10 @@
-import { readdir, readFile, writeFile } from 'node:fs/promises';
+import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { cwd, exit } from 'node:process';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { logger } from '$logger';
 import { buildFunction } from '$utils/build_utils.js';
-
-/**
- * Reads the content of a text file.
- * @param path - The path to the file.
- * @returns A promise that resolves to the file's content as a string.
- */
-async function _readTextFile(path: string): Promise<string> {
-  return readFile(path, 'utf-8');
-}
-
-/**
- * Writes content to a text file.
- * @param path - The path to the file.
- * @param contents - The content to write.
- * @returns A promise that resolves when the file is written.
- */
-async function _writeTextFile(path: string, contents: string): Promise<void> {
-  await writeFile(path, contents, 'utf-8');
-}
 
 /**
  * Reads the entries of a directory.
