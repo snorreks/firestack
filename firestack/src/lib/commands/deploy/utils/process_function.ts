@@ -1,15 +1,10 @@
-import {
-  mkdir as mkdirProm,
-  readFile as readFileProm,
-  rm,
-  writeFile as writeFileProm,
-} from 'node:fs/promises';
+import { mkdir as mkdirProm, rm, writeFile as writeFileProm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { cwd } from 'node:process';
 import { logger } from '$logger';
 import { buildFunction } from '$utils/build_utils.js';
 import { cacheChecksumLocal, checkForChanges } from '$utils/checksum.js';
-import { Command } from '$utils/command.js';
+import { executeCommand } from '$utils/command.js';
 import { findProjectRoot } from '$utils/common.js';
 import {
   createFirebaseConfig,
@@ -21,10 +16,6 @@ import { getEnvironmentNeeded } from '$utils/read-compiled-file.js';
 import { createTemporaryIndexFunctionFile } from './create_deploy_index.js';
 import type { DeployOptions } from './options.js';
 
-async function readTextFile(path: string): Promise<string> {
-  return readFileProm(path, 'utf-8');
-}
-
 async function writeTextFile(path: string, contents: string): Promise<void> {
   await writeFileProm(path, contents, 'utf-8');
 }
@@ -35,6 +26,11 @@ async function mkdir(path: string, options?: { recursive?: boolean }): Promise<v
 
 async function remove(path: string, options?: { recursive?: boolean }): Promise<void> {
   await rm(path, { recursive: options?.recursive ?? false, force: true });
+}
+
+interface ProcessResult {
+  functionName: string;
+  status: 'deployed' | 'skipped' | 'failed' | 'dry-run';
 }
 
 /**
@@ -51,22 +47,84 @@ export async function processFunction(
   options: DeployOptions,
   environment: Record<string, string>,
   controllersPath: string
-) {
+): Promise<ProcessResult> {
   const functionName = deriveFunctionName(funcPath, controllersPath);
   logger.info(`\nProcessing function: ${functionName}`);
 
   const outputDir = join(cwd(), 'dist', functionName);
   const temporaryDir = join(cwd(), 'tmp', functionName);
+
+  try {
+    await setupDirectories(outputDir, temporaryDir, options);
+
+    const buildSuccess = await performBuild(
+      funcPath,
+      functionName,
+      outputDir,
+      temporaryDir,
+      controllersPath,
+      options
+    );
+    if (!buildSuccess) return { functionName, status: 'failed' };
+
+    const envNeeded = await setupEnvironment(outputDir, environment);
+
+    const deployFunctionData = await checkForChanges({
+      functionName,
+      outputRoot: outputDir,
+      flavor: options.flavor,
+      force: options.force,
+      outputDirectory: join(cwd(), 'dist'),
+      environment: envNeeded,
+    });
+
+    if (!deployFunctionData) {
+      return { functionName, status: 'skipped' };
+    }
+
+    if (!options.dryRun) {
+      const installSuccess = await installDependencies(outputDir, options);
+      if (!installSuccess) return { functionName, status: 'failed' };
+
+      const deploySuccess = await deployFunction(functionName, outputDir, options);
+      if (deploySuccess) {
+        await cacheChecksumLocal(deployFunctionData);
+        return { functionName, status: 'deployed' };
+      }
+      return { functionName, status: 'failed' };
+    }
+
+    logger.info(`Dry run: skipped deployment of ${functionName}.`);
+    return { functionName, status: 'dry-run' };
+  } catch (error) {
+    logger.error(`Failed to process ${functionName}: ${(error as Error).message}`);
+    return { functionName, status: 'failed' };
+  } finally {
+    if (!options.debug) {
+      await remove(temporaryDir, { recursive: true });
+    }
+  }
+}
+
+async function setupDirectories(outputDir: string, temporaryDir: string, options: DeployOptions) {
   await mkdir(join(outputDir, 'src'), { recursive: true });
   await mkdir(temporaryDir, { recursive: true });
 
   await writeTextFile(join(outputDir, 'firebase.json'), createFirebaseConfig(options.nodeVersion!));
-
   await writeTextFile(
     join(outputDir, 'src', 'package.json'),
-    createPackageJson(options.nodeVersion!)
+    createPackageJson(options.nodeVersion!, options.external)
   );
+}
 
+async function performBuild(
+  funcPath: string,
+  functionName: string,
+  outputDir: string,
+  temporaryDir: string,
+  controllersPath: string,
+  options: DeployOptions
+): Promise<boolean> {
   const outputFile = join(outputDir, 'src', 'index.js');
   logger.debug(`Building ${funcPath} to ${outputFile}...`);
 
@@ -77,7 +135,6 @@ export async function processFunction(
       temporaryDirectory: temporaryDir,
       controllersPath,
     });
-    logger.debug('Temporary input file content:', await readTextFile(inputFile));
 
     const projectRoot = await findProjectRoot();
     await buildFunction({
@@ -86,52 +143,53 @@ export async function processFunction(
       configPath: join(projectRoot, 'package.json'),
       minify: options.minify,
       sourcemap: options.sourcemap,
+      external: options.external,
     });
     logger.debug(`Successfully built ${functionName}.`);
+    return true;
   } catch (buildError) {
     logger.error(`Failed to build ${functionName}: ${(buildError as Error).message}`);
-    return { functionName, status: 'failed' };
-  } finally {
-    if (!options.debug) {
-      await remove(temporaryDir, { recursive: true });
-    }
+    return false;
   }
+}
 
+async function setupEnvironment(outputDir: string, environment: Record<string, string>) {
   const envNeeded = await getEnvironmentNeeded(outputDir, environment);
   if (envNeeded) {
     const envCode = toDotEnvironmentCode(envNeeded);
     await writeTextFile(join(outputDir, '.env'), envCode);
   }
+  return envNeeded;
+}
 
-  const deployFunctionData = await checkForChanges({
-    functionName,
-    outputRoot: outputDir,
-    flavor: options.flavor,
-    force: options.force,
-    outputDirectory: join(cwd(), 'dist'),
-    environment: envNeeded,
+async function installDependencies(outputDir: string, options: DeployOptions): Promise<boolean> {
+  if (!options.external || options.external.length === 0) {
+    return true;
+  }
+
+  logger.debug('Installing external dependencies...');
+  const result = await executeCommand('npm', {
+    args: ['install'],
+    cwd: join(outputDir, 'src'),
+    packageManager: 'global', // Force npm as requested for Firebase functions
+    stdout: 'pipe',
+    stderr: 'pipe',
   });
 
-  if (!deployFunctionData) {
-    return { functionName, status: 'skipped' };
+  if (!result.success) {
+    logger.error('Failed to install dependencies:');
+    logger.error(result.stderr);
+    return false;
   }
+  logger.debug('Dependencies installed successfully.');
+  return true;
+}
 
-  if (!options.dryRun) {
-    // TODO check if they have external options, then install the external depndenvies
-    // logger.debug('Installing dependencies...');
-    // const npmInstall = new Command('npm', {
-    //   args: ['install'],
-    //   cwd: join(outputDir, 'src'),
-    // });
-    // const { code: npmCode, stderr: npmStderr } = await npmInstall.output();
-    // if (npmCode !== 0) {
-    //   logger.error('Failed to install dependencies:');
-    //   logger.error(new TextDecoder().decode(npmStderr));
-    //   return { functionName, status: 'failed' };
-    // }
-    // logger.debug('Dependencies installed successfully.');
-  }
-
+async function deployFunction(
+  functionName: string,
+  outputDir: string,
+  options: DeployOptions
+): Promise<boolean> {
   const deployArgs = [
     'deploy',
     '--only',
@@ -145,26 +203,20 @@ export async function processFunction(
 
   logger.debug(`> firebase ${deployArgs.join(' ')}`);
 
-  if (!options.dryRun) {
-    try {
-      const command = new Command('firebase', {
-        args: deployArgs,
-        cwd: outputDir,
-      });
-      const { success } = await command.spawn().status;
-      if (success) {
-        logger.info(`Successfully deployed ${functionName}.`);
-        await cacheChecksumLocal(deployFunctionData);
-        return { functionName, status: 'deployed' };
-      }
-      logger.error(`Failed to deploy ${functionName}.`);
-      return { functionName, status: 'failed' };
-    } catch (deployError) {
-      logger.error(`Failed to deploy ${functionName}: ${(deployError as Error).message}`);
-      return { functionName, status: 'failed' };
+  try {
+    const result = await executeCommand('firebase', {
+      args: deployArgs,
+      cwd: outputDir,
+      packageManager: options.packageManager,
+    });
+    if (result.success) {
+      logger.info(`Successfully deployed ${functionName}.`);
+      return true;
     }
-  } else {
-    logger.info(`Dry run: skipped deployment of ${functionName}.`);
-    return { functionName, status: 'dry-run' };
+    logger.error(`Failed to deploy ${functionName}.`);
+    return false;
+  } catch (deployError) {
+    logger.error(`Failed to deploy ${functionName}: ${(deployError as Error).message}`);
+    return false;
   }
 }

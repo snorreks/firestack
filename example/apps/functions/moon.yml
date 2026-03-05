@@ -3,7 +3,7 @@ $schema: "https://moonrepo.dev/schemas/project.json"
 
 tasks:
   build:
-    command: 'node_modules/.bin/firestack build'
+    command: 'bun run build'
     inputs:
       - "src/**/*"
       - "firestack.json"
@@ -11,7 +11,7 @@ tasks:
       cache: false
 
   deploy:
-    command: 'node_modules/.bin/firestack deploy'
+    command: 'bun run deploy'
     inputs:
       - "src/**/*"
       - "firestack.json"
@@ -19,7 +19,7 @@ tasks:
       cache: false
 
   delete:
-    command: 'node_modules/.bin/firestack delete'
+    command: 'bun run delete'
     inputs:
       - "src/**/*"
       - "firestack.json"
@@ -27,7 +27,7 @@ tasks:
       cache: false
 
   emulate:
-    command: 'node_modules/.bin/firestack emulate'
+    command: 'bun run emulate'
     inputs:
       - "src/**/*"
       - "firestack.json"
@@ -36,7 +36,7 @@ tasks:
       persistent: true
 
   rules:
-    command: 'node_modules/.bin/firestack rules'
+    command: 'bun run rules'
     inputs:
       - "src/**/*"
       - "firestack.json"
@@ -44,17 +44,20 @@ tasks:
       cache: false
 
   scripts:
-    script: 'node_modules/.bin/firestack scripts'
+    script: 'bun run scripts'
     options:
       cache: false
       interactive: true
 
   logs:
-    command: 'node_modules/.bin/firestack logs'
+    command: 'bun run logs'
     options:
       cache: false
-
-  check-path:
-    script: 'bun --version && which bun && env'
+  check:
+    command: 'bun run check'
+    options:
+      cache: false
+  fix:
+    command: 'bun run fix'
     options:
       cache: false

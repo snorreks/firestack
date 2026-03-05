@@ -1,4 +1,4 @@
-import type { FunctionsCacheFetch, FunctionsCacheUpdate } from '@snorreks/firestack';
+import type { FunctionsCacheGet, FunctionsCacheUpdate } from '@snorreks/firestack';
 
 const baseURL = 'https://api.jsonbin.io/v3/b';
 const masterKey = '';
@@ -16,8 +16,7 @@ const getBinId = (flavor: string): string => {
   }
 };
 
-
-export const get: FunctionsCacheFetch = async ({ flavor }) => {
+export const get: FunctionsCacheGet = async ({ flavor }) => {
   const binId = getBinId(flavor);
   const response = await fetch(`${baseURL}/${binId}/latest`, {
     method: 'GET',

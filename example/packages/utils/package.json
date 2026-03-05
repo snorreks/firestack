@@ -4,9 +4,12 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
-      },
-      "dependencies": {
-        "@shared/types": "workspace:*",
-        "@snorreks/firestack": "file:../../../firestack/dist"
-      }
+  },
+  "dependencies": {
+    "@shared/types": "workspace:*"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "fix": "biome check --write ."
+  }
 }

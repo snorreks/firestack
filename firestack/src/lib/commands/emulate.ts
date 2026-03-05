@@ -1,11 +1,12 @@
 import { existsSync, watch } from 'node:fs';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { connect } from 'node:net';
 import { basename, join, relative } from 'node:path';
 import { Command } from 'commander';
-import { execa } from 'execa';
 import { DEFAULT_NODE_VERSION } from '$constants';
 import { logger } from '$logger';
 import { buildFunction } from '$utils/build_utils.js';
+import { executeCommand } from '$utils/command.js';
 import { findProjectRoot } from '$utils/common.js';
 import { deriveFunctionName } from '$utils/function_naming.js';
 import { createTemporaryIndexFunctionFile } from './deploy/utils/create_deploy_index.js';
@@ -21,12 +22,35 @@ interface EmulateOptions extends DeployOptions {
 }
 
 /**
+ * Waits for a port to be open.
+ */
+async function waitForPort(port: number, host = '127.0.0.1', timeout = 30000): Promise<void> {
+  const startTime = Date.now();
+  while (Date.now() - startTime < timeout) {
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const socket = connect(port, host, () => {
+          socket.end();
+          resolve();
+        });
+        socket.on('error', reject);
+      });
+      return;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+  throw new Error(`Timeout waiting for port ${port}`);
+}
+
+/**
  * Runs the init script before starting emulators.
  */
 async function runInitScript(
   scriptsDirectory: string,
   initScript: string,
-  projectId: string
+  projectId: string,
+  engine = 'bun'
 ): Promise<void> {
   const initScriptPath = join(process.cwd(), scriptsDirectory, initScript);
 
@@ -35,22 +59,27 @@ async function runInitScript(
     return;
   }
 
-  logger.info(`Running init script: ${initScript}`);
+  logger.info(`Running init script: ${initScript} using ${engine}`);
 
-  try {
-    await execa('bun', ['run', initScriptPath], {
-      cwd: process.cwd(),
-      env: {
-        ...process.env,
-        FIREBASE_PROJECT_ID: projectId,
-        GCLOUD_PROJECT: projectId,
-      },
-      stdio: 'inherit',
-    });
+  const result = await executeCommand(engine, {
+    args: ['run', initScriptPath],
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      FIREBASE_PROJECT_ID: projectId,
+      GCLOUD_PROJECT: projectId,
+      FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080',
+      FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099',
+      FIREBASE_STORAGE_EMULATOR_HOST: '127.0.0.1:9199',
+      FIREBASE_DATABASE_EMULATOR_HOST: '127.0.0.1:9000',
+    },
+    stdio: 'inherit',
+  });
+
+  if (result.success) {
     logger.info('Init script completed successfully.');
-  } catch (error) {
-    logger.error(`Failed to run init script: ${(error as Error).message}`);
-    throw error;
+  } else {
+    logger.error(`Failed to run init script: ${result.stderr}`);
   }
 }
 
@@ -110,13 +139,14 @@ async function buildEmulatorFunctions(
   await writeFile(join(outputDir, 'src', 'package.json'), JSON.stringify(packageJson, null, 2));
 
   logger.info('Installing dependencies...');
-  try {
-    await execa('npm', ['install'], {
-      cwd: join(outputDir, 'src'),
-      stdio: 'inherit',
-    });
-  } catch (_error) {
-    throw new Error('Failed to install dependencies');
+  const result = await executeCommand('npm', {
+    args: ['install'],
+    cwd: join(outputDir, 'src'),
+    stdio: 'inherit',
+  });
+
+  if (!result.success) {
+    throw new Error(`Failed to install dependencies: ${result.stderr}`);
   }
   logger.info('Dependencies installed.');
 
@@ -221,6 +251,15 @@ export const emulateCommand = new Command('emulate')
     'The directory where the functions are located.'
   )
   .option('--node-version <nodeVersion>', 'The Node.js version to use for the functions.')
+  .option('--engine <engine>', 'The engine to use for running scripts (e.g., "bun", "node").')
+  .option(
+    '--packageManager <packageManager>',
+    'The package manager to use (npm, yarn, pnpm, bun, global).',
+    'npm'
+  )
+  .option('--external <external>', 'Comma-separated list of external dependencies.', (val) =>
+    val.split(',')
+  )
   .action(async (cliOptions: EmulateOptions) => {
     const options = await getOptions(cliOptions);
 
@@ -229,19 +268,6 @@ export const emulateCommand = new Command('emulate')
         'Project ID not found. Please provide it using --projectId option or in firestack.json.'
       );
       process.exit(1);
-    }
-
-    // Run init script if enabled
-    if (cliOptions.init !== false) {
-      try {
-        await runInitScript(
-          options.scriptsDirectory || 'scripts',
-          options.initScript || 'init.ts',
-          options.projectId
-        );
-      } catch (_error) {
-        logger.error('Failed to run init script, continuing without initialization...');
-      }
     }
 
     const functionsPath = join(process.cwd(), options.functionsDirectory!);
@@ -271,14 +297,35 @@ export const emulateCommand = new Command('emulate')
     logger.info('Starting Firebase emulator...');
     logger.debug(`> firebase ${commandArgs.join(' ')}`);
 
-    const emulatorProcess = execa('firebase', commandArgs, {
+    const emulatorPromise = executeCommand('firebase', {
+      args: commandArgs,
       cwd: outputDir,
+      packageManager: options.packageManager,
       stdio: 'inherit',
     });
+
+    // Run init script if enabled
+    if (cliOptions.init !== false) {
+      // Run it in the background after waiting for the port
+      (async () => {
+        try {
+          // Wait for Firestore emulator port
+          await waitForPort(8080);
+          await runInitScript(
+            options.scriptsDirectory || 'scripts',
+            options.initScript || 'on_emulate.ts',
+            options.projectId!,
+            options.engine
+          );
+        } catch (error) {
+          logger.error(`Failed to run init script: ${(error as Error).message}`);
+        }
+      })();
+    }
 
     if (cliOptions.watch) {
       watchAndRebuild(functionsPath, functionFiles, outputDir, options, functionsPath);
     }
 
-    await emulatorProcess;
+    await emulatorPromise;
   });

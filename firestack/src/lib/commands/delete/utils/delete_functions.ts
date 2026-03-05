@@ -1,7 +1,7 @@
 import { exit } from 'node:process';
-import { execa } from 'execa';
 import type { DeployOptions } from '$commands/deploy/utils/options.js';
 import { logger } from '$logger';
+import { executeCommand } from '$utils/command.js';
 
 /**
  * Deletes the specified Firebase functions.
@@ -29,17 +29,15 @@ export async function deleteFunctions(
  */
 async function executeFirebaseFunctionsDelete(options: DeployOptions, functionNames: string[]) {
   logger.info(`Deleting functions: ${functionNames.join(', ')}...`);
-  try {
-    await execa(
-      'firebase',
-      ['functions:delete', ...functionNames, '--project', options.projectId!, '--force'],
-      {
-        stdio: 'inherit',
-      }
-    );
-  } catch (error: unknown) {
+  const result = await executeCommand('firebase', {
+    args: ['functions:delete', ...functionNames, '--project', options.projectId!, '--force'],
+    stdio: 'inherit',
+    packageManager: options.packageManager,
+  });
+
+  if (!result.success) {
     logger.error('Failed to delete functions:');
-    logger.error((error as Error).message);
+    logger.error(result.stderr);
     exit(1);
   }
 }

@@ -1,6 +1,6 @@
 import { Command } from 'commander';
-import { execa } from 'execa';
 import { logger } from '$logger';
+import { executeCommand } from '$utils/command.js';
 import { type DeployOptions, getOptions } from './deploy/utils/options.js';
 
 interface LogsOptions extends DeployOptions {
@@ -19,6 +19,14 @@ export const logsCommand = new Command('logs')
   .option('-n, --lines <lines>', 'Number of log lines to fetch.', '50')
   .option('--since <since>', 'Only show logs after this time (e.g., "1h", "30m").')
   .option('--open', 'Open logs in web browser.')
+  .option(
+    '--packageManager <packageManager>',
+    'The package manager to use (npm, yarn, pnpm, bun, global).',
+    'npm'
+  )
+  .option('--external <external>', 'Comma-separated list of external dependencies.', (val) =>
+    val.split(',')
+  )
   .action(async (cliOptions: LogsOptions) => {
     const options = await getOptions(cliOptions);
 
@@ -50,7 +58,9 @@ export const logsCommand = new Command('logs')
     logger.info(`Fetching logs for project: ${options.projectId}`);
     logger.debug(`> firebase ${commandArgs.join(' ')}`);
 
-    await execa('firebase', commandArgs, {
+    await executeCommand('firebase', {
+      args: commandArgs,
       stdio: 'inherit',
+      packageManager: options.packageManager,
     });
   });

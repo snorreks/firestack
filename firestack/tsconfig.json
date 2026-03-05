@@ -23,5 +23,5 @@
       "$logger": ["src/lib/utils/logger.js"]
     }
   },
-  "include": ["src"]
+  "include": ["src", "build.ts"]
 }

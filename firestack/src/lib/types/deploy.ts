@@ -2,7 +2,7 @@ import type { ExecutorBaseBuildOptions } from './core.js';
 import type { DeployFunction, FunctionBuilder } from './function-types.js';
 import type { FunctionOptions, NodeVersion } from './helper-options.js';
 
-export type PackageManager = 'npm' | 'yarn' | 'pnpm' | 'global';
+export type PackageManager = 'npm' | 'yarn' | 'pnpm' | 'bun' | 'global';
 
 interface SharedDeployExecutorBaseOptions extends ExecutorBaseBuildOptions {
   /** The project flavor */

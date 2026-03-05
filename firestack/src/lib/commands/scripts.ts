@@ -29,6 +29,7 @@ interface ScriptsOptions {
   scriptsDirectory?: string;
   verbose?: boolean;
   silent?: boolean;
+  engine?: string;
 }
 
 interface ScriptConfig {
@@ -53,6 +54,7 @@ async function getScriptConfig(flavor: string): Promise<Record<string, unknown>>
 
 interface FirestackConfig {
   scriptsDirectory?: string;
+  engine?: string;
 }
 
 async function getOptions(cliOptions: ScriptsOptions): Promise<ScriptsOptions> {
@@ -75,6 +77,7 @@ async function getOptions(cliOptions: ScriptsOptions): Promise<ScriptsOptions> {
   const options: ScriptsOptions = {
     ...cliOptions,
     scriptsDirectory: cliOptions.scriptsDirectory || config.scriptsDirectory || 'scripts',
+    engine: cliOptions.engine || config.engine || 'bun',
   };
 
   logger.setLogSeverity(cliOptions);
@@ -91,7 +94,7 @@ async function findScripts(dir: string): Promise<string[]> {
   try {
     const entries = await readDir(dir);
     for (const entry of entries) {
-      if (entry.isFile() && entry.name.endsWith('.ts') && entry.name !== 'init.ts') {
+      if (entry.isFile() && entry.name.endsWith('.ts') && entry.name !== 'on_emulate.ts') {
         scripts.push(entry.name.replace('.ts', ''));
       }
     }
@@ -119,10 +122,11 @@ async function runScript(scriptName: string, options: ScriptsOptions, projectRoo
     logger.debug('Script config loaded:', scriptConfig);
   }
 
-  logger.debug(`Running command: bun run "${scriptPath}"`);
+  const engine = options.engine || 'bun';
+  logger.debug(`Running command: ${engine} run "${scriptPath}"`);
 
   try {
-    await execa('bun', ['run', scriptPath], {
+    await execa(engine, ['run', scriptPath], {
       cwd: cwd(),
       env: { ...process.env, ...env },
       stdio: 'inherit',
@@ -147,6 +151,7 @@ export const scriptsCommand = new Command('scripts')
   .option('--flavor <flavor>', 'The flavor to use.', 'development')
   .option('--verbose', 'Enable verbose logging.')
   .option('--silent', 'Disable logging.')
+  .option('--engine <engine>', 'The engine to use for running scripts (e.g., "bun", "node").')
   .argument('[scriptName]', 'The name of the script to run.')
   .action(async (scriptName: string | undefined, cliOptions: ScriptsOptions) => {
     const options = await getOptions(cliOptions);

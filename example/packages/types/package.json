@@ -7,5 +7,9 @@
   },
   "dependencies": {
     "@snorreks/firestack": "file:../../../firestack/dist"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "fix": "biome check --write ."
   }
 }

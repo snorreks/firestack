@@ -3,8 +3,8 @@ import { mkdir as mkdirProm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { cwd, exit } from 'node:process';
 import { Command } from 'commander';
-import { execa } from 'execa';
 import { logger } from '$logger';
+import { executeCommand } from '$utils/command.js';
 import { type DeployOptions, getOptions } from './deploy/utils/options.js';
 import { findRuleFiles } from './rules/utils/rule_files.js';
 
@@ -34,6 +34,14 @@ export const rulesCommand = new Command('rules')
   .option('--verbose', 'Whether to run the command with verbose logging.')
   .option('--projectId <projectId>', 'The Firebase project ID to deploy to.')
   .option('--only <only>', 'Only deploy the specified components (e.g., "firestore,storage").')
+  .option(
+    '--packageManager <packageManager>',
+    'The package manager to use (npm, yarn, pnpm, bun, global).',
+    'npm'
+  )
+  .option('--external <external>', 'Comma-separated list of external dependencies.', (val) =>
+    val.split(',')
+  )
   .action(async (cliOptions: RulesOptions) => {
     const options = await getOptions(cliOptions);
 
@@ -112,14 +120,15 @@ export const rulesCommand = new Command('rules')
     logger.info(`Deploying: ${deployTargets.join(', ')}`);
     logger.debug(`> firebase ${commandArgs.join(' ')}`);
 
-    try {
-      await execa('firebase', commandArgs, {
-        cwd: tempDir,
-        stdio: 'inherit',
-      });
+    const result = await executeCommand('firebase', {
+      args: commandArgs,
+      cwd: tempDir,
+      packageManager: options.packageManager,
+    });
 
+    if (result.success) {
       logger.info('Rules and indexes deployed successfully.');
-    } catch {
+    } else {
       logger.error('Failed to deploy rules.');
       exit(1);
     }

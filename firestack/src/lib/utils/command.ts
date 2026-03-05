@@ -1,69 +1,67 @@
-import { spawn } from 'node:child_process';
+import { type ExecaError, type Options as ExecaOptions, execa } from 'execa';
+import type { PackageManager } from '$lib/commands/deploy/utils/options.js';
+import { logger } from '$logger';
 
-export class Command {
-  private cmd: string;
-  private args: string[] = [];
-  private opts: {
-    cwd?: string;
-    env?: Record<string, string>;
-    stdout?: 'inherit' | 'pipe';
-    stderr?: 'inherit' | 'pipe';
-  } = {};
+export interface CommandOptions extends ExecaOptions {
+  args?: string[];
+  packageManager?: PackageManager;
+}
 
-  constructor(
-    cmd: string,
-    options?: {
-      args?: string[];
-      cwd?: string;
-      env?: Record<string, string>;
-      stdout?: 'inherit' | 'pipe';
-      stderr?: 'inherit' | 'pipe';
+/**
+ * A wrapper for execa that supports local command execution via package managers.
+ */
+export async function executeCommand(
+  cmd: string,
+  options: CommandOptions = {}
+): Promise<{ code: number; stdout: string; stderr: string; success: boolean }> {
+  const { args = [], packageManager = 'npm', ...execaOptions } = options;
+
+  let finalCmd = cmd;
+  let finalArgs = [...args];
+
+  if (cmd === 'firebase' && packageManager !== 'global') {
+    switch (packageManager) {
+      case 'bun':
+        finalCmd = 'bun';
+        finalArgs = ['x', 'firebase', ...args];
+        break;
+      case 'pnpm':
+        finalCmd = 'pnpm';
+        finalArgs = ['dlx', 'firebase', ...args];
+        break;
+      case 'yarn':
+        finalCmd = 'yarn';
+        finalArgs = ['dlx', 'firebase', ...args];
+        break;
+      default:
+        finalCmd = 'npx';
+        finalArgs = ['firebase', ...args];
+        break;
     }
-  ) {
-    this.cmd = cmd;
-    if (options?.args) this.args = options.args;
-    if (options?.cwd) this.opts.cwd = options.cwd;
-    if (options?.env) this.opts.env = options.env;
-    if (options?.stdout) this.opts.stdout = options.stdout;
-    if (options?.stderr) this.opts.stderr = options.stderr;
   }
 
-  async output(): Promise<{ code: number; stdout: Uint8Array; stderr: Uint8Array }> {
-    return new Promise((resolve) => {
-      const child = spawn(this.cmd, this.args, {
-        cwd: this.opts.cwd,
-        env: { ...process.env, ...this.opts.env },
-      });
-      let stdout = Buffer.alloc(0);
-      let stderr = Buffer.alloc(0);
-      if (child.stdout) {
-        child.stdout.on('data', (data) => {
-          stdout = Buffer.concat([stdout, Buffer.from(data)]);
-        });
-      }
-      if (child.stderr) {
-        child.stderr.on('data', (data) => {
-          stderr = Buffer.concat([stderr, Buffer.from(data)]);
-        });
-      }
-      child.on('close', (code) => {
-        resolve({ code: code ?? 0, stdout, stderr });
-      });
-    });
-  }
+  logger.debug(`Executing: ${finalCmd} ${finalArgs.join(' ')}`);
 
-  spawn(): { status: Promise<{ code: number; success: boolean }> } {
-    const child = spawn(this.cmd, this.args, {
-      cwd: this.opts.cwd,
-      env: { ...process.env, ...this.opts.env },
-      stdio: ['ignore', this.opts.stdout ?? 'inherit', this.opts.stderr ?? 'inherit'],
+  try {
+    const result = await execa(finalCmd, finalArgs, {
+      ...execaOptions,
+      stdout: execaOptions.stdout ?? 'inherit',
+      stderr: execaOptions.stderr ?? 'inherit',
     });
+
     return {
-      status: new Promise((resolve) => {
-        child.on('close', (code) => {
-          resolve({ code: code ?? 0, success: code === 0 });
-        });
-      }),
+      code: result.exitCode ?? 0,
+      stdout: typeof result.stdout === 'string' ? result.stdout : '',
+      stderr: typeof result.stderr === 'string' ? result.stderr : '',
+      success: true,
+    };
+  } catch (error) {
+    const err = error as ExecaError;
+    return {
+      code: err.exitCode ?? 1,
+      stdout: typeof err.stdout === 'string' ? err.stdout : '',
+      stderr: typeof err.stderr === 'string' ? err.stderr : '',
+      success: false,
     };
   }
 }

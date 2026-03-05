@@ -22,6 +22,14 @@ export const deleteCommand = new Command('delete')
   .option('--verbose', 'Whether to run the command with verbose logging.')
   .option('--projectId <projectId>', 'The Firebase project ID to delete from.')
   .option('--all', 'Delete all functions in the project.')
+  .option(
+    '--packageManager <packageManager>',
+    'The package manager to use (npm, yarn, pnpm, bun, global).',
+    'npm'
+  )
+  .option('--external <external>', 'Comma-separated list of external dependencies.', (val) =>
+    val.split(',')
+  )
   .action(async (cliOptions: DeleteOptions) => {
     const options = await getOptions(cliOptions);
 

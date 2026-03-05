@@ -48,6 +48,7 @@ interface BuildOptions {
   outputDirectory: string;
   config?: string;
   functionsDirectory?: string;
+  external?: string[];
 }
 
 /**
@@ -60,6 +61,9 @@ export const buildCommand = new Command('build')
   .option(
     '--functionsDirectory <functionsDirectory>',
     'The directory where the functions are located.'
+  )
+  .option('--external <external>', 'Comma-separated list of external dependencies.', (val) =>
+    val.split(',')
   )
   .action(async (options: BuildOptions) => {
     logger.info(chalk.bold.green('Starting build with esbuild...'));
@@ -93,6 +97,7 @@ export const buildCommand = new Command('build')
           inputFile: funcPath,
           outputFile,
           configPath,
+          external: options.external,
         });
         logger.info(chalk.green(`Successfully built ${functionName}.`));
       } catch (error) {

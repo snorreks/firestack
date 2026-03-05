@@ -8,6 +8,8 @@ async function readTextFile(path: string): Promise<string> {
   return readFileProm(path, 'utf-8');
 }
 
+export type PackageManager = 'npm' | 'yarn' | 'pnpm' | 'bun' | 'global';
+
 export interface DeployOptions {
   flavor: string;
   dryRun?: boolean;
@@ -26,6 +28,9 @@ export interface DeployOptions {
   projectId?: string;
   nodeVersion?: string;
   debug?: boolean;
+  engine?: string;
+  external?: string[];
+  packageManager?: PackageManager;
 }
 
 export interface FirestackConfig {
@@ -36,6 +41,11 @@ export interface FirestackConfig {
   flavors?: Record<string, string>;
   region?: string;
   nodeVersion?: string;
+  engine?: string;
+  minify?: boolean;
+  sourcemap?: boolean;
+  external?: string[];
+  packageManager?: PackageManager;
 }
 
 /**
@@ -66,10 +76,15 @@ export async function getOptions(cliOptions: DeployOptions): Promise<DeployOptio
       cliOptions.functionsDirectory || config.functionsDirectory || 'src/controllers',
     rulesDirectory: cliOptions.rulesDirectory || config.rulesDirectory || 'src/rules',
     scriptsDirectory: cliOptions.scriptsDirectory || config.scriptsDirectory || 'scripts',
-    initScript: cliOptions.initScript || config.initScript || 'init.ts',
+    initScript: cliOptions.initScript || config.initScript || 'on_emulate.ts',
     region: cliOptions.region || config.region,
     nodeVersion: cliOptions.nodeVersion || config.nodeVersion || DEFAULT_NODE_VERSION,
     projectId: cliOptions.projectId || config.flavors?.[cliOptions.flavor],
+    engine: cliOptions.engine || config.engine || 'bun',
+    minify: cliOptions.minify ?? config.minify ?? true,
+    sourcemap: cliOptions.sourcemap ?? config.sourcemap ?? true,
+    external: cliOptions.external || config.external || [],
+    packageManager: cliOptions.packageManager || config.packageManager || 'npm',
   };
 
   logger.setLogSeverity(options);

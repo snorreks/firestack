@@ -1,5 +1,5 @@
 import type { Bucket } from '@google-cloud/storage';
-import { getStorage, type Storage } from 'firebase-admin/storage';
+import { getStorage } from 'firebase-admin/storage';
 
 import { getApp } from './app.ts';
 

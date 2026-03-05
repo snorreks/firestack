@@ -19,16 +19,28 @@ export function createFirebaseConfig(nodeVersion: string): string {
 /**
  * Creates a package.json configuration string for functions.
  * @param nodeVersion - The Node.js version to use.
+ * @param external - An optional array of external dependencies.
  * @returns A JSON string for the package.json configuration.
  */
-export function createPackageJson(nodeVersion: string): string {
-  const packageJsonContent = {
+export function createPackageJson(nodeVersion: string, external?: string[]): string {
+  const packageJsonContent: Record<string, unknown> = {
     type: 'module',
     main: 'index.js',
     engines: {
       node: nodeVersion,
     },
   };
+
+  if (external && external.length > 0) {
+    packageJsonContent.dependencies = external.reduce(
+      (acc, dep) => {
+        acc[dep] = 'latest';
+        return acc;
+      },
+      {} as Record<string, string>
+    );
+  }
+
   return JSON.stringify(packageJsonContent, null, 2);
 }
 

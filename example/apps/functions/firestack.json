@@ -7,7 +7,7 @@
   "functionsDirectory": "src/controllers",
   "rulesDirectory": "src/rules",
   "scriptsDirectory": "scripts",
-  "initScript": "init.ts",
+  "initScript": "on_emulate.ts",
   "minify": false,
   "nodeVersion": "22"
 }

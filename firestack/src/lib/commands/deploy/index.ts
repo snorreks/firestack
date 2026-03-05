@@ -14,14 +14,6 @@ import { type DeployOptions, getOptions } from './utils/options.js';
 import { processFunction } from './utils/process_function.js';
 import { retryFailedFunctions } from './utils/retry_failed_functions.js';
 
-function cwdDir(): string {
-  return cwd();
-}
-
-function exitCode(code: number): never {
-  return exit(code);
-}
-
 export const deployCommand = new Command('deploy')
   .description('Builds and deploys all Firebase functions.')
   .option('--flavor <flavor>', 'The flavor to use for deployment.', 'development')
@@ -41,6 +33,14 @@ export const deployCommand = new Command('deploy')
   .option('--projectId <projectId>', 'The Firebase project ID to deploy to.')
   .option('--node-version <nodeVersion>', 'The Node.js version to use for the functions.')
   .option('--debug', 'Enable debug mode (keeps temporary files).')
+  .option('--external <external>', 'Comma-separated list of external dependencies.', (val) =>
+    val.split(',')
+  )
+  .option(
+    '--packageManager <packageManager>',
+    'The package manager to use (npm, yarn, pnpm, bun, global).',
+    'npm'
+  )
   .action(async (cliOptions: DeployOptions) => {
     const options = await getOptions(cliOptions);
 
@@ -48,10 +48,10 @@ export const deployCommand = new Command('deploy')
       logger.error(
         'Project ID not found. Please provide it using --projectId option or in firestack.json.'
       );
-      exitCode(1);
+      exit(1);
     }
 
-    const { get: getCache, update: updateCache } = await bun ();
+    const { get: getCache, update: updateCache } = await getFunctionsCache();
     let previousCache: Record<string, string> | undefined;
 
     if (getCache) {
@@ -59,7 +59,7 @@ export const deployCommand = new Command('deploy')
       logger.debug('Previous functions cache:', previousCache);
     }
 
-    const functionsPath = join(cwdDir(), options.functionsDirectory!);
+    const functionsPath = join(cwd(), options.functionsDirectory!);
     let functionFiles = await findFunctions(functionsPath);
 
     if (options.only) {
@@ -103,14 +103,14 @@ export const deployCommand = new Command('deploy')
 
     if (failedFunctions.length > 0) {
       logger.error(`\nDeployment failed for ${failedFunctions.length} functions.`);
-      exitCode(1);
+      exit(1);
     }
 
     if (updateCache) {
       const newCache: Record<string, string> = { ...previousCache };
       for (const result of results) {
         if (result?.functionName && result?.status === 'deployed') {
-          const checksumPath = join(cwdDir(), 'dist', '.checksums', `${result.functionName}.json`);
+          const checksumPath = join(cwd(), 'dist', '.checksums', `${result.functionName}.json`);
           try {
             const { readFile } = await import('node:fs/promises');
             const checksumData = JSON.parse(await readFile(checksumPath, 'utf-8'));

@@ -15,14 +15,12 @@
     "rules": "moon run functions:rules",
     "scripts": "moon run functions:scripts",
     "logs": "moon run functions:logs",
-    "lint": "biome lint .",
-    "format": "biome format --write .",
-    "check": "tsc --noEmit",
-    "fix": "biome check --write ."
+    "check": "moon run :check",
+    "fix": "moon run :fix"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
     "@moonrepo/cli": "^2.0.3",
-    "@biomejs/biome": "^2.4.4"
+    "@biomejs/biome": "^2.4.6"
   }
 }

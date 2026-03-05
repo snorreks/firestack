@@ -4,8 +4,14 @@
   "type": "module",
   "scripts": {
     "check": "tsc --noEmit",
+    "fix": "biome check --write .",
     "deploy": "firestack deploy",
-    "scripts": "firestack scripts"
+    "scripts": "firestack scripts",
+    "emulate": "firestack emulate",
+    "logs": "firestack logs",
+    "delete": "firestack delete",
+    "rules": "firestack rules",
+    "build": "firestack build"
   },
   "dependencies": {
     "@shared/utils": "workspace:*",
