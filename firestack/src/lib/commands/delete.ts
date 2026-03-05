@@ -5,14 +5,16 @@ import { deleteFunctions } from './delete/utils/delete_functions.js';
 import { getOnlineFunctionNames, getUnusedFunctionNames } from './delete/utils/read_functions.js';
 import { type DeployOptions, getOptions } from './deploy/utils/options.js';
 
-function exitCode(code: number): never {
-  return exit(code);
-}
-
+/**
+ * Options for the delete command.
+ */
 interface DeleteOptions extends DeployOptions {
   all?: boolean;
 }
 
+/**
+ * The delete command definition.
+ */
 export const deleteCommand = new Command('delete')
   .description('Deletes all unused Firebase functions.')
   .option('--flavor <flavor>', 'The flavor to use for deletion.', 'development')
@@ -27,7 +29,7 @@ export const deleteCommand = new Command('delete')
       logger.error(
         'Project ID not found. Please provide it using --projectId option or in firestack.json.'
       );
-      exitCode(1);
+      exit(1);
     }
 
     const functionsToDelete = cliOptions.all

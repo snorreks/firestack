@@ -9,14 +9,6 @@ import { logger } from '$logger';
 import { findProjectRoot } from '$utils/common.js';
 import { getScriptEnvironment } from '$utils/env.js';
 
-function cwdDir(): string {
-  return cwd();
-}
-
-function exitCode(code: number): never {
-  return exit(code);
-}
-
 async function readTextFile(path: string): Promise<string> {
   return readFileProm(path, 'utf-8');
 }
@@ -44,7 +36,7 @@ interface ScriptConfig {
 }
 
 async function getScriptConfig(flavor: string): Promise<Record<string, unknown>> {
-  const configPath = join(cwdDir(), `script-config.${flavor}.ts`);
+  const configPath = join(cwd(), `script-config.${flavor}.ts`);
 
   if (!existsSync(configPath)) {
     return {};
@@ -64,7 +56,7 @@ interface FirestackConfig {
 }
 
 async function getOptions(cliOptions: ScriptsOptions): Promise<ScriptsOptions> {
-  const configPath = join(cwdDir(), 'firestack.json');
+  const configPath = join(cwd(), 'firestack.json');
   let config: FirestackConfig = {};
   try {
     const configContent = await readTextFile(configPath);
@@ -76,7 +68,7 @@ async function getOptions(cliOptions: ScriptsOptions): Promise<ScriptsOptions> {
       logger.debug('firestack.json not found, using command-line options.');
     } else {
       logger.error(`Failed to read firestack.json at ${configPath}: ${error.message}`);
-      exitCode(1);
+      exit(1);
     }
   }
 
@@ -88,7 +80,7 @@ async function getOptions(cliOptions: ScriptsOptions): Promise<ScriptsOptions> {
   logger.setLogSeverity(cliOptions);
   logger.debug('Starting script command...');
   logger.debug('Options:', options);
-  logger.debug('Current working directory:', cwdDir());
+  logger.debug('Current working directory:', cwd());
   logger.debug('Scripts directory:', options.scriptsDirectory);
 
   return options;
@@ -110,7 +102,7 @@ async function findScripts(dir: string): Promise<string[]> {
 }
 
 async function runScript(scriptName: string, options: ScriptsOptions, projectRoot: string) {
-  const scriptsPath = join(cwdDir(), options.scriptsDirectory!);
+  const scriptsPath = join(cwd(), options.scriptsDirectory!);
   const scriptPath = join(scriptsPath, `${scriptName}.ts`);
   const packageJsonPath = join(projectRoot, 'package.json');
 
@@ -131,7 +123,7 @@ async function runScript(scriptName: string, options: ScriptsOptions, projectRoo
 
   try {
     await execa('bun', ['run', scriptPath], {
-      cwd: cwdDir(),
+      cwd: cwd(),
       env: { ...process.env, ...env },
       stdio: 'inherit',
     });
@@ -143,10 +135,13 @@ async function runScript(scriptName: string, options: ScriptsOptions, projectRoo
     if (err.cause) {
       logger.error(`Cause: ${err.cause.message}`);
     }
-    exitCode(err.exitCode ?? 1);
+    exit(err.exitCode ?? 1);
   }
 }
 
+/**
+ * Command to run a script from the scripts directory.
+ */
 export const scriptsCommand = new Command('scripts')
   .description('Run a script from the scripts directory.')
   .option('--flavor <flavor>', 'The flavor to use.', 'development')
@@ -155,7 +150,7 @@ export const scriptsCommand = new Command('scripts')
   .argument('[scriptName]', 'The name of the script to run.')
   .action(async (scriptName: string | undefined, cliOptions: ScriptsOptions) => {
     const options = await getOptions(cliOptions);
-    const scriptsPath = join(cwdDir(), options.scriptsDirectory!);
+    const scriptsPath = join(cwd(), options.scriptsDirectory!);
 
     let selectedScriptName: string;
 

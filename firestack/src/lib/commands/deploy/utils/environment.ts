@@ -2,16 +2,17 @@ import { readFile as readFileProm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { cwd } from 'node:process';
 
-function cwdDir(): string {
-  return cwd();
-}
-
 async function readTextFile(path: string): Promise<string> {
   return readFileProm(path, 'utf-8');
 }
 
+/**
+ * Gets the environment variables for the given flavor.
+ * @param flavor The flavor to get the environment variables for.
+ * @returns The environment variables.
+ */
 export async function getEnvironment(flavor: string): Promise<Record<string, string>> {
-  const envPath = join(cwdDir(), `.env.${flavor}`);
+  const envPath = join(cwd(), `.env.${flavor}`);
   try {
     const envContent = await readTextFile(envPath);
     return envContent.split('\n').reduce(

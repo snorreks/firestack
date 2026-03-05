@@ -5,7 +5,7 @@ import {
   writeFile as writeFileProm,
 } from 'node:fs/promises';
 import { join } from 'node:path';
-import { cwd, exit } from 'node:process';
+import { cwd } from 'node:process';
 import { logger } from '$logger';
 import { buildFunction } from '$utils/build_utils.js';
 import { cacheChecksumLocal, checkForChanges } from '$utils/checksum.js';
@@ -20,14 +20,6 @@ import { deriveFunctionName } from '$utils/function_naming.js';
 import { getEnvironmentNeeded } from '$utils/read-compiled-file.js';
 import { createTemporaryIndexFunctionFile } from './create_deploy_index.js';
 import type { DeployOptions } from './options.js';
-
-function cwdDir(): string {
-  return cwd();
-}
-
-function exitCode(code: number): never {
-  return exit(code);
-}
 
 async function readTextFile(path: string): Promise<string> {
   return readFileProm(path, 'utf-8');
@@ -45,6 +37,15 @@ async function remove(path: string, options?: { recursive?: boolean }): Promise<
   await rm(path, { recursive: options?.recursive ?? false, force: true });
 }
 
+/**
+ * Processes a single function for deployment.
+ * This includes building the function, checking for changes, and deploying it to Firebase.
+ * @param funcPath The path to the function file.
+ * @param options The deployment options.
+ * @param environment The environment variables for the function.
+ * @param controllersPath The path to the functions directory.
+ * @returns The result of the processing.
+ */
 export async function processFunction(
   funcPath: string,
   options: DeployOptions,
@@ -54,8 +55,8 @@ export async function processFunction(
   const functionName = deriveFunctionName(funcPath, controllersPath);
   logger.info(`\nProcessing function: ${functionName}`);
 
-  const outputDir = join(cwdDir(), 'dist', functionName);
-  const temporaryDir = join(cwdDir(), 'tmp', functionName);
+  const outputDir = join(cwd(), 'dist', functionName);
+  const temporaryDir = join(cwd(), 'tmp', functionName);
   await mkdir(join(outputDir, 'src'), { recursive: true });
   await mkdir(temporaryDir, { recursive: true });
 
@@ -107,7 +108,7 @@ export async function processFunction(
     outputRoot: outputDir,
     flavor: options.flavor,
     force: options.force,
-    outputDirectory: join(cwdDir(), 'dist'),
+    outputDirectory: join(cwd(), 'dist'),
     environment: envNeeded,
   });
 

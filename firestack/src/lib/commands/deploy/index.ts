@@ -51,7 +51,7 @@ export const deployCommand = new Command('deploy')
       exitCode(1);
     }
 
-    const { get: getCache, update: updateCache } = await getFunctionsCache();
+    const { get: getCache, update: updateCache } = await bun ();
     let previousCache: Record<string, string> | undefined;
 
     if (getCache) {

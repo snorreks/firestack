@@ -4,10 +4,10 @@
  */
 
 /**
- * Runs multiple functions in parallel.
- * @param functions The functions to run.
- * @param concurrency The number of functions to run in parallel.
- * @returns The results of the functions.
+ * Runs multiple functions in parallel with a limited concurrency.
+ * @param functions - The functions to run.
+ * @param concurrency - The maximum number of functions to run in parallel.
+ * @returns A promise that resolves to an array of results from the functions.
  */
 export const runFunctions = async <T>(
   functions: (() => Promise<T>)[],

@@ -4,19 +4,20 @@ import { cwd } from 'node:process';
 import type { DeployOptions } from '$commands/deploy/utils/options.js';
 import { logger } from '$logger';
 
-function cwdDir(): string {
-  return cwd();
-}
-
 export interface RuleFile {
   name: string;
   type: 'firestore' | 'storage' | 'firestoreIndexes';
   path: string;
 }
 
+/**
+ * Finds all rule files in the given rules directory.
+ * @param rulesDirectory The directory to search for rule files.
+ * @returns A list of rule files found.
+ */
 export async function findRuleFiles(rulesDirectory: string): Promise<RuleFile[]> {
   const rules: RuleFile[] = [];
-  const rulesPath = join(cwdDir(), rulesDirectory);
+  const rulesPath = join(cwd(), rulesDirectory);
 
   try {
     const entries = await readdir(rulesPath, { withFileTypes: true });
@@ -51,6 +52,11 @@ export async function findRuleFiles(rulesDirectory: string): Promise<RuleFile[]>
   return rules;
 }
 
+/**
+ * Gets the list of rule files to deploy based on the given options.
+ * @param options The deployment options.
+ * @returns A list of rule files to deploy.
+ */
 export async function getRulesToDeploy(options: DeployOptions): Promise<RuleFile[]> {
   const rules = await findRuleFiles(options.rulesDirectory || 'src/rules');
 

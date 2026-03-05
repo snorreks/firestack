@@ -18,16 +18,56 @@ export interface LogEntry {
   message?: string;
 }
 
+/**
+ * Interface for the logger service.
+ */
 export interface LoggerInterface {
+  /**
+   * The current log severity.
+   */
   readonly currentLogSeverity: LogSeverity;
 
+  /**
+   * Sets the log severity based on the provided options.
+   * @param options - Options containing silent and verbose flags.
+   */
   setLogSeverity(options: { silent?: boolean; verbose?: boolean }): void;
 
+  /**
+   * Writes a log entry to the console.
+   * @param entry - The log entry to write.
+   * @param data - Additional data to log.
+   */
   write(entry: LogEntry, ...data: unknown[]): void;
+
+  /**
+   * Logs a debug message.
+   * @param args - The message or data to log.
+   */
   debug(...args: unknown[]): void;
+
+  /**
+   * Logs an info message.
+   * @param args - The message or data to log.
+   */
   log(...args: unknown[]): void;
+
+  /**
+   * Logs an info message.
+   * @param args - The message or data to log.
+   */
   info(...args: unknown[]): void;
+
+  /**
+   * Logs a warning message.
+   * @param args - The message or data to log.
+   */
   warn(...args: unknown[]): void;
+
+  /**
+   * Logs an error message.
+   * @param args - The message or data to log.
+   */
   error(...args: unknown[]): void;
 }
 

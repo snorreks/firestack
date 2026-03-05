@@ -8,22 +8,26 @@ import { logger } from '$logger';
 import { type DeployOptions, getOptions } from './deploy/utils/options.js';
 import { findRuleFiles } from './rules/utils/rule_files.js';
 
-function cwdDir(): string {
-  return cwd();
-}
-
-function exitCode(code: number): never {
-  return exit(code);
-}
-
+/**
+ * Creates a directory, optionally recursively.
+ * @param path - The path to the directory.
+ * @param options - Options for directory creation.
+ * @returns A promise that resolves when the directory is created.
+ */
 async function mkdir(path: string, options?: { recursive?: boolean }): Promise<void> {
   await mkdirProm(path, { recursive: options?.recursive ?? false });
 }
 
+/**
+ * Options for the rules command.
+ */
 interface RulesOptions extends DeployOptions {
   only?: string;
 }
 
+/**
+ * The rules command definition.
+ */
 export const rulesCommand = new Command('rules')
   .description('Deploys Firestore, Storage rules, and indexes.')
   .option('--flavor <flavor>', 'The flavor to use for deployment.', 'development')
@@ -37,10 +41,10 @@ export const rulesCommand = new Command('rules')
       logger.error(
         'Project ID not found. Please provide it using --projectId option or in firestack.json.'
       );
-      exitCode(1);
+      exit(1);
     }
 
-    const _rulesDir = join(cwdDir(), options.rulesDirectory || 'src/rules');
+    const _rulesDir = join(cwd(), options.rulesDirectory || 'src/rules');
     const ruleFiles = await findRuleFiles(options.rulesDirectory || 'src/rules');
 
     if (ruleFiles.length === 0) {
@@ -51,7 +55,7 @@ export const rulesCommand = new Command('rules')
     logger.info(`Found ${ruleFiles.length} rule/index file(s) to deploy.`);
 
     // Create a temporary directory for deployment
-    const tempDir = join(cwdDir(), 'dist', 'rules-deploy');
+    const tempDir = join(cwd(), 'dist', 'rules-deploy');
     await mkdir(join(tempDir), { recursive: true });
 
     // Create firebase.json
@@ -84,7 +88,7 @@ export const rulesCommand = new Command('rules')
 
     // Copy rule files to temp dir
     for (const rule of ruleFiles) {
-      const sourcePath = join(cwdDir(), options.rulesDirectory || 'src/rules', rule.name);
+      const sourcePath = join(cwd(), options.rulesDirectory || 'src/rules', rule.name);
       const destPath = join(tempDir, rule.name);
       if (existsSync(sourcePath)) {
         copyFileSync(sourcePath, destPath);
@@ -117,6 +121,6 @@ export const rulesCommand = new Command('rules')
       logger.info('Rules and indexes deployed successfully.');
     } catch {
       logger.error('Failed to deploy rules.');
-      exitCode(1);
+      exit(1);
     }
   });

@@ -4,14 +4,6 @@ import { cwd, exit } from 'node:process';
 import { DEFAULT_NODE_VERSION } from '$constants';
 import { logger } from '$logger';
 
-function cwdDir(): string {
-  return cwd();
-}
-
-function exitCode(code: number): never {
-  return exit(code);
-}
-
 async function readTextFile(path: string): Promise<string> {
   return readFileProm(path, 'utf-8');
 }
@@ -46,8 +38,13 @@ export interface FirestackConfig {
   nodeVersion?: string;
 }
 
+/**
+ * Gets the deployment options by merging CLI options with the firestack.json configuration.
+ * @param cliOptions The options provided via the command line.
+ * @returns The merged deployment options.
+ */
 export async function getOptions(cliOptions: DeployOptions): Promise<DeployOptions> {
-  const configPath = join(cwdDir(), 'firestack.json');
+  const configPath = join(cwd(), 'firestack.json');
   let config: FirestackConfig = {};
   try {
     const configContent = await readTextFile(configPath);
@@ -59,7 +56,7 @@ export async function getOptions(cliOptions: DeployOptions): Promise<DeployOptio
       logger.debug('firestack.json not found, using command-line options.');
     } else {
       logger.error(`Failed to read firestack.json at ${configPath}: ${error.message}`);
-      exitCode(1);
+      exit(1);
     }
   }
 

@@ -2,10 +2,11 @@ import { readdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { cwd } from 'node:process';
 
-function cwdDir(): string {
-  return cwd();
-}
-
+/**
+ * Reads the entries of a directory.
+ * @param path - The path to the directory.
+ * @returns A promise that resolves to an array of directory entries.
+ */
 async function readDir(
   path: string
 ): Promise<{ name: string; isDirectory: () => boolean; isFile: () => boolean }[]> {
@@ -17,8 +18,13 @@ async function readDir(
   }));
 }
 
+/**
+ * Finds the project root by searching for firestack.json or package.json.
+ * @returns A promise that resolves to the project root path.
+ * @throws An error if the project root cannot be found.
+ */
 export async function findProjectRoot(): Promise<string> {
-  let current = cwdDir();
+  let current = cwd();
   while (true) {
     const entries = await readDir(current);
     for (const entry of entries) {

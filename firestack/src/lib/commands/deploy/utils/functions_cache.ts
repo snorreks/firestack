@@ -9,6 +9,10 @@ interface FunctionsCacheModule {
   update: FunctionsCacheUpdate;
 }
 
+/**
+ * Gets the functions cache utilities from functions-cache.ts.
+ * @returns An object containing the get and update functions for the cache.
+ */
 export async function getFunctionsCache(): Promise<{
   get: FunctionsCacheGet | undefined;
   update: FunctionsCacheUpdate | undefined;
@@ -32,22 +36,34 @@ export async function getFunctionsCache(): Promise<{
       get: cacheModule.get,
       update: cacheModule.update,
     };
-  } catch (error) {
+  } catch (_error) {
     return { get: undefined, update: undefined };
   }
 }
 
+/**
+ * Fetches the current functions cache using the provided get function.
+ * @param getFn The function to use to fetch the cache.
+ * @param flavor The flavor to fetch the cache for.
+ * @returns The current functions cache, or undefined if it could not be fetched.
+ */
 export async function fetchFunctionsCache(
   getFn: FunctionsCacheGet,
   flavor: string
 ): Promise<FunctionsCache | undefined> {
   try {
     return await getFn({ flavor });
-  } catch (error) {
+  } catch (_error) {
     return undefined;
   }
 }
 
+/**
+ * Updates the functions cache using the provided update function.
+ * @param updateFn The function to use to update the cache.
+ * @param flavor The flavor to update the cache for.
+ * @param newCache The new functions cache.
+ */
 export async function updateFunctionsCache(
   updateFn: FunctionsCacheUpdate,
   flavor: string,
@@ -56,6 +72,6 @@ export async function updateFunctionsCache(
   try {
     await updateFn({ flavor, newFunctionsCache: newCache });
   } catch (error) {
-    console.error('Failed to update functions cache:', error);
+    logger.error('Failed to update functions cache:', error);
   }
 }
