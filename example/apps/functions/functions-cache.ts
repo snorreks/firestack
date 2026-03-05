@@ -1,6 +1,7 @@
 import type { FunctionsCacheFetch, FunctionsCacheUpdate } from '@snorreks/firestack';
 
 const baseURL = 'https://api.jsonbin.io/v3/b';
+const masterKey = '';
 
 const getBinId = (flavor: string): string => {
   switch (flavor) {
@@ -15,7 +16,6 @@ const getBinId = (flavor: string): string => {
   }
 };
 
-const masterKey = '$2b$10$aKk5wBPTio4d6rkJ9g397OBD3DYZRTTzh/MyQ5f8JTDeGuiCR6MyO';
 
 export const get: FunctionsCacheFetch = async ({ flavor }) => {
   const binId = getBinId(flavor);
