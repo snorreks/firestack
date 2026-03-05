@@ -44,7 +44,7 @@ export const update: FunctionsCacheUpdate = async ({ flavor, newFunctionsCache }
     ...newFunctionsCache,
   };
 
-  const response = await window.fetch(`${baseURL}/${binId}`, {
+  const response = await fetch(`${baseURL}/${binId}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
