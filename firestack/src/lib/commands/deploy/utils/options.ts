@@ -80,7 +80,7 @@ export async function getOptions(cliOptions: DeployOptions): Promise<DeployOptio
     minify: cliOptions.minify ?? config.minify ?? true,
     sourcemap: cliOptions.sourcemap ?? config.sourcemap ?? true,
     external: cliOptions.external || config.external || [],
-    packageManager: cliOptions.packageManager || config.packageManager || 'npm',
+    packageManager: cliOptions.packageManager || config.packageManager || 'global',
   };
 
   logger.setLogSeverity(options);

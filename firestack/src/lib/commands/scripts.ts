@@ -8,6 +8,7 @@ import prompts from 'prompts';
 import { logger } from '$logger';
 import { findProjectRoot } from '$utils/common.js';
 import { getScriptEnvironment } from '$utils/env.js';
+import type { PackageManager } from './deploy/utils/options.js';
 
 async function readDir(
   path: string
@@ -26,6 +27,7 @@ interface ScriptsOptions {
   verbose?: boolean;
   silent?: boolean;
   engine?: string;
+  packageManager?: PackageManager;
 }
 
 interface ScriptConfig {
@@ -74,6 +76,7 @@ async function getOptions(cliOptions: ScriptsOptions): Promise<ScriptsOptions> {
     ...cliOptions,
     scriptsDirectory: cliOptions.scriptsDirectory || config.scriptsDirectory || 'scripts',
     engine: cliOptions.engine || config.engine || 'bun',
+    packageManager: cliOptions.packageManager || config.packageManager || 'global',
   };
 
   logger.setLogSeverity(cliOptions);

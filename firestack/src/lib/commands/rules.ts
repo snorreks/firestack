@@ -27,7 +27,7 @@ export const rulesCommand = new Command('rules')
   .option(
     '--packageManager <packageManager>',
     'The package manager to use (npm, yarn, pnpm, bun, global).',
-    'npm'
+    'global'
   )
   .option('--external <external>', 'Comma-separated list of external dependencies.', (val) =>
     val.split(',')
