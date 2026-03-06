@@ -1,12 +1,53 @@
 import { join } from 'node:path';
 import { cwd } from 'node:process';
 import { logger } from '$logger';
-import type { FunctionsCache, FunctionsCacheGet, FunctionsCacheUpdate } from '$types';
 import { exists } from '$utils/common.js';
+import { loadChecksums } from '$utils/checksum.js';
+import type { FunctionsCache, FunctionsCacheGet, FunctionsCacheUpdate } from '$types';
 
 interface RemoteCacheModule {
   get: FunctionsCacheGet;
   update: FunctionsCacheUpdate;
+}
+
+export interface CacheContext {
+  remoteUtils: {
+    get: FunctionsCacheGet | undefined;
+    update: FunctionsCacheUpdate | undefined;
+  };
+  localCache: Record<string, string>;
+  mergedCache: Record<string, string>;
+}
+
+/**
+ * Fetches the complete cache context (local and remote) in parallel.
+ * @param flavor The flavor to fetch the cache for.
+ * @returns The cache context.
+ */
+export async function getCacheContext(flavor: string): Promise<CacheContext> {
+  const [remoteUtils, localCache] = await Promise.all([
+    getRemoteCacheUtils(),
+    loadChecksums({
+      outputDirectory: join(cwd(), 'dist'),
+      flavor,
+    }),
+  ]);
+
+  let mergedCache: Record<string, string> = { ...localCache };
+
+  if (remoteUtils.get) {
+    const remoteCache = await fetchRemoteCache(remoteUtils.get, flavor);
+    if (remoteCache) {
+      logger.debug('Using remote cache, merging with local');
+      mergedCache = { ...mergedCache, ...remoteCache };
+    }
+  }
+
+  return {
+    remoteUtils,
+    localCache,
+    mergedCache,
+  };
 }
 
 /**

@@ -3,29 +3,23 @@ import { cwd, exit } from 'node:process';
 import { Command } from 'commander';
 import { rulesAction } from '$commands/rules/index.js';
 import { logger } from '$logger';
-import { loadChecksums } from '$utils/checksum.js';
 import { runFunctions } from '$utils/run-functions.js';
 import { getEnvironment } from './utils/environment.js';
 import { findFunctions } from './utils/find_functions.js';
 import {
-  fetchRemoteCache,
-  getRemoteCacheUtils,
+  getCacheContext,
   updateRemoteCache,
 } from './utils/functions_cache.js';
 import { type DeployOptions, getOptions } from './utils/options.js';
 import { processFunction } from './utils/process_function.js';
 import { retryFailedFunctions } from './utils/retry_failed_functions.js';
+import { loadChecksums } from '$utils/checksum.js';
 
 export interface ExtendedDeployOptions extends DeployOptions {
   all?: boolean;
 }
 
 export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
-  if (cliOptions.all) {
-    logger.info('Deploying all (rules and functions)...');
-    await rulesAction(cliOptions);
-  }
-
   const options = await getOptions(cliOptions);
 
   if (!options.projectId) {
@@ -35,23 +29,14 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
     exit(1);
   }
 
-  // 1. Fetch online and locally in parallel
-  const [{ get: getRemote, update: updateRemote }, localCache] = await Promise.all([
-    getRemoteCacheUtils(),
-    loadChecksums({
-      outputDirectory: join(cwd(), 'dist'),
-      flavor: options.flavor,
-    }),
-  ]);
+  // 1. Fetch online and locally in parallel once
+  const cacheContext = await getCacheContext(options.flavor);
+  const { remoteUtils, mergedCache: previousCache } = cacheContext;
 
-  let previousCache: Record<string, string> = { ...localCache };
-
-  if (getRemote) {
-    const remoteCache = await fetchRemoteCache(getRemote, options.flavor);
-    if (remoteCache) {
-      logger.debug('Using remote cache, merging with local');
-      previousCache = { ...previousCache, ...remoteCache };
-    }
+  if (cliOptions.all) {
+    logger.info('Deploying all (rules and functions)...');
+    // Pass the already fetched cache to rulesAction
+    await rulesAction({ ...cliOptions, cacheContext });
   }
 
   if (!options.functionsDirectory) {
@@ -103,21 +88,18 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
     exit(1);
   }
 
-  // 2. Update online and locally in parallel when done
-  // Local cache is already updated inside processFunction -> builds -> cacheChecksumLocal
-  // We just need to sync the remote cache if it exists.
-
-  if (updateRemote) {
-    // Re-load local cache to get all latest checksums
+  // 2. Update remote cache if it exists
+  if (remoteUtils.update) {
+    // Re-load local cache to get all latest checksums (including rules if they were deployed)
     const latestLocalCache = await loadChecksums({
       outputDirectory: join(cwd(), 'dist'),
       flavor: options.flavor,
     });
-
+    
     // Merge remote with latest local to ensure we have everything
     const newRemoteCacheData = { ...previousCache, ...latestLocalCache };
-
-    await updateRemoteCache(updateRemote, options.flavor, newRemoteCacheData);
+    
+    await updateRemoteCache(remoteUtils.update, options.flavor, newRemoteCacheData);
     logger.info('Remote cache updated.');
   }
 

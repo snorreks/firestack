@@ -1,31 +1,20 @@
-import { createHash } from 'node:crypto';
+import { existsSync as _existsSync } from 'node:fs';
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { cwd, exit } from 'node:process';
+import { createHash } from 'node:crypto';
 import { Command } from 'commander';
-import {
-  fetchRemoteCache,
-  getRemoteCacheUtils,
-  updateRemoteCache,
-} from '$commands/deploy/utils/functions_cache.js';
 import { type DeployOptions, getOptions } from '$commands/deploy/utils/options.js';
 import { logger } from '$logger';
-import { loadChecksums } from '$utils/checksum.js';
 import { executeCommand } from '$utils/command.js';
+import {
+  type CacheContext,
+  getCacheContext,
+  updateRemoteCache,
+} from '$commands/deploy/utils/functions_cache.js';
 import { findRuleFiles } from './utils/rule_files.js';
-
-/**
- * Checks if a file or directory exists using promises.
- */
-const exists = async (path: string): Promise<boolean> => {
-  try {
-    const { access } = await import('node:fs/promises');
-    await access(path);
-    return true;
-  } catch {
-    return false;
-  }
-};
+import { loadChecksums } from '$utils/checksum.js';
+import { exists } from '$utils/common.js';
 
 /**
  * Options for the rules command.
@@ -33,6 +22,7 @@ const exists = async (path: string): Promise<boolean> => {
 interface RulesOptions extends DeployOptions {
   only?: string;
   force?: boolean;
+  cacheContext?: CacheContext;
 }
 
 export const rulesAction = async (cliOptions: RulesOptions) => {
@@ -45,24 +35,9 @@ export const rulesAction = async (cliOptions: RulesOptions) => {
     exit(1);
   }
 
-  // 1. Fetch online and locally in parallel
-  const [{ get: getRemote, update: updateRemote }, localCache] = await Promise.all([
-    getRemoteCacheUtils(),
-    loadChecksums({
-      outputDirectory: join(cwd(), 'dist'),
-      flavor: options.flavor,
-    }),
-  ]);
-
-  let previousCache: Record<string, string> = { ...localCache };
-
-  if (getRemote) {
-    const remoteCache = await fetchRemoteCache(getRemote, options.flavor);
-    if (remoteCache) {
-      logger.debug('Using remote cache for rules, merging with local');
-      previousCache = { ...previousCache, ...remoteCache };
-    }
-  }
+  // 1. Fetch cache context if not provided
+  const cacheContext = cliOptions.cacheContext ?? await getCacheContext(options.flavor);
+  const { remoteUtils, mergedCache: previousCache } = cacheContext;
 
   const rulesDir = join(cwd(), options.rulesDirectory || 'src/rules');
   const ruleFiles = await findRuleFiles(options.rulesDirectory || 'src/rules');
@@ -168,7 +143,13 @@ export const rulesAction = async (cliOptions: RulesOptions) => {
   if (hasFirestore) deployTargets.push('firestore');
   if (hasStorage) deployTargets.push('storage');
 
-  const commandArgs = ['deploy', '--only', deployTargets.join(','), '--project', options.projectId];
+  const commandArgs = [
+    'deploy',
+    '--only',
+    deployTargets.join(','),
+    '--project',
+    options.projectId,
+  ];
 
   logger.info(`Deploying: ${deployTargets.join(', ')}`);
   logger.debug(`> firebase ${commandArgs.join(' ')}`);
@@ -195,17 +176,14 @@ export const rulesAction = async (cliOptions: RulesOptions) => {
         flavor: options.flavor,
       });
       const updatedLocalChecksums = { ...currentLocalChecksums, ...newChecksums };
-      await writeFile(
-        join(checksumsFolder, 'checksums.json'),
-        JSON.stringify(updatedLocalChecksums, null, 2)
-      );
+      await writeFile(join(checksumsFolder, 'checksums.json'), JSON.stringify(updatedLocalChecksums, null, 2));
     };
     updatePromises.push(updateLocalCache());
 
     // Update remote cache
-    if (updateRemote) {
+    if (remoteUtils.update) {
       const updatedRemoteCache = { ...previousCache, ...newChecksums };
-      updatePromises.push(updateRemoteCache(updateRemote, options.flavor, updatedRemoteCache));
+      updatePromises.push(updateRemoteCache(remoteUtils.update, options.flavor, updatedRemoteCache));
     }
 
     await Promise.all(updatePromises);
