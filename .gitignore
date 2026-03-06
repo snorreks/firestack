@@ -54,3 +54,5 @@ Thumbs.db
 
 script-config.*.ts
 !script-config.example.ts
+example/apps/functions/firestore-debug.log
+example/apps/functions/firebase.json
