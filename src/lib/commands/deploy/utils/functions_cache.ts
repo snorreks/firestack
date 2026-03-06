@@ -1,9 +1,9 @@
 import { join } from 'node:path';
 import { cwd } from 'node:process';
 import { logger } from '$logger';
-import { exists } from '$utils/common.js';
-import { loadChecksums } from '$utils/checksum.js';
 import type { FunctionsCache, FunctionsCacheGet, FunctionsCacheUpdate } from '$types';
+import { loadChecksums } from '$utils/checksum.js';
+import { exists } from '$utils/common.js';
 
 interface RemoteCacheModule {
   get: FunctionsCacheGet;
@@ -107,15 +107,18 @@ export async function fetchRemoteCache(
  * @param updateFn The function to use to update the cache.
  * @param flavor The flavor to update the cache for.
  * @param newCache The new cache to store remotely.
+ * @returns True if the update was successful, false otherwise.
  */
 export async function updateRemoteCache(
   updateFn: FunctionsCacheUpdate,
   flavor: string,
   newCache: FunctionsCache
-): Promise<void> {
+): Promise<boolean> {
   try {
     await updateFn({ flavor, newFunctionsCache: newCache });
+    return true;
   } catch (error) {
     logger.error('Failed to update remote cache:', error);
+    return false;
   }
 }

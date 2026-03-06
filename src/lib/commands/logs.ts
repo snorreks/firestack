@@ -1,8 +1,12 @@
+import chalk from 'chalk';
 import { Command } from 'commander';
 import { type DeployOptions, getOptions } from '$commands/deploy/utils/options.js';
 import { logger } from '$logger';
 import { executeCommand } from '$utils/command.js';
 
+/**
+ * Options specifically for the logs command.
+ */
 interface LogsOptions extends DeployOptions {
   only?: string;
   lines?: string;
@@ -10,6 +14,9 @@ interface LogsOptions extends DeployOptions {
   open?: boolean;
 }
 
+/**
+ * Command definition to view Firebase Cloud Functions logs.
+ */
 export const logsCommand = new Command('logs')
   .description('View logs from Firebase Cloud Functions.')
   .option('--flavor <flavor>', 'The flavor to use for logs.', 'development')
@@ -32,35 +39,40 @@ export const logsCommand = new Command('logs')
 
     if (!options.projectId) {
       logger.error(
-        'Project ID not found. Please provide it using --projectId option or in firestack.json.'
+        chalk.red('❌ Project ID not found. Provide it with --projectId or in firestack.json.')
       );
       process.exit(1);
     }
 
+    // 1. Build Argument List
     const commandArgs = ['functions:log', '--project', options.projectId];
 
-    if (cliOptions.only) {
-      commandArgs.push('--only', cliOptions.only);
+    const argMappings: Record<string, string | boolean | undefined> = {
+      '--only': cliOptions.only,
+      '--lines': cliOptions.lines,
+      '--since': cliOptions.since,
+      '--open': cliOptions.open,
+    };
+
+    for (const [flag, value] of Object.entries(argMappings)) {
+      if (value === true) {
+        commandArgs.push(flag);
+      } else if (value) {
+        commandArgs.push(flag, String(value));
+      }
     }
 
-    if (cliOptions.lines) {
-      commandArgs.push('--lines', cliOptions.lines);
-    }
-
-    if (cliOptions.since) {
-      commandArgs.push('--since', cliOptions.since);
-    }
-
-    if (cliOptions.open) {
-      commandArgs.push('--open');
-    }
-
-    logger.info(`Fetching logs for project: ${options.projectId}`);
+    // 2. Logging and Execution
+    logger.info(`📋 Fetching logs for project: ${chalk.cyan.bold(options.projectId)}`);
     logger.debug(`> firebase ${commandArgs.join(' ')}`);
 
-    await executeCommand('firebase', {
-      args: commandArgs,
-      stdio: 'inherit',
-      packageManager: options.packageManager,
-    });
+    try {
+      await executeCommand('firebase', {
+        args: commandArgs,
+        stdio: 'inherit',
+        packageManager: options.packageManager,
+      });
+    } catch (error) {
+      logger.error(chalk.red(`❌ Failed to fetch logs: ${(error as Error).message}`));
+    }
   });

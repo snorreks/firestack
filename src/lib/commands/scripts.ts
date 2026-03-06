@@ -1,24 +1,14 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { cwd, exit } from 'node:process';
+import chalk from 'chalk';
 import { Command } from 'commander';
 import { execa } from 'execa';
 import prompts from 'prompts';
 import type { PackageManager } from '$commands/deploy/utils/options.js';
 import { logger } from '$logger';
-import { exists, findProjectRoot } from '$utils/common.js';
+import { exists } from '$utils/common.js';
 import { getScriptEnvironment } from '$utils/env.js';
-
-async function readDir(
-  path: string
-): Promise<{ name: string; isDirectory: () => boolean; isFile: () => boolean }[]> {
-  const entries = await readdir(path, { withFileTypes: true });
-  return entries.map((entry) => ({
-    name: entry.name,
-    isDirectory: () => entry.isDirectory(),
-    isFile: () => entry.isFile(),
-  }));
-}
 
 interface ScriptsOptions {
   flavor: string;
@@ -33,103 +23,98 @@ interface ScriptConfig {
   config?: Record<string, unknown>;
 }
 
+/**
+ * Loads script configuration for a specific flavor.
+ */
 async function getScriptConfig(flavor: string): Promise<Record<string, unknown>> {
   const configPath = join(cwd(), `script-config.${flavor}.ts`);
 
-  if (!(await exists(configPath))) {
-    return {};
-  }
+  if (!(await exists(configPath))) return {};
 
   try {
     const configModule = (await import(configPath)) as ScriptConfig;
     return configModule.config ?? {};
-  } catch (error) {
-    logger.debug(`Failed to load script-config.${flavor}.ts:`, error);
+  } catch (_error) {
+    logger.debug(chalk.dim(`No custom config loaded from script-config.${flavor}.ts`));
     return {};
   }
 }
 
-interface FirestackConfig {
-  scriptsDirectory?: string;
-  engine?: string;
-  packageManager?: string;
-}
-
+/**
+ * Merges CLI options with firestack.json configuration.
+ */
 async function getOptions(cliOptions: ScriptsOptions): Promise<ScriptsOptions> {
   const configPath = join(cwd(), 'firestack.json');
-  let config: FirestackConfig = {};
-  try {
-    const configContent = await readFile(configPath, 'utf-8');
-    config = JSON.parse(configContent);
-    logger.debug(`Using configuration from ${configPath}`);
-  } catch (e) {
-    const error = e as Error & { code?: string };
-    if (error.code === 'ENOENT') {
-      logger.debug('firestack.json not found, using command-line options.');
-    } else {
-      logger.error(`Failed to read firestack.json at ${configPath}: ${error.message}`);
+  let config: Record<string, unknown> = {};
+
+  if (await exists(configPath)) {
+    try {
+      const configContent = await readFile(configPath, 'utf-8');
+      config = JSON.parse(configContent) as Record<string, unknown>;
+      logger.debug(chalk.dim(`Using configuration from ${configPath}`));
+    } catch (e) {
+      logger.error(chalk.red(`❌ Failed to parse firestack.json: ${(e as Error).message}`));
       exit(1);
     }
   }
 
   const options: ScriptsOptions = {
     ...cliOptions,
-    scriptsDirectory: cliOptions.scriptsDirectory || config.scriptsDirectory || 'scripts',
-    engine: cliOptions.engine || config.engine || 'bun',
+    scriptsDirectory:
+      cliOptions.scriptsDirectory || (config.scriptsDirectory as string | undefined) || 'scripts',
+    engine: cliOptions.engine || (config.engine as string | undefined) || 'bun',
     packageManager:
-      cliOptions.packageManager || (config.packageManager as PackageManager) || 'global',
+      cliOptions.packageManager ||
+      (config.packageManager as PackageManager | undefined) ||
+      'global',
   };
 
   logger.setLogSeverity(cliOptions);
-  logger.debug('Starting script command...');
-  logger.debug('Options:', options);
-  logger.debug('Current working directory:', cwd());
-  logger.debug('Scripts directory:', options.scriptsDirectory);
-
   return options;
 }
 
+/**
+ * Finds all executable scripts in the scripts directory.
+ */
 async function findScripts(dir: string): Promise<string[]> {
-  const scripts: string[] = [];
   try {
-    const entries = await readDir(dir);
-    for (const entry of entries) {
-      if (entry.isFile() && entry.name.endsWith('.ts') && entry.name !== 'on_emulate.ts') {
-        scripts.push(entry.name.replace('.ts', ''));
-      }
-    }
+    const entries = await readdir(dir, { withFileTypes: true });
+    return entries
+      .filter((e) => e.isFile() && e.name.endsWith('.ts') && e.name !== 'on_emulate.ts')
+      .map((e) => e.name.replace('.ts', ''));
   } catch {
-    logger.debug(`Scripts directory ${dir} not found`);
+    logger.debug(chalk.dim(`Scripts directory ${dir} not found`));
+    return [];
   }
-  return scripts;
 }
 
-async function runScript(scriptName: string, options: ScriptsOptions, projectRoot: string) {
-  if (!options.scriptsDirectory) {
-    throw new Error('Scripts directory is not specified.');
+/**
+ * Executes a specific script with environment variables and configuration.
+ */
+async function runScript(scriptName: string, options: ScriptsOptions) {
+  const scriptsDirectory = options.scriptsDirectory;
+  if (!scriptsDirectory) {
+    throw new Error('Scripts directory is required.');
   }
-  const scriptsPath = join(cwd(), options.scriptsDirectory);
+  const scriptsPath = join(cwd(), scriptsDirectory);
   const scriptPath = join(scriptsPath, `${scriptName}.ts`);
-  const packageJsonPath = join(projectRoot, 'package.json');
 
-  logger.debug('Script details:');
-  logger.debug('  scriptsPath:', scriptsPath);
-  logger.debug('  scriptPath:', scriptPath);
-  logger.debug('  packageJsonPath:', packageJsonPath);
-
-  const env = await getScriptEnvironment(options.flavor);
-  const scriptConfig = await getScriptConfig(options.flavor);
+  // Parallel fetch of environment and config
+  const [env, scriptConfig] = await Promise.all([
+    getScriptEnvironment(options.flavor),
+    getScriptConfig(options.flavor),
+  ]);
 
   if (Object.keys(scriptConfig).length > 0) {
     env.SCRIPT_CONFIG = JSON.stringify(scriptConfig);
-    logger.debug('Script config loaded:', scriptConfig);
   }
 
   const engine = options.engine || 'bun';
   const relativeScriptPath = relative(cwd(), scriptPath);
   const args = engine === 'bun' ? [relativeScriptPath] : ['run', relativeScriptPath];
 
-  logger.debug(`Running command: ${engine} ${args.join(' ')}`);
+  logger.info(chalk.cyan(`🏃 Executing script: ${chalk.bold(scriptName)}`));
+  logger.debug(chalk.dim(`Command: ${engine} ${args.join(' ')}`));
 
   try {
     await execa(engine, args, {
@@ -137,14 +122,10 @@ async function runScript(scriptName: string, options: ScriptsOptions, projectRoo
       env: { ...process.env, ...env },
       stdio: 'inherit',
     });
-
-    logger.info('\n✅ Script finished successfully!');
+    logger.info(chalk.bold.green('\n✅ Script finished successfully!'));
   } catch (error) {
     const err = error as { exitCode?: number; cause?: Error };
-    logger.error(`\n❌ Error running script. Exit code: ${err.exitCode ?? 'unknown'}`);
-    if (err.cause) {
-      logger.error(`Cause: ${err.cause.message}`);
-    }
+    logger.error(chalk.red(`\n❌ Error running script. Exit code: ${err.exitCode ?? 'unknown'}`));
     exit(err.exitCode ?? 1);
   }
 }
@@ -157,50 +138,46 @@ export const scriptsCommand = new Command('scripts')
   .option('--flavor <flavor>', 'The flavor to use.', 'development')
   .option('--verbose', 'Enable verbose logging.')
   .option('--silent', 'Disable logging.')
-  .option('--engine <engine>', 'The engine to use for running scripts (e.g., "bun", "node").')
+  .option('--engine <engine>', 'The engine to use (e.g., "bun", "node").')
   .argument('[scriptName]', 'The name of the script to run.')
   .action(async (scriptName: string | undefined, cliOptions: ScriptsOptions) => {
     const options = await getOptions(cliOptions);
-
-    if (!options.scriptsDirectory) {
-      throw new Error('Scripts directory is not specified.');
+    const scriptsDirectory = options.scriptsDirectory;
+    if (!scriptsDirectory) {
+      throw new Error('Scripts directory is required.');
     }
+    const scriptsPath = join(cwd(), scriptsDirectory);
 
-    const scriptsPath = join(cwd(), options.scriptsDirectory);
+    let selectedScriptName = scriptName;
 
-    let selectedScriptName: string;
-
-    if (scriptName) {
-      selectedScriptName = scriptName;
-    } else {
+    if (!selectedScriptName) {
       const scriptFiles = await findScripts(scriptsPath);
+
       if (scriptFiles.length === 0) {
-        logger.warn('No scripts found.');
+        logger.warn(chalk.yellow('⚠️  No scripts found in the scripts directory.'));
         return;
       }
 
       if (scriptFiles.length === 1) {
         selectedScriptName = scriptFiles[0];
-        logger.info(`Running single script: ${selectedScriptName}`);
+        logger.info(chalk.dim(`Selected single available script: ${selectedScriptName}`));
       } else {
         const response = await prompts({
           type: 'select',
           name: 'script',
           message: 'Please select a script to run:',
-          choices: scriptFiles.map((script) => ({
-            title: script,
-            value: script,
-          })),
+          choices: scriptFiles.map((s) => ({ title: s, value: s })),
         });
 
-        if (!response.script) {
-          logger.warn('No script selected. Exiting.');
-          return;
-        }
-        selectedScriptName = response.script;
+        if (!response.script) return;
+        selectedScriptName = response.script as string;
       }
     }
 
-    const projectRoot = await findProjectRoot();
-    await runScript(selectedScriptName, options, projectRoot);
+    if (!selectedScriptName) {
+      logger.error(chalk.red('❌ No script selected.'));
+      return;
+    }
+
+    await runScript(selectedScriptName, options);
   });

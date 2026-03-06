@@ -1,6 +1,7 @@
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { cwd } from 'node:process';
+import chalk from 'chalk';
 import { logger } from '$logger';
 import { buildFunction } from '$utils/build_utils.js';
 import { cacheChecksumLocal, checkForChanges } from '$utils/checksum.js';
@@ -24,10 +25,11 @@ interface ProcessResult {
 /**
  * Processes a single function for deployment.
  * This includes building the function, checking for changes, and deploying it to Firebase.
- * @param funcPath The path to the function file.
- * @param options The deployment options.
- * @param environment The environment variables for the function.
- * @param controllersPath The path to the functions directory.
+ *
+ * @param funcPath - The path to the function file.
+ * @param options - The deployment options.
+ * @param environment - The environment variables for the function.
+ * @param controllersPath - The path to the functions directory.
  * @returns The result of the processing.
  */
 export async function processFunction(
@@ -37,14 +39,20 @@ export async function processFunction(
   controllersPath: string
 ): Promise<ProcessResult> {
   const functionName = deriveFunctionName(funcPath, controllersPath);
-  logger.info(`\nProcessing function: ${functionName}`);
+  logger.info(`\n⚙️  Processing function: ${chalk.bold.cyan(functionName)}`);
 
+  // Define build and temporary paths
   const outputDir = join(cwd(), 'dist', functionName);
   const temporaryDir = join(cwd(), 'tmp', functionName);
 
   try {
+    // 1. Validation and Directory Setup
+    if (!options.nodeVersion) {
+      throw new Error('Node version is required for deployment.');
+    }
     await setupDirectories(outputDir, temporaryDir, options);
 
+    // 2. Build Phase
     const buildSuccess = await performBuild(
       funcPath,
       functionName,
@@ -53,10 +61,14 @@ export async function processFunction(
       controllersPath,
       options
     );
-    if (!buildSuccess) return { functionName, status: 'failed' };
+    if (!buildSuccess) {
+      return { functionName, status: 'failed' };
+    }
 
+    // 3. Environment Setup
     const envNeeded = await setupEnvironment(outputDir, environment);
 
+    // 4. Change Detection (Differential Deployment)
     const deployFunctionData = await checkForChanges({
       functionName,
       outputRoot: outputDir,
@@ -67,55 +79,72 @@ export async function processFunction(
     });
 
     if (!deployFunctionData) {
+      logger.info(chalk.yellow(`⏭️  Skipped ${functionName} (no changes detected).`));
       return { functionName, status: 'skipped' };
     }
 
-    if (!options.dryRun) {
-      const installSuccess = await installDependencies(outputDir, options);
-      if (!installSuccess) return { functionName, status: 'failed' };
+    // 5. Dry Run Check
+    if (options.dryRun) {
+      logger.info(chalk.blue(`📝 Dry run: skipped deployment of ${functionName}.`));
+      return { functionName, status: 'dry-run' };
+    }
 
-      const deploySuccess = await deployFunction(functionName, outputDir, options);
-      if (deploySuccess) {
-        await cacheChecksumLocal(deployFunctionData);
-        return { functionName, status: 'deployed' };
-      }
+    // 6. Dependency Installation
+    const installSuccess = await installDependencies(outputDir, options);
+    if (!installSuccess) {
       return { functionName, status: 'failed' };
     }
 
-    logger.info(`Dry run: skipped deployment of ${functionName}.`);
-    return { functionName, status: 'dry-run' };
+    // 7. Deployment Phase
+    const deploySuccess = await deployFunction(functionName, outputDir, options);
+    if (!deploySuccess) {
+      return { functionName, status: 'failed' };
+    }
+
+    // 8. Cache Persistence
+    await cacheChecksumLocal(deployFunctionData);
+    return { functionName, status: 'deployed' };
   } catch (error) {
-    logger.error(`Failed to process ${functionName}: ${(error as Error).message}`);
+    logger.error(`❌ Failed to process ${functionName}: ${(error as Error).message}`);
     return { functionName, status: 'failed' };
   } finally {
+    // Cleanup temporary files unless debugging is enabled
     if (!options.debug) {
-      await rm(temporaryDir, { recursive: true, force: true });
+      await rm(temporaryDir, { recursive: true, force: true }).catch(() => {});
     }
   }
 }
 
+/**
+ * Prepares the output and temporary directories for the build.
+ */
 async function setupDirectories(outputDir: string, temporaryDir: string, options: DeployOptions) {
-  if (!options.nodeVersion) {
+  const { nodeVersion } = options;
+  if (!nodeVersion) {
     throw new Error('Node version is required for deployment.');
   }
 
-  // Delete specific function output and temporary directories before each build
-  await rm(outputDir, { recursive: true, force: true });
-  await rm(temporaryDir, { recursive: true, force: true });
+  // Parallel cleanup of existing directories
+  await Promise.all([
+    rm(outputDir, { recursive: true, force: true }),
+    rm(temporaryDir, { recursive: true, force: true }),
+  ]);
 
-  await mkdir(join(outputDir, 'src'), { recursive: true });
-  await mkdir(temporaryDir, { recursive: true });
+  // Parallel creation of required directory structures
+  await Promise.all([
+    mkdir(join(outputDir, 'src'), { recursive: true }),
+    mkdir(temporaryDir, { recursive: true }),
+  ]);
 
-  await writeFile(
-    join(outputDir, 'firebase.json'),
-    createFirebaseConfig(options.nodeVersion),
-    'utf-8'
-  );
-  await writeFile(
-    join(outputDir, 'src', 'package.json'),
-    createPackageJson(options.nodeVersion, options.external),
-    'utf-8'
-  );
+  // Parallel generation of configuration files
+  await Promise.all([
+    writeFile(join(outputDir, 'firebase.json'), createFirebaseConfig(nodeVersion), 'utf-8'),
+    writeFile(
+      join(outputDir, 'src', 'package.json'),
+      createPackageJson(nodeVersion, options.external),
+      'utf-8'
+    ),
+  ]);
 }
 
 async function performBuild(
@@ -135,6 +164,7 @@ async function performBuild(
       functionName,
       temporaryDirectory: temporaryDir,
       controllersPath,
+      region: options.region,
     });
 
     const projectRoot = await findProjectRoot();

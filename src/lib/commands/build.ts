@@ -36,20 +36,24 @@ export const buildCommand = new Command('build')
   .option('--sourcemap', 'Whether to generate sourcemaps.', true)
   .option('--no-sourcemap', 'Do not generate sourcemaps.')
   .action(async (input: string, output: string, options: BuildOptions) => {
-    logger.info(chalk.bold.green('Starting build...'));
+    logger.info(chalk.bold.green('🛠️  Starting build...'));
 
     const inputPath = join(cwd(), input);
     const outputPath = join(cwd(), output);
 
+    // 1. Validate Input
     if (!(await exists(inputPath))) {
-      logger.error(chalk.red(`Input file not found: ${inputPath}`));
+      logger.error(chalk.red(`❌ Input file not found: ${inputPath}`));
       exit(1);
     }
 
     const outputDir = dirname(outputPath);
-    await mkdir(outputDir, { recursive: true });
 
     try {
+      // 2. Prepare Output Directory
+      await mkdir(outputDir, { recursive: true });
+
+      // 3. Perform Build
       await buildFunction({
         inputFile: inputPath,
         outputFile: outputPath,
@@ -59,31 +63,29 @@ export const buildCommand = new Command('build')
         sourcemap: options.sourcemap,
       });
 
-      // Create a basic package.json in the output directory's parent (assuming functions structure)
-      // or just alongside the output if it's a single file.
-      // Usually for Firebase, we need a package.json where the functions are.
+      // 4. Post-build tasks: Generate package.json if missing
       const packageJsonPath = join(dirname(outputDir), 'package.json');
       if (!(await exists(packageJsonPath))) {
         const pkg = {
           name: basename(dirname(outputDir)) || 'function',
           main: join('src', basename(outputPath)),
           type: 'module',
-          dependencies: {} as Record<string, string>,
+          dependencies: (options.external || []).reduce(
+            (acc, ext) => {
+              acc[ext] = '*';
+              return acc;
+            },
+            {} as Record<string, string>
+          ),
         };
 
-        if (options.external) {
-          for (const ext of options.external) {
-            pkg.dependencies[ext] = '*';
-          }
-        }
-
         await writeFile(packageJsonPath, JSON.stringify(pkg, null, 2));
-        logger.info(chalk.blue(`Created package.json at ${packageJsonPath}`));
+        logger.info(chalk.dim(`📄 Created package.json at ${packageJsonPath}`));
       }
 
-      logger.info(chalk.green(`Successfully built to ${outputPath}`));
+      logger.info(chalk.bold.green(`✅ Successfully built to ${outputPath}`));
     } catch (error) {
-      logger.error(chalk.red('Build failed:'));
+      logger.error(chalk.red('❌ Build failed:'));
       logger.error(error);
       exit(1);
     }

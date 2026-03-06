@@ -1,44 +1,52 @@
 import { basename, join } from 'node:path';
 import { cwd, exit } from 'node:process';
+import chalk from 'chalk';
 import { Command } from 'commander';
 import { rulesAction } from '$commands/rules/index.js';
 import { logger } from '$logger';
+import { loadChecksums } from '$utils/checksum.js';
 import { runFunctions } from '$utils/run-functions.js';
 import { getEnvironment } from './utils/environment.js';
 import { findFunctions } from './utils/find_functions.js';
-import {
-  getCacheContext,
-  updateRemoteCache,
-} from './utils/functions_cache.js';
+import { getCacheContext, updateRemoteCache } from './utils/functions_cache.js';
 import { type DeployOptions, getOptions } from './utils/options.js';
 import { processFunction } from './utils/process_function.js';
 import { retryFailedFunctions } from './utils/retry_failed_functions.js';
-import { loadChecksums } from '$utils/checksum.js';
 
 export interface ExtendedDeployOptions extends DeployOptions {
   all?: boolean;
 }
 
+/**
+ * Main deployment action that orchestrates the entire process.
+ */
 export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
   const options = await getOptions(cliOptions);
 
   if (!options.projectId) {
     logger.error(
-      'Project ID not found. Please provide it using --projectId option or in firestack.json.'
+      chalk.red('❌ Project ID not found. Provide it with --projectId or in firestack.json.')
     );
     exit(1);
   }
 
-  // 1. Fetch online and locally in parallel once
-  const cacheContext = await getCacheContext(options.flavor);
+  // 1. Parallel Context Initialization
+  logger.info(chalk.bold.green('🚀 Starting deployment...'));
+
+  const [cacheContext, environment] = await Promise.all([
+    getCacheContext(options.flavor),
+    getEnvironment(options.flavor),
+  ]);
+
   const { remoteUtils, mergedCache: previousCache } = cacheContext;
 
+  // 2. Rules Deployment (Optional)
   if (cliOptions.all) {
-    logger.info('Deploying all (rules and functions)...');
-    // Pass the already fetched cache to rulesAction
+    logger.info(chalk.cyan('📦 Deploying all (rules and functions)...'));
     await rulesAction({ ...cliOptions, cacheContext });
   }
 
+  // 3. Functions Discovery
   if (!options.functionsDirectory) {
     throw new Error('Functions directory is required for deployment.');
   }
@@ -46,6 +54,7 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
   const functionsPath = join(cwd(), options.functionsDirectory);
   let functionFiles = await findFunctions(functionsPath);
 
+  // Filter if '--only' is specified
   if (options.only) {
     const onlyFunctions = options.only.split(',').map((f) => f.trim());
     functionFiles = functionFiles.filter((file) => {
@@ -55,55 +64,58 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
   }
 
   if (functionFiles.length === 0) {
-    logger.warn('No functions found to deploy.');
+    logger.warn(chalk.yellow('⚠️  No functions found to deploy.'));
     return;
   }
 
-  logger.info(`Found ${functionFiles.length} functions to deploy.`);
+  logger.info(`🔍 Found ${chalk.bold.cyan(functionFiles.length)} function(s) to deploy.`);
 
-  const environment = await getEnvironment(options.flavor);
+  // 4. Execute Parallel Function Processing
+  const rawResults = await runFunctions(
+    functionFiles.map((path) => () => processFunction(path, options, environment, functionsPath)),
+    options.concurrency
+  );
 
-  const results = (
-    await runFunctions(
-      functionFiles.map((path) => () => processFunction(path, options, environment, functionsPath)),
-      options.concurrency
-    )
-  ).filter((r) => r);
+  const results = rawResults.filter((r) => r);
 
+  // 5. Retry Logic for Failed Functions
   let failedFunctions = results.filter((r) => r?.status === 'failed') as {
     functionName: string;
     status: string;
   }[];
 
-  failedFunctions = await retryFailedFunctions(
-    failedFunctions,
-    functionFiles,
-    options,
-    environment,
-    functionsPath
-  );
-
   if (failedFunctions.length > 0) {
-    logger.error(`\nDeployment failed for ${failedFunctions.length} functions.`);
+    failedFunctions = await retryFailedFunctions(
+      failedFunctions,
+      functionFiles,
+      options,
+      environment,
+      functionsPath
+    );
+  }
+
+  // 6. Final Status Check
+  if (failedFunctions.length > 0) {
+    logger.error(
+      chalk.bold.red(`\n❌ Deployment failed for ${failedFunctions.length} function(s).`)
+    );
     exit(1);
   }
 
-  // 2. Update remote cache if it exists
+  // 7. Synchronize Remote Cache
   if (remoteUtils.update) {
-    // Re-load local cache to get all latest checksums (including rules if they were deployed)
     const latestLocalCache = await loadChecksums({
       outputDirectory: join(cwd(), 'dist'),
       flavor: options.flavor,
     });
-    
-    // Merge remote with latest local to ensure we have everything
-    const newRemoteCacheData = { ...previousCache, ...latestLocalCache };
-    
-    await updateRemoteCache(remoteUtils.update, options.flavor, newRemoteCacheData);
-    logger.info('Remote cache updated.');
-  }
 
-  logger.info('\nDeployment process complete!');
+    const newRemoteCacheData = { ...previousCache, ...latestLocalCache };
+    const success = await updateRemoteCache(remoteUtils.update, options.flavor, newRemoteCacheData);
+    if (success) {
+      logger.info(chalk.dim('🌐 Remote cache updated.'));
+    }
+  }
+  logger.info(chalk.bold.green('\n✨ Deployment process complete!'));
 };
 
 export const deployCommand = new Command('deploy')

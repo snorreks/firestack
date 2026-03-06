@@ -72,7 +72,6 @@ export const checkForChanges = async (
     const newChecksum = generateChecksum(newCode + environmentString);
 
     if (!deployFunction.force && cachedChecksum && cachedChecksum === newChecksum) {
-      logger.info(`${deployFunction.functionName} has not changed, skipping deployment`);
       return undefined;
     }
 

@@ -45,11 +45,13 @@ export async function executeCommand(
     logger.debug(`Working directory: ${execaOptions.cwd}`);
   }
 
+  const isVerbose = logger.currentLogSeverity === 'debug';
+
   try {
     const result = await execa(finalCmd, finalArgs, {
       ...execaOptions,
-      stdout: execaOptions.stdout ?? 'inherit',
-      stderr: execaOptions.stderr ?? 'inherit',
+      stdout: execaOptions.stdout ?? (isVerbose ? 'inherit' : 'pipe'),
+      stderr: execaOptions.stderr ?? (isVerbose ? 'inherit' : 'pipe'),
     });
 
     return {
