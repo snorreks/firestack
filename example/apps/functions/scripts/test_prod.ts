@@ -25,3 +25,4 @@ try {
 } catch (error) {
   console.error('Error testing production:', error);
 }
+export {};

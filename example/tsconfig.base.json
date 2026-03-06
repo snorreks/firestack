@@ -10,7 +10,7 @@
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "isolatedModules": true,
+    "isolatedModules": true
   },
-  "exclude":["node_modules", "tmp", "dist"]
+  "exclude": ["node_modules", "tmp", "dist"]
 }

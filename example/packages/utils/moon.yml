@@ -8,5 +8,6 @@ tasks:
       cache: false
   fix:
     command: 'bun run fix'
+    toolchain: 'system'
     options:
       cache: false

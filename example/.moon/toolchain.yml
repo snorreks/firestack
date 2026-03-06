@@ -2,8 +2,8 @@
 $schema: "https://moonrepo.dev/schemas/toolchain.json"
 
 # Bun
-bun:
-  version: "system"
+# bun:
+#   version: "system"
 
 # TypeScript
 typescript:

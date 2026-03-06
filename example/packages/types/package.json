@@ -6,7 +6,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@snorreks/firestack": "file:../../../firestack/dist"
+    "@snorreks/firestack": "file:../../../dist"
   },
   "scripts": {
     "check": "tsc --noEmit",

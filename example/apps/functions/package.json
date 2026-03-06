@@ -11,12 +11,12 @@
     "logs": "firestack logs",
     "delete": "firestack delete",
     "rules": "firestack rules",
-    "build": "firestack build"
+    "build": "firestack build src/controllers/api/test_api.ts dist/api/src/index.js --external firebase-admin,firebase-functions"
   },
   "dependencies": {
     "@shared/utils": "workspace:*",
     "@shared/types": "workspace:*",
-    "@snorreks/firestack": "file:../../../firestack/dist",
+    "@snorreks/firestack": "file:../../../dist",
     "firebase-admin": "^13.7.0",
     "firebase-functions": "^7.1.0",
     "firebase-tools": "^15.9.0"

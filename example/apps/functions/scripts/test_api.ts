@@ -1,4 +1,3 @@
-import type { ScriptFunction } from '@snorreks/firestack';
 import { getFirestore } from '$configs/database.ts';
 
 const url = 'https://test-api-cnvwdepuza-ew.a.run.app';

@@ -8,15 +8,17 @@
   ],
   "scripts": {
     "moon": "moon",
-    "build": "moon run functions:build",
-    "deploy": "moon run functions:deploy",
-    "delete": "moon run functions:delete",
-    "emulate": "moon run functions:emulate",
-    "rules": "moon run functions:rules",
-    "scripts": "moon run functions:scripts",
-    "logs": "moon run functions:logs",
-    "check": "moon run :check",
-    "fix": "moon run :fix"
+    "build": "PROTO_HOME=/tmp/non-existent-proto moon run functions:build --",
+    "deploy": "moon run functions:deploy --",
+    "delete": "PROTO_HOME=/tmp/non-existent-proto moon run functions:delete --",
+    "emulate": "PROTO_HOME=/tmp/non-existent-proto moon run functions:emulate --",
+    "rules": "PROTO_HOME=/tmp/non-existent-proto moon run functions:rules --",
+    "scripts": "PROTO_HOME=/tmp/non-existent-proto moon run functions:scripts --",
+    "logs": "PROTO_HOME=/tmp/non-existent-proto moon run functions:logs --",
+    "check": "PROTO_HOME=/tmp/non-existent-proto moon run :check --",
+    "fix": "PROTO_HOME=/tmp/non-existent-proto moon run :fix --",
+    "test": "bun test tests/cli.test.ts",
+    "sync": "cd .. && bun run build && cd example/apps/functions && bun install && cd ../../packages/types && bun install"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
