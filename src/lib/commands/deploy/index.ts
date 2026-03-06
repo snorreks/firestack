@@ -10,7 +10,12 @@ import { getEnvironment } from './utils/environment.js';
 import { findFunctions } from './utils/find_functions.js';
 import { getCacheContext, updateRemoteCache } from './utils/functions_cache.js';
 import { type DeployOptions, getOptions } from './utils/options.js';
-import { processFunction } from './utils/process_function.js';
+import {
+  executeFunctionDeployment,
+  type PrepareResult,
+  type ProcessResult,
+  prepareFunction,
+} from './utils/process_function.js';
 import { retryFailedFunctions } from './utils/retry_failed_functions.js';
 
 export interface ExtendedDeployOptions extends DeployOptions {
@@ -70,31 +75,94 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
 
   logger.info(`🔍 Found ${chalk.bold.cyan(functionFiles.length)} function(s) to deploy.`);
 
-  // 4. Execute Parallel Function Processing
-  const rawResults = await runFunctions(
-    functionFiles.map((path) => () => processFunction(path, options, environment, functionsPath)),
+  // 4. Phase 1: Planning (Build & Check Changes)
+  const prepareResults = await runFunctions<PrepareResult>(
+    functionFiles.map(
+      (path) => () =>
+        prepareFunction({
+          funcPath: path,
+          options,
+          environment,
+          controllersPath: functionsPath,
+        })
+    ),
     options.concurrency
   );
 
-  const results = rawResults.filter((r) => r);
+  // 5. Aggregate and Log Plan
+  const toDeploy = prepareResults.filter((r) => r.status === 'to-deploy');
+  const skipped = prepareResults.filter((r) => r.status === 'skipped').map((r) => r.functionName);
+  const failedPrep = prepareResults.filter((r) => r.status === 'failed').map((r) => r.functionName);
+  const dryRun = prepareResults.filter((r) => r.status === 'dry-run').map((r) => r.functionName);
 
-  // 5. Retry Logic for Failed Functions
-  let failedFunctions = results.filter((r) => r?.status === 'failed') as {
-    functionName: string;
-    status: string;
-  }[];
+  if (skipped.length > 0) {
+    logger.info(chalk.yellow(`⏭️  Skipped (${skipped.length}): ${chalk.dim(skipped.join(', '))}`));
+  }
+  if (failedPrep.length > 0) {
+    logger.error(
+      chalk.red(`❌ Failed to prepare (${failedPrep.length}): ${failedPrep.join(', ')}`)
+    );
+  }
+  if (dryRun.length > 0) {
+    logger.info(chalk.blue(`📝 Dry run (${dryRun.length}): ${chalk.bold(dryRun.join(', '))}`));
+  }
+
+  if (toDeploy.length === 0) {
+    logger.info(chalk.green('✅ Nothing to deploy.'));
+    return;
+  }
+
+  logger.info(
+    chalk.cyan(
+      `📦 Deploying (${toDeploy.length}): ${chalk.bold(toDeploy.map((r) => r.functionName).join(', '))}`
+    )
+  );
+
+  // 6. Phase 2: Execution (Install & Deploy)
+  const totalToDeploy = toDeploy.length;
+  let deployedCount = 0;
+
+  const deployResults = await runFunctions<ProcessResult>(
+    toDeploy.map((prep) => async () => {
+      const result = await executeFunctionDeployment({ prepareResult: prep, options });
+      deployedCount++;
+      if (result.status === 'failed') {
+        logger.error(`❌ Failed: ${chalk.bold(result.functionName)}`);
+      } else if (options.verbose) {
+        logger.debug(`[${deployedCount}/${totalToDeploy}] Deployed ${result.functionName}`);
+      }
+      return result;
+    }),
+    options.concurrency
+  );
+
+  const finalResults = deployResults.filter((r): r is ProcessResult => !!r);
+  const successfullyDeployed = finalResults
+    .filter((r) => r.status === 'deployed')
+    .map((r) => r.functionName);
+
+  if (successfullyDeployed.length > 0) {
+    logger.info(
+      chalk.green(
+        `✅ Successfully deployed (${successfullyDeployed.length}): ${chalk.bold(successfullyDeployed.join(', '))}`
+      )
+    );
+  }
+
+  // 7. Retry Logic for Failed Functions
+  let failedFunctions = finalResults.filter((r) => r.status === 'failed');
 
   if (failedFunctions.length > 0) {
-    failedFunctions = await retryFailedFunctions(
+    failedFunctions = await retryFailedFunctions({
       failedFunctions,
       functionFiles,
       options,
       environment,
-      functionsPath
-    );
+      functionsPath,
+    });
   }
 
-  // 6. Final Status Check
+  // 8. Final Status Check
   if (failedFunctions.length > 0) {
     logger.error(
       chalk.bold.red(`\n❌ Deployment failed for ${failedFunctions.length} function(s).`)
@@ -102,7 +170,7 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
     exit(1);
   }
 
-  // 7. Synchronize Remote Cache
+  // 9. Synchronize Remote Cache
   if (remoteUtils.update) {
     const latestLocalCache = await loadChecksums({
       outputDirectory: join(cwd(), 'dist'),
@@ -110,7 +178,11 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
     });
 
     const newRemoteCacheData = { ...previousCache, ...latestLocalCache };
-    const success = await updateRemoteCache(remoteUtils.update, options.flavor, newRemoteCacheData);
+    const success = await updateRemoteCache({
+      updateFn: remoteUtils.update,
+      flavor: options.flavor,
+      newCache: newRemoteCacheData,
+    });
     if (success) {
       logger.info(chalk.dim('🌐 Remote cache updated.'));
     }

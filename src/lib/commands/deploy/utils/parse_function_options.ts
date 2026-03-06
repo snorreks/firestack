@@ -15,6 +15,7 @@ import type { DeployFunction } from '$types';
 
 // Valid configuration keys for Firebase v2 functions
 const VALID_FIREBASE_OPTIONS = new Set([
+  // Global / Instance / Runtime options
   'region',
   'memory',
   'timeoutSeconds',
@@ -32,9 +33,37 @@ const VALID_FIREBASE_OPTIONS = new Set([
   'omit',
   'cors',
   'preserveExternalChanges',
-  // Allow our internal custom keys injected later
+
+  // App Check (HTTP/Callable)
+  'enforceAppCheck',
+  'consumeAppCheckToken',
+
+  // Scheduled Function triggers
+  'schedule',
+  'timeZone',
+  'retryConfig', // Also used by Task Queues
+  'retry', // Used by background events (boolean)
+
+  // Eventarc / PubSub / Custom events
+  'eventFilters',
+  'eventFilterPathPatterns',
+  'topic',
+  'eventType',
+  'channel',
+
+  // Firestore triggers
   'document',
+  'database', // For multi-database support in v2
+
+  // Realtime Database triggers
   'ref',
+  'instance',
+
+  // Storage triggers
+  'bucket',
+
+  // Task Queue triggers
+  'rateLimits',
 ]);
 
 export function extractAndValidateOptions(
@@ -103,7 +132,56 @@ export function extractAndValidateOptions(
     }
   }
 
+  // 6. Enforce V2 specific requirements (Fail early!)
+  validateV2Options(deployFunction, validatedOptions, funcPath);
+
   return { deployFunction, options: validatedOptions };
+}
+
+/**
+ * Enforces V2 specific requirements and types, throwing errors early
+ * during the build step rather than failing during deployment.
+ */
+function validateV2Options(
+  deployFunction: DeployFunction,
+  options: Record<string, unknown>,
+  funcPath: string
+): void {
+  // 1. Required Trigger Properties
+  if (deployFunction === 'onSchedule' && !options.schedule) {
+    throw new Error(
+      `[Firestack] Build failed: 'onSchedule' in ${funcPath} requires a 'schedule' property.`
+    );
+  }
+
+  // 2. Type Validations for Common V2 Properties
+  if ('memory' in options) {
+    const mem = options.memory;
+    if (typeof mem !== 'string' && typeof mem !== 'number') {
+      throw new Error(
+        `[Firestack] Build failed: 'memory' in ${funcPath} must be a string (e.g., '256MB') or a number.`
+      );
+    }
+  }
+
+  if ('concurrency' in options) {
+    const conc = options.concurrency;
+    if (typeof conc !== 'number' || conc < 1) {
+      throw new Error(
+        `[Firestack] Build failed: 'concurrency' in ${funcPath} must be a positive number.`
+      );
+    }
+  }
+
+  if ('timeoutSeconds' in options) {
+    const timeout = options.timeoutSeconds;
+    // Firebase Gen 2 allows up to 3600 seconds (60 mins)
+    if (typeof timeout !== 'number' || timeout > 3600 || timeout < 1) {
+      throw new Error(
+        `[Firestack] Build failed: 'timeoutSeconds' in ${funcPath} must be a number between 1 and 3600.`
+      );
+    }
+  }
 }
 
 /**

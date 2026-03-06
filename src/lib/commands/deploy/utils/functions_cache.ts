@@ -36,7 +36,7 @@ export async function getCacheContext(flavor: string): Promise<CacheContext> {
   let mergedCache: Record<string, string> = { ...localCache };
 
   if (remoteUtils.get) {
-    const remoteCache = await fetchRemoteCache(remoteUtils.get, flavor);
+    const remoteCache = await fetchRemoteCache({ getFn: remoteUtils.get, flavor });
     if (remoteCache) {
       logger.debug('Using remote cache, merging with local');
       mergedCache = { ...mergedCache, ...remoteCache };
@@ -84,16 +84,18 @@ export async function getRemoteCacheUtils(): Promise<{
   }
 }
 
+interface FetchRemoteCacheOptions {
+  getFn: FunctionsCacheGet;
+  flavor: string;
+}
+
 /**
  * Fetches the current remote cache using the provided get function.
- * @param getFn The function to use to fetch the cache.
- * @param flavor The flavor to fetch the cache for.
- * @returns The current remote cache, or undefined if it could not be fetched.
  */
 export async function fetchRemoteCache(
-  getFn: FunctionsCacheGet,
-  flavor: string
+  opts: FetchRemoteCacheOptions
 ): Promise<FunctionsCache | undefined> {
+  const { getFn, flavor } = opts;
   try {
     return await getFn({ flavor });
   } catch (error) {
@@ -102,18 +104,17 @@ export async function fetchRemoteCache(
   }
 }
 
+interface UpdateRemoteCacheOptions {
+  updateFn: FunctionsCacheUpdate;
+  flavor: string;
+  newCache: FunctionsCache;
+}
+
 /**
  * Updates the remote cache using the provided update function.
- * @param updateFn The function to use to update the cache.
- * @param flavor The flavor to update the cache for.
- * @param newCache The new cache to store remotely.
- * @returns True if the update was successful, false otherwise.
  */
-export async function updateRemoteCache(
-  updateFn: FunctionsCacheUpdate,
-  flavor: string,
-  newCache: FunctionsCache
-): Promise<boolean> {
+export async function updateRemoteCache(opts: UpdateRemoteCacheOptions): Promise<boolean> {
+  const { updateFn, flavor, newCache } = opts;
   try {
     await updateFn({ flavor, newFunctionsCache: newCache });
     return true;

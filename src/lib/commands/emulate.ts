@@ -5,7 +5,7 @@ import chalk from 'chalk';
 import { Command } from 'commander';
 import { logger } from '$logger';
 import { executeCommand } from '$utils/command.js';
-import { exists } from '$utils/common.js';
+import { exists, openUrl } from '$utils/common.js';
 import { getEnvironment } from './deploy/utils/environment.js';
 import { type DeployOptions, getOptions } from './deploy/utils/options.js';
 
@@ -45,7 +45,8 @@ export const emulateCommand = new Command('emulate')
   .option('--flavor <flavor>', 'The flavor to use.', 'development')
   .option('--verbose', 'Enable verbose logging.')
   .option('--silent', 'Disable logging.')
-  .action(async (cliOptions: DeployOptions) => {
+  .option('--open', 'Automatically open the Emulator UI in the browser.')
+  .action(async (cliOptions: DeployOptions & { open?: boolean }) => {
     const options = await getOptions(cliOptions);
     const projectRoot = cwd();
 
@@ -71,10 +72,27 @@ export const emulateCommand = new Command('emulate')
       );
     }
 
-    // 3. Start Emulator Process
+    // 3. Start Emulator Process with output monitoring
+    let uiLogged = false;
     const emulatorProcess = executeCommand('firebase', {
       args: ['emulators:start', '--project', options.projectId || 'demo-project'],
       packageManager: options.packageManager,
+      onStdout: (data) => {
+        if (!uiLogged && data.includes('Emulator UI at')) {
+          const match = data.match(/http:\/\/[^\s/]+/);
+          if (match) {
+            const url = `${match[0]}/`;
+            logger.info(chalk.bold.cyan(`\n👉 Emulator UI: ${url}\n`));
+            uiLogged = true;
+
+            if (cliOptions.open) {
+              openUrl(url).catch((err) => {
+                logger.debug(`Failed to auto-open URL: ${err.message}`);
+              });
+            }
+          }
+        }
+      },
     });
 
     // 4. Run post-startup initialization

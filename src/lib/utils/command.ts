@@ -5,6 +5,8 @@ import { logger } from '$logger';
 export interface CommandOptions extends ExecaOptions {
   args?: string[];
   packageManager?: PackageManager;
+  onStdout?: (data: string) => void;
+  onStderr?: (data: string) => void;
 }
 
 /**
@@ -14,7 +16,7 @@ export async function executeCommand(
   cmd: string,
   options: CommandOptions = {}
 ): Promise<{ code: number; stdout: string; stderr: string; success: boolean }> {
-  const { args = [], packageManager = 'global', ...execaOptions } = options;
+  const { args = [], packageManager = 'global', onStdout, onStderr, ...execaOptions } = options;
 
   let finalCmd = cmd;
   let finalArgs = [...args];
@@ -48,11 +50,20 @@ export async function executeCommand(
   const isVerbose = logger.currentLogSeverity === 'debug';
 
   try {
-    const result = await execa(finalCmd, finalArgs, {
+    const subprocess = execa(finalCmd, finalArgs, {
       ...execaOptions,
       stdout: execaOptions.stdout ?? (isVerbose ? 'inherit' : 'pipe'),
       stderr: execaOptions.stderr ?? (isVerbose ? 'inherit' : 'pipe'),
     });
+
+    if (onStdout && subprocess.stdout) {
+      subprocess.stdout.on('data', (chunk) => onStdout(chunk.toString()));
+    }
+    if (onStderr && subprocess.stderr) {
+      subprocess.stderr.on('data', (chunk) => onStderr(chunk.toString()));
+    }
+
+    const result = await subprocess;
 
     return {
       code: result.exitCode ?? 0,

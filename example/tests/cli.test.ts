@@ -80,7 +80,9 @@ describe('Firestack CLI', () => {
         }
       );
 
-      expect(result.stdout.toString()).toContain('Found 1 functions to deploy');
+      const output = result.stdout.toString();
+      expect(output).toContain('Found 1 function(s) to deploy');
+      expect(output).toContain('Dry run (1): test_api');
     },
     { timeout: 60000 }
   );
@@ -95,7 +97,8 @@ describe('Firestack CLI', () => {
         }
       );
 
-      expect(result.stdout.toString()).toContain('Deploying all (rules and functions)');
+      const output = result.stdout.toString();
+      expect(output).toContain('Deploying all (rules and functions)');
     },
     { timeout: 60000 }
   );

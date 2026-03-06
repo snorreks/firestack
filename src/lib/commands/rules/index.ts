@@ -65,15 +65,25 @@ export const rulesAction = async (cliOptions: RulesOptions) => {
   }
 
   // 3. Detect changes in parallel
-  const { rulesToDeploy, newChecksums } = await detectChanges(
+  const { rulesToDeploy, newChecksums, skippedRules } = await detectChanges({
     ruleFiles,
     rulesDir,
     previousCache,
-    options.force
-  );
+    force: options.force,
+  });
+
+  if (skippedRules.length > 0) {
+    logger.info(
+      chalk.yellow(
+        `⏭️  Skipped rules (${skippedRules.length}): ${chalk.dim(skippedRules.join(', '))}`
+      )
+    );
+  }
 
   if (rulesToDeploy.length === 0) {
-    logger.info(chalk.green('✅ No changes detected in rules or indexes. Skipping deployment.'));
+    if (skippedRules.length === 0) {
+      logger.info(chalk.green('✅ No changes detected in rules or indexes. Skipping deployment.'));
+    }
     return;
   }
 
@@ -102,20 +112,25 @@ export const rulesAction = async (cliOptions: RulesOptions) => {
 interface ChangeDetectionResult {
   rulesToDeploy: RuleFile[];
   newChecksums: Record<string, string>;
+  skippedRules: string[];
+}
+
+interface DetectChangesOptions {
+  ruleFiles: RuleFile[];
+  rulesDir: string;
+  previousCache: Record<string, string>;
+  force?: boolean;
 }
 
 /**
  * Detects which rule files have changed.
  */
-async function detectChanges(
-  ruleFiles: RuleFile[],
-  rulesDir: string,
-  previousCache: Record<string, string>,
-  force?: boolean
-): Promise<ChangeDetectionResult> {
+async function detectChanges(opts: DetectChangesOptions): Promise<ChangeDetectionResult> {
+  const { ruleFiles, rulesDir, previousCache, force } = opts;
   const algorithm = 'md5';
   const rulesToDeploy: RuleFile[] = [];
   const newChecksums: Record<string, string> = {};
+  const skippedRules: string[] = [];
 
   const checkResults = await Promise.all(
     ruleFiles.map(async (rule) => {
@@ -144,11 +159,11 @@ async function detectChanges(
     if (res.hasChanged) {
       rulesToDeploy.push(res.rule);
     } else {
-      logger.info(chalk.dim(`${res.rule.type} rules have not changed, skipping.`));
+      skippedRules.push(res.rule.type);
     }
   }
 
-  return { rulesToDeploy, newChecksums };
+  return { rulesToDeploy, newChecksums, skippedRules };
 }
 
 /**
@@ -267,7 +282,11 @@ async function updateCaches(
   // Update remote cache
   if (remoteUtils.update) {
     const updatedRemoteCache = { ...previousCache, ...newChecksums };
-    remoteSuccess = await updateRemoteCache(remoteUtils.update, options.flavor, updatedRemoteCache);
+    remoteSuccess = await updateRemoteCache({
+      updateFn: remoteUtils.update,
+      flavor: options.flavor,
+      newCache: updatedRemoteCache,
+    });
   }
 
   await Promise.all(updatePromises);

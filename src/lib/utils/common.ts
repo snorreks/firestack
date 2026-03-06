@@ -53,3 +53,24 @@ export async function findProjectRoot(): Promise<string> {
     current = parent;
   }
 }
+
+/**
+ * Opens a URL in the default web browser.
+ * @param url - The URL to open.
+ */
+export async function openUrl(url: string): Promise<void> {
+  const { execa } = await import('execa');
+  const platform = process.platform;
+
+  try {
+    if (platform === 'win32') {
+      await execa('cmd', ['/c', 'start', url]);
+    } else if (platform === 'darwin') {
+      await execa('open', [url]);
+    } else {
+      await execa('xdg-open', [url]);
+    }
+  } catch (error) {
+    throw new Error(`Failed to open URL: ${(error as Error).message}`);
+  }
+}
