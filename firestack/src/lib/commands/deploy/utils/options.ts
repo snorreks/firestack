@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { cwd, exit } from 'node:process';
@@ -19,6 +20,8 @@ export interface DeployOptions {
   sourcemap?: boolean;
   functionsDirectory?: string;
   rulesDirectory?: string;
+  firestoreRules?: string;
+  storageRules?: string;
   scriptsDirectory?: string;
   initScript?: string;
   projectId?: string;
@@ -32,6 +35,8 @@ export interface DeployOptions {
 export interface FirestackConfig {
   functionsDirectory?: string;
   rulesDirectory?: string;
+  firestoreRules?: string;
+  storageRules?: string;
   scriptsDirectory?: string;
   initScript?: string;
   flavors?: Record<string, string>;
@@ -66,11 +71,16 @@ export async function getOptions(cliOptions: DeployOptions): Promise<DeployOptio
     }
   }
 
+  const defaultPackageManager =
+    existsSync(join(cwd(), 'bun.lock')) || existsSync(join(cwd(), 'bun.lockb')) ? 'bun' : 'global';
+
   const options: DeployOptions = {
     ...cliOptions,
     functionsDirectory:
       cliOptions.functionsDirectory || config.functionsDirectory || 'src/controllers',
     rulesDirectory: cliOptions.rulesDirectory || config.rulesDirectory || 'src/rules',
+    firestoreRules: cliOptions.firestoreRules || config.firestoreRules,
+    storageRules: cliOptions.storageRules || config.storageRules,
     scriptsDirectory: cliOptions.scriptsDirectory || config.scriptsDirectory || 'scripts',
     initScript: cliOptions.initScript || config.initScript || 'on_emulate.ts',
     region: cliOptions.region || config.region,
@@ -80,7 +90,7 @@ export async function getOptions(cliOptions: DeployOptions): Promise<DeployOptio
     minify: cliOptions.minify ?? config.minify ?? true,
     sourcemap: cliOptions.sourcemap ?? config.sourcemap ?? true,
     external: cliOptions.external || config.external || [],
-    packageManager: cliOptions.packageManager || config.packageManager || 'global',
+    packageManager: cliOptions.packageManager || config.packageManager || defaultPackageManager,
   };
 
   logger.setLogSeverity(options);

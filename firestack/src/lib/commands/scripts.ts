@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { readdir, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { cwd, exit } from 'node:process';
 import { Command } from 'commander';
 import { execa } from 'execa';
@@ -53,6 +53,7 @@ async function getScriptConfig(flavor: string): Promise<Record<string, unknown>>
 interface FirestackConfig {
   scriptsDirectory?: string;
   engine?: string;
+  packageManager?: string;
 }
 
 async function getOptions(cliOptions: ScriptsOptions): Promise<ScriptsOptions> {
@@ -76,7 +77,8 @@ async function getOptions(cliOptions: ScriptsOptions): Promise<ScriptsOptions> {
     ...cliOptions,
     scriptsDirectory: cliOptions.scriptsDirectory || config.scriptsDirectory || 'scripts',
     engine: cliOptions.engine || config.engine || 'bun',
-    packageManager: cliOptions.packageManager || config.packageManager || 'global',
+    packageManager:
+      cliOptions.packageManager || (config.packageManager as PackageManager) || 'global',
   };
 
   logger.setLogSeverity(cliOptions);
@@ -125,10 +127,13 @@ async function runScript(scriptName: string, options: ScriptsOptions, projectRoo
   }
 
   const engine = options.engine || 'bun';
-  logger.debug(`Running command: ${engine} run "${scriptPath}"`);
+  const relativeScriptPath = relative(cwd(), scriptPath);
+  const args = engine === 'bun' ? [relativeScriptPath] : ['run', relativeScriptPath];
+
+  logger.debug(`Running command: ${engine} ${args.join(' ')}`);
 
   try {
-    await execa(engine, ['run', scriptPath], {
+    await execa(engine, args, {
       cwd: cwd(),
       env: { ...process.env, ...env },
       stdio: 'inherit',

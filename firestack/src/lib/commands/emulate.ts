@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process';
 import { existsSync, watch } from 'node:fs';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { connect } from 'node:net';
@@ -22,28 +23,6 @@ interface EmulateOptions extends DeployOptions {
 }
 
 /**
- * Waits for a port to be open.
- */
-async function waitForPort(port: number, host = '127.0.0.1', timeout = 30000): Promise<void> {
-  const startTime = Date.now();
-  while (Date.now() - startTime < timeout) {
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const socket = connect(port, host, () => {
-          socket.end();
-          resolve();
-        });
-        socket.on('error', reject);
-      });
-      return;
-    } catch {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-  }
-  throw new Error(`Timeout waiting for port ${port}`);
-}
-
-/**
  * Runs the init script before starting emulators.
  */
 async function runInitScript(
@@ -61,8 +40,11 @@ async function runInitScript(
 
   logger.info(`Running init script: ${initScript} using ${engine}`);
 
+  const relativeInitScriptPath = relative(process.cwd(), initScriptPath);
+  const args = engine === 'bun' ? [relativeInitScriptPath] : ['run', relativeInitScriptPath];
+
   const result = await executeCommand(engine, {
-    args: ['run', initScriptPath],
+    args,
     cwd: process.cwd(),
     env: {
       ...process.env,
@@ -73,13 +55,14 @@ async function runInitScript(
       FIREBASE_STORAGE_EMULATOR_HOST: '127.0.0.1:9199',
       FIREBASE_DATABASE_EMULATOR_HOST: '127.0.0.1:9000',
     },
-    stdio: 'inherit',
+    stdout: 'pipe',
+    stderr: 'pipe',
   });
 
   if (result.success) {
     logger.info('Init script completed successfully.');
   } else {
-    logger.error(`Failed to run init script: ${result.stderr}`);
+    logger.error(`Failed to run init script: ${result.stderr || result.stdout || 'Unknown error'}`);
   }
 }
 
@@ -138,18 +121,6 @@ async function buildEmulatorFunctions(
   };
   await writeFile(join(outputDir, 'src', 'package.json'), JSON.stringify(packageJson, null, 2));
 
-  logger.info('Installing dependencies...');
-  const result = await executeCommand('npm', {
-    args: ['install'],
-    cwd: join(outputDir, 'src'),
-    stdio: 'inherit',
-  });
-
-  if (!result.success) {
-    throw new Error(`Failed to install dependencies: ${result.stderr}`);
-  }
-  logger.info('Dependencies installed.');
-
   if (!options.debug) {
     await rm(tempDir, { recursive: true, force: true }).catch(() => {});
   }
@@ -175,16 +146,36 @@ async function generateFirebaseJson(outputDir: string, options: EmulateOptions):
     },
   };
 
-  if (options.firestoreRules && existsSync(options.firestoreRules)) {
-    firebaseConfig.firestore = {
-      rules: options.firestoreRules,
-    };
+  const firestoreRules = options.firestoreRules || 'firestore.rules';
+  const firestoreRulesPaths = [
+    join(process.cwd(), firestoreRules),
+    join(process.cwd(), options.rulesDirectory || 'src/rules', firestoreRules),
+  ];
+
+  for (const path of firestoreRulesPaths) {
+    if (existsSync(path)) {
+      firebaseConfig.firestore = {
+        rules: path,
+      };
+      logger.debug(`Using Firestore rules from: ${path}`);
+      break;
+    }
   }
 
-  if (options.storageRules && existsSync(options.storageRules)) {
-    firebaseConfig.storage = {
-      rules: options.storageRules,
-    };
+  const storageRules = options.storageRules || 'storage.rules';
+  const storageRulesPaths = [
+    join(process.cwd(), storageRules),
+    join(process.cwd(), options.rulesDirectory || 'src/rules', storageRules),
+  ];
+
+  for (const path of storageRulesPaths) {
+    if (existsSync(path)) {
+      firebaseConfig.storage = {
+        rules: path,
+      };
+      logger.debug(`Using Storage rules from: ${path}`);
+      break;
+    }
   }
 
   await writeFile(join(outputDir, 'firebase.json'), JSON.stringify(firebaseConfig, null, 2));
@@ -232,12 +223,8 @@ export const emulateCommand = new Command('emulate')
     'Only start the emulator for the given services (e.g., "functions,firestore").',
     'functions,firestore'
   )
-  .option(
-    '--firestoreRules <firestoreRules>',
-    'Path to the Firestore rules file.',
-    'firestore.rules'
-  )
-  .option('--storageRules <storageRules>', 'Path to the Storage rules file.', 'storage.rules')
+  .option('--firestoreRules <firestoreRules>', 'Path to the Firestore rules file.')
+  .option('--storageRules <storageRules>', 'Path to the Storage rules file.')
   .option('--watch', 'Enable file watching for live reload.', true)
   .option('--no-watch', 'Disable file watching.')
   .option('--init', 'Run init script before starting emulators.', true)
@@ -254,8 +241,7 @@ export const emulateCommand = new Command('emulate')
   .option('--engine <engine>', 'The engine to use for running scripts (e.g., "bun", "node").')
   .option(
     '--packageManager <packageManager>',
-    'The package manager to use (npm, yarn, pnpm, bun, global).',
-    'global'
+    'The package manager to use (npm, yarn, pnpm, bun, global).'
   )
   .option('--external <external>', 'Comma-separated list of external dependencies.', (val) =>
     val.split(',')
@@ -299,13 +285,56 @@ export const emulateCommand = new Command('emulate')
     }
 
     logger.info('Starting Firebase emulator...');
-    logger.debug(`> firebase ${commandArgs.join(' ')}`);
 
-    const emulatorPromise = executeCommand('firebase', {
-      args: commandArgs,
+    let emulatorExited = false;
+    let finalCmd = 'firebase';
+    let finalArgs = commandArgs;
+
+    if (options.packageManager !== 'global') {
+      switch (options.packageManager) {
+        case 'bun':
+          finalCmd = 'bun';
+          finalArgs = ['x', 'firebase', ...commandArgs];
+          break;
+        case 'pnpm':
+          finalCmd = 'pnpm';
+          finalArgs = ['dlx', 'firebase', ...commandArgs];
+          break;
+        case 'yarn':
+          finalCmd = 'yarn';
+          finalArgs = ['dlx', 'firebase', ...commandArgs];
+          break;
+        default:
+          finalCmd = 'npx';
+          finalArgs = ['firebase', ...commandArgs];
+      }
+    } else {
+      const firebasePath = join(process.cwd(), 'node_modules', '.bin', 'firebase');
+      if (existsSync(firebasePath)) {
+        finalCmd = firebasePath;
+      }
+    }
+
+    logger.debug(`Executing: ${finalCmd} ${finalArgs.join(' ')}`);
+    logger.debug(`Working directory: ${outputDir}`);
+
+    const emulatorProcess = spawn(finalCmd, finalArgs, {
       cwd: outputDir,
-      packageManager: options.packageManager,
       stdio: 'inherit',
+      detached: false,
+    });
+
+    emulatorProcess.on('exit', (code) => {
+      emulatorExited = true;
+      if (code !== 0 && code !== null) {
+        logger.error(`Firebase emulator exited with code ${code}`);
+      }
+    });
+
+    const emulatorPromise = new Promise<{ code: number; success: boolean }>((resolve) => {
+      emulatorProcess.on('close', (code) => {
+        resolve({ code: code ?? 0, success: code === 0 || code === null });
+      });
     });
 
     // Run init script if enabled
@@ -316,8 +345,48 @@ export const emulateCommand = new Command('emulate')
           if (!options.projectId) {
             throw new Error('Project ID is missing for emulator initialization.');
           }
-          // Wait for Firestore emulator port
-          await waitForPort(8080);
+
+          // Wait for Firestore emulator port, but also check if emulator exited
+          const port = 8080;
+          const host = '127.0.0.1';
+          const timeout = 60000;
+          const startTime = Date.now();
+
+          logger.debug('Waiting for Firestore emulator to start...');
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+
+          let connected = false;
+          while (Date.now() - startTime < timeout) {
+            if (emulatorExited) {
+              throw new Error('Emulator exited before port became available.');
+            }
+            try {
+              await new Promise<void>((resolve, reject) => {
+                const socket = connect(port, host, () => {
+                  socket.end();
+                  resolve();
+                });
+                socket.on('error', reject);
+                socket.setTimeout(2000);
+                socket.on('timeout', () => {
+                  socket.destroy();
+                  reject(new Error('timeout'));
+                });
+              });
+              connected = true;
+              logger.debug(`Port ${port} is now available!`);
+              await new Promise((resolve) => setTimeout(resolve, 5000));
+              break;
+            } catch {
+              logger.debug(`Port ${port} not ready yet, waiting...`);
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+          }
+
+          if (!connected) {
+            throw new Error(`Timeout waiting for port ${port}`);
+          }
+
           await runInitScript(
             options.scriptsDirectory || 'scripts',
             options.initScript || 'on_emulate.ts',
