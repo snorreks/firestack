@@ -1,20 +1,21 @@
 import { exit } from 'node:process';
+import chalk from 'chalk';
 import type { DeployOptions } from '$commands/deploy/utils/options.js';
 import { logger } from '$logger';
 import { executeCommand } from '$utils/command.js';
 
+export interface DeleteFunctionsOptions {
+  options: DeployOptions;
+  functionNames: string[];
+}
+
 /**
  * Deletes the specified Firebase functions.
- * @param options - The deployment options containing the project ID.
- * @param functionNames - The names of the functions to delete.
- * @returns A promise that resolves when the functions are deleted.
  */
-export async function deleteFunctions(
-  options: DeployOptions,
-  functionNames: string[]
-): Promise<void> {
+export async function deleteFunctions(opts: DeleteFunctionsOptions): Promise<void> {
+  const { options, functionNames } = opts;
   try {
-    await executeFirebaseFunctionsDelete(options, functionNames);
+    await executeFirebaseFunctionsDelete({ options, functionNames });
   } catch (error) {
     logger.error('deleteFunctions', error);
     throw error;
@@ -23,25 +24,27 @@ export async function deleteFunctions(
 
 /**
  * Executes the Firebase CLI command to delete functions.
- * @param options - The deployment options containing the project ID.
- * @param functionNames - The names of the functions to delete.
- * @returns A promise that resolves when the command execution is complete.
  */
-async function executeFirebaseFunctionsDelete(options: DeployOptions, functionNames: string[]) {
+async function executeFirebaseFunctionsDelete(opts: DeleteFunctionsOptions) {
+  const { options, functionNames } = opts;
   if (!options.projectId) {
     throw new Error('Project ID is required for delete command.');
   }
 
-  logger.info(`Deleting functions: ${functionNames.join(', ')}...`);
+  logger.info(chalk.dim(`📡 Executing deletion for: ${functionNames.join(', ')}`));
   const result = await executeCommand('firebase', {
     args: ['functions:delete', ...functionNames, '--project', options.projectId, '--force'],
-    stdio: 'inherit',
     packageManager: options.packageManager,
   });
 
   if (!result.success) {
-    logger.error('Failed to delete functions:');
-    logger.error(result.stderr);
+    logger.error(`\n❌ Failed to delete functions: ${chalk.bold(functionNames.join(', '))}`);
+    if (result.stderr) {
+      logger.error(chalk.red(result.stderr));
+    }
+    if (result.stdout && !options.verbose) {
+      logger.error(chalk.dim(result.stdout));
+    }
     exit(1);
   }
 }

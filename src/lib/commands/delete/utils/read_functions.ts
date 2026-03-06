@@ -1,8 +1,9 @@
-import { basename, join } from 'node:path';
+import { join } from 'node:path';
 import client from 'firebase-tools';
 import { findFunctions } from '$commands/deploy/utils/find_functions.js';
 import type { DeployOptions } from '$commands/deploy/utils/options.js';
 import { logger } from '$logger';
+import { deriveFunctionName } from '$utils/function_naming.js';
 
 export async function getLocalFunctionNames(options: DeployOptions): Promise<string[]> {
   try {
@@ -12,7 +13,7 @@ export async function getLocalFunctionNames(options: DeployOptions): Promise<str
     const functionsPath = join(process.cwd(), options.functionsDirectory);
     const localFunctionFiles = await findFunctions(functionsPath);
     const localFunctionNames = localFunctionFiles.map((file) =>
-      basename(file).replace(/\.(ts|tsx|js)$/, '')
+      deriveFunctionName(file, functionsPath)
     );
     logger.debug('localFunctionNames', localFunctionNames);
     return localFunctionNames;

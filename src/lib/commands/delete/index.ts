@@ -1,4 +1,5 @@
 import { exit } from 'node:process';
+import chalk from 'chalk';
 import { Command } from 'commander';
 import { type DeployOptions, getOptions } from '$commands/deploy/utils/options.js';
 import { logger } from '$logger';
@@ -35,25 +36,40 @@ export const deleteCommand = new Command('delete')
 
     if (!options.projectId) {
       logger.error(
-        'Project ID not found. Please provide it using --projectId option or in firestack.json.'
+        chalk.red('❌ Project ID not found. Provide it with --projectId or in firestack.json.')
       );
       exit(1);
     }
+
+    logger.info(chalk.bold.green('🗑️  Starting deletion process...'));
 
     const functionsToDelete = cliOptions.all
       ? await getOnlineFunctionNames(options)
       : await getUnusedFunctionNames(options);
 
-    logger.info('Functions to delete:', functionsToDelete);
+    if (functionsToDelete.length === 0) {
+      logger.info(chalk.green('✅ No unused functions found. Nothing to delete.'));
+      return;
+    }
 
-    if (functionsToDelete.length > 0) {
-      if (cliOptions.dryRun) {
-        logger.info('Dry run: skipping deletion.');
-      } else {
-        await deleteFunctions(options, functionsToDelete);
-        logger.info('Deletion complete.');
-      }
-    } else {
-      logger.info('No unused functions found.');
+    logger.info(
+      chalk.cyan(
+        `🔍 Found ${chalk.bold(functionsToDelete.length)} function(s) to delete: ${chalk.dim(functionsToDelete.join(', '))}`
+      )
+    );
+
+    if (cliOptions.dryRun) {
+      logger.info(
+        chalk.blue(`📝 Dry run: skipping deletion of ${functionsToDelete.length} function(s).`)
+      );
+      return;
+    }
+
+    try {
+      await deleteFunctions({ options, functionNames: functionsToDelete });
+      logger.info(chalk.bold.green('\n✅ Deletion complete!'));
+    } catch (error) {
+      logger.error(chalk.red(`\n❌ Failed to delete functions: ${(error as Error).message}`));
+      exit(1);
     }
   });
