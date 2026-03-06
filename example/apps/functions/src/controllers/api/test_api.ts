@@ -9,6 +9,7 @@ export default onRequest<RequestFunctions, "test_api", { p: string }>(
 		console.log(`params ${request.params.p}`);
 
 		const firestore = getFirestore();
+		console.log("firestore", firestore);
 
 		if (request.body.message === "error") {
 			throw new FirestackError("invalid-argument", "Message cannot be 'error'");

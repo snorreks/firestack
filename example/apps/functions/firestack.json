@@ -1,13 +1,12 @@
 {
-  "flavors": {
-    "development": "aikami-prod",
-    "production": "aikami-prod"
-  },
-  "region": "us-central1",
-  "functionsDirectory": "src/controllers",
-  "rulesDirectory": "src/rules",
-  "scriptsDirectory": "scripts",
-  "initScript": "on_emulate.ts",
-  "minify": false,
-  "nodeVersion": "22"
+	"flavors": {
+		"development": "aikami-prod",
+		"production": "aikami-prod"
+	},
+	"region": "us-central1",
+	"functionsDirectory": "src/controllers",
+	"rulesDirectory": "src/rules",
+	"scriptsDirectory": "scripts",
+	"initScript": "on_emulate.ts",
+	"minify": false
 }

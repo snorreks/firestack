@@ -118,6 +118,10 @@ async function buildEmulatorFunctions(
     type: 'module',
     main: 'index.js',
     engines: { node: `${options.nodeVersion || DEFAULT_NODE_VERSION}` },
+    dependencies: {
+      'firebase-admin': '*',
+      'firebase-functions': '*',
+    },
   };
   await writeFile(join(outputDir, 'src', 'package.json'), JSON.stringify(packageJson, null, 2));
 
@@ -133,7 +137,7 @@ async function generateFirebaseJson(outputDir: string, options: EmulateOptions):
   const firebaseConfig: Record<string, unknown> = {
     functions: [
       {
-        source: 'src',
+        source: relative(process.cwd(), join(outputDir, 'src')),
         codebase: 'default',
         runtime: `nodejs${options.nodeVersion || DEFAULT_NODE_VERSION}`,
       },
@@ -178,7 +182,7 @@ async function generateFirebaseJson(outputDir: string, options: EmulateOptions):
     }
   }
 
-  await writeFile(join(outputDir, 'firebase.json'), JSON.stringify(firebaseConfig, null, 2));
+  await writeFile(join(process.cwd(), 'firebase.json'), JSON.stringify(firebaseConfig, null, 2));
 }
 
 /**
@@ -316,10 +320,10 @@ export const emulateCommand = new Command('emulate')
     }
 
     logger.debug(`Executing: ${finalCmd} ${finalArgs.join(' ')}`);
-    logger.debug(`Working directory: ${outputDir}`);
+    logger.debug(`Working directory: ${process.cwd()}`);
 
     const emulatorProcess = spawn(finalCmd, finalArgs, {
-      cwd: outputDir,
+      cwd: process.cwd(),
       stdio: 'inherit',
       detached: false,
     });

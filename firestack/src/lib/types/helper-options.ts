@@ -5,7 +5,7 @@ import type { HttpsOptions as FirebaseHttpsOptions } from 'firebase-functions/v2
 import type { GlobalOptions } from 'firebase-functions/v2/options';
 import type { ScheduleOptions as FBScheduleOptions } from 'firebase-functions/v2/scheduler';
 import type { StorageOptions } from 'firebase-functions/v2/storage';
-export type NodeVersion = '14' | '16' | '18' | '20' | '22';
+export type NodeVersion = '18' | '20' | '22' | '24';
 
 export interface BaseFunctionOptions<T extends string = string> extends GlobalOptions {
   /**

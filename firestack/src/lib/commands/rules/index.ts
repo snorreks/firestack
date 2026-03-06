@@ -3,10 +3,10 @@ import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { cwd, exit } from 'node:process';
 import { Command } from 'commander';
+import { type DeployOptions, getOptions } from '$commands/deploy/utils/options.js';
 import { logger } from '$logger';
 import { executeCommand } from '$utils/command.js';
-import { type DeployOptions, getOptions } from './deploy/utils/options.js';
-import { findRuleFiles } from './rules/utils/rule_files.js';
+import { findRuleFiles } from './utils/rule_files.js';
 
 /**
  * Options for the rules command.

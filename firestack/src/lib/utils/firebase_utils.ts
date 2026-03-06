@@ -23,22 +23,22 @@ export function createFirebaseConfig(nodeVersion: string): string {
  * @returns A JSON string for the package.json configuration.
  */
 export function createPackageJson(nodeVersion: string, external?: string[]): string {
-  const packageJsonContent: Record<string, unknown> = {
+  const packageJsonContent: Record<string, any> = {
     type: 'module',
     main: 'index.js',
     engines: {
       node: nodeVersion,
     },
+    dependencies: {
+      'firebase-admin': '*',
+      'firebase-functions': '*',
+    },
   };
 
   if (external && external.length > 0) {
-    packageJsonContent.dependencies = external.reduce(
-      (acc, dep) => {
-        acc[dep] = 'latest';
-        return acc;
-      },
-      {} as Record<string, string>
-    );
+    external.forEach((dep) => {
+      packageJsonContent.dependencies[dep] = 'latest';
+    });
   }
 
   return JSON.stringify(packageJsonContent, null, 2);

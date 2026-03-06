@@ -1,9 +1,9 @@
 import { exit } from 'node:process';
 import { Command } from 'commander';
+import { type DeployOptions, getOptions } from '$commands/deploy/utils/options.js';
 import { logger } from '$logger';
-import { deleteFunctions } from './delete/utils/delete_functions.js';
-import { getOnlineFunctionNames, getUnusedFunctionNames } from './delete/utils/read_functions.js';
-import { type DeployOptions, getOptions } from './deploy/utils/options.js';
+import { deleteFunctions } from './utils/delete_functions.js';
+import { getOnlineFunctionNames, getUnusedFunctionNames } from './utils/read_functions.js';
 
 /**
  * Options for the delete command.

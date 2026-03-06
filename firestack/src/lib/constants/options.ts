@@ -1,1 +1,3 @@
-export const DEFAULT_NODE_VERSION = '22';
+import type { NodeVersion } from '$types';
+
+export const DEFAULT_NODE_VERSION: NodeVersion = '24';
