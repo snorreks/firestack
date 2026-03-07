@@ -6,7 +6,7 @@ Firestack uses `firestack.json` in the project root to manage flavors, regions, 
 Always add the `$schema` property for autocompletion:
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/snorreks/firestack/master/firestack.schema.json",
+  "$schema": "./node_modules/@snorreks/firestack/firestack.schema.json",
   "flavors": {
     "development": "my-project-dev",
     "production": "my-project-prod"

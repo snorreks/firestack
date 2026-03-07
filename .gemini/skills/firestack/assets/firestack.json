@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/snorreks/firestack/master/firestack.schema.json",
+  "$schema": "./node_modules/@snorreks/firestack/firestack.schema.json",
   "flavors": {
     "development": "my-project-dev",
     "production": "my-project-prod"
