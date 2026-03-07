@@ -26,11 +26,11 @@ bun add @snorreks/firestack
 
 ### 1. Setup Configuration
 
-Create a `firestack.json` in your project root. You can add the `$schema` property to get autocompletion and validation in your editor:
+Create a `firestack.json` in your project root. You can add the `$schema` property to get autocompletion and validation in your editor. We recommend pointing to the schema in your `node_modules` for the best performance:
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/snorreks/firestack/master/firestack.schema.json",
+  "$schema": "./node_modules/@snorreks/firestack/firestack.schema.json",
   "flavors": {
     "development": "my-project-dev",
     "production": "my-project-prod"
@@ -45,6 +45,28 @@ Create a `firestack.json` in your project root. You can add the `$schema` proper
   "packageManager": "global"
 }
 ```
+
+Alternatively, you can use the remote schema if you are not using a local installation:
+`https://raw.githubusercontent.com/snorreks/firestack/master/firestack.schema.json`
+
+## Gemini CLI Integration (Skill)
+
+If you use [Gemini CLI](https://github.com/google/gemini-cli) (or other AI-powered agents), you can install the **Firestack Skill** to give your agent native knowledge of your project's deployment workflows, triggers, and configuration.
+
+### Install the Skill
+Download the `firestack.skill` file and run:
+
+```bash
+# Install to your current project workspace
+gemini skills install firestack.skill --scope workspace
+
+# OR Install for all your projects (user scope)
+gemini skills install firestack.skill --scope user
+```
+
+### Activate
+After installation, run `/skills reload` in your interactive Gemini session. Your agent will now understand how to deploy functions, manage emulators, and write v2 triggers according to Firestack standards.
+
 
 ### 2. Create a Function
 

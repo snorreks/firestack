@@ -15,10 +15,19 @@ export async function getEnvironmentNeeded(
     const code = await readFile(outputPath, 'utf-8');
     const needed: Record<string, string> = {};
 
-    // Look for process.env.VARIABLE in the code
-    const regex = /process\.env\.([a-zA-Z0-9_]+)/g;
-    let match: RegExpExecArray | null;
+    const envKeys = Object.keys(environment);
+    if (envKeys.length === 0) return undefined;
 
+    // Create a regex that matches any of the environment keys as a standalone word/identifier
+    // This handles:
+    // 1. process.env.VAR
+    // 2. minified.env.VAR
+    // 3. getEnv('VAR')
+    // 4. env['VAR']
+    const escapedKeys = envKeys.map((key) => key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const regex = new RegExp(`\\b(${escapedKeys.join('|')})\\b`, 'g');
+
+    let match: RegExpExecArray | null;
     // biome-ignore lint/suspicious/noAssignInExpressions: valid use case for regex
     while ((match = regex.exec(code)) !== null) {
       const varName = match[1];

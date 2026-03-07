@@ -226,6 +226,7 @@ interface SetupEnvironmentOptions {
 async function setupEnvironment(opts: SetupEnvironmentOptions) {
   const { outputDir, environment } = opts;
   const envNeeded = await getEnvironmentNeeded(outputDir, environment);
+  logger.debug(`Environment needed for ${outputDir}:`, envNeeded);
   if (envNeeded) {
     const envCode = toDotEnvironmentCode(envNeeded);
     await writeFile(join(outputDir, '.env'), envCode, 'utf-8');

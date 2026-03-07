@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../dist/firestack.schema.json",
   "flavors": {
     "development": "aikami-prod",
     "production": "aikami-prod"

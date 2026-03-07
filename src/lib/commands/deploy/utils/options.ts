@@ -31,6 +31,7 @@ export interface DeployOptions {
   engine?: string;
   external?: string[];
   packageManager?: PackageManager;
+  emulators?: string[];
 }
 
 export interface FirestackConfig {
@@ -48,6 +49,7 @@ export interface FirestackConfig {
   sourcemap?: boolean;
   external?: string[];
   packageManager?: PackageManager;
+  emulators?: string[];
 }
 
 /**
@@ -95,6 +97,7 @@ export async function getOptions(cliOptions: DeployOptions): Promise<DeployOptio
     sourcemap: cliOptions.sourcemap ?? config.sourcemap ?? true,
     external: cliOptions.external || config.external || [],
     packageManager: cliOptions.packageManager || config.packageManager || defaultPackageManager,
+    emulators: cliOptions.emulators || config.emulators,
   };
 
   logger.setLogSeverity(options);

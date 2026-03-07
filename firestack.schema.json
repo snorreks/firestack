@@ -83,6 +83,14 @@
       "enum": ["npm", "yarn", "pnpm", "bun", "global"],
       "default": "global",
       "description": "The package manager for firebase commands."
+    },
+    "emulators": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["auth", "functions", "firestore", "pubsub", "storage", "database", "hosting"]
+      },
+      "description": "List of emulators to enable during emulation."
     }
   },
   "additionalProperties": false

@@ -1,5 +1,5 @@
 import { existsSync, watch } from 'node:fs';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { basename, join, relative } from 'node:path';
 import { exit } from 'node:process';
 import chalk from 'chalk';
@@ -10,9 +10,10 @@ import type { NodeVersion } from '$types';
 import { buildFunction } from '$utils/build_utils.js';
 import { executeCommand } from '$utils/command.js';
 import { exists, findProjectRoot, openUrl } from '$utils/common.js';
-import { createPackageJson } from '$utils/firebase_utils.js';
+import { createPackageJson, toDotEnvironmentCode } from '$utils/firebase_utils.js';
 import { deriveFunctionName } from '$utils/function_naming.js';
 import { createTemporaryIndexFunctionFile } from './deploy/utils/create_deploy_index.js';
+import { getEnvironment } from './deploy/utils/environment.js';
 import { findFunctions } from './deploy/utils/find_functions.js';
 import { type DeployOptions, getOptions } from './deploy/utils/options.js';
 
@@ -23,6 +24,7 @@ interface EmulateOptions extends DeployOptions {
   watch?: boolean;
   init?: boolean;
   open?: boolean;
+  emulators?: string[];
 }
 
 /**
@@ -121,64 +123,156 @@ async function buildEmulatorFunctions(opts: {
 
   await writeFile(join(outputDir, 'src', 'package.json'), packageJson);
 
+  // Generate .env for emulator containing all flavor envs (minus service account)
+  const env = await getEnvironment(options.flavor);
+  const emulatorEnv: Record<string, string> = {};
+  for (const [key, value] of Object.entries(env)) {
+    if (key !== 'FIREBASE_SERVICE_ACCOUNT') {
+      emulatorEnv[key] = value;
+    }
+  }
+
+  if (Object.keys(emulatorEnv).length > 0) {
+    await writeFile(join(outputDir, '.env'), toDotEnvironmentCode(emulatorEnv));
+    logger.debug('Generated .env file for emulator');
+  }
+
   if (!options.debug) {
     await rm(tempDir, { recursive: true, force: true }).catch(() => {});
   }
 }
 
 /**
- * Generates firebase.json for the emulator.
+ * Generates firebase.json for the emulator inside the output directory.
+ * Also copies rules and index files to the output directory.
  */
 async function generateFirebaseJson(opts: {
   outputDir: string;
   options: EmulateOptions;
+  functionFiles: string[];
 }): Promise<void> {
-  const { outputDir, options } = opts;
+  const { outputDir, options, functionFiles } = opts;
+
+  // 1. Collect potential emulators to enable
+  const emulatorsToEnable = new Set<string>();
+
+  if (options.emulators) {
+    for (const e of options.emulators) emulatorsToEnable.add(e);
+  } else {
+    emulatorsToEnable.add('auth');
+    if (functionFiles.length > 0) {
+      emulatorsToEnable.add('functions');
+      emulatorsToEnable.add('firestore');
+      if (await checkHasScheduler(functionFiles)) {
+        emulatorsToEnable.add('pubsub');
+      }
+    }
+    if (await hasRuleFile(options, 'firestore')) emulatorsToEnable.add('firestore');
+    if (await hasRuleFile(options, 'storage')) emulatorsToEnable.add('storage');
+  }
+
   const firebaseConfig: Record<string, unknown> = {
     functions: [
       {
-        source: relative(process.cwd(), join(outputDir, 'src')),
+        source: 'src', // Relative to firebase.json in dist/emulator
         codebase: 'default',
         runtime: `nodejs${options.nodeVersion || DEFAULT_NODE_VERSION}`,
       },
     ],
     emulators: {
-      functions: { port: 5001 },
-      firestore: { port: 8080 },
-      pubsub: { port: 8085 },
-      storage: { port: 9199 },
-      ui: { enabled: true, port: 4000 },
       singleProjectMode: true,
+      ui: { enabled: true, port: 4000 },
     },
   };
 
-  const firestoreRules = options.firestoreRules || 'firestore.rules';
-  const firestoreRulesPaths = [
-    join(process.cwd(), firestoreRules),
-    join(process.cwd(), options.rulesDirectory || 'src/rules', firestoreRules),
-  ];
+  const emulators = firebaseConfig.emulators as Record<string, unknown>;
 
-  for (const path of firestoreRulesPaths) {
-    if (existsSync(path)) {
-      firebaseConfig.firestore = { rules: path };
-      break;
+  if (emulatorsToEnable.has('auth')) emulators.auth = { port: 9099 };
+  if (emulatorsToEnable.has('functions')) emulators.functions = { port: 5001 };
+  if (emulatorsToEnable.has('firestore')) emulators.firestore = { port: 8080 };
+  if (emulatorsToEnable.has('pubsub')) emulators.pubsub = { port: 8085 };
+  if (emulatorsToEnable.has('storage')) emulators.storage = { port: 9199 };
+  if (emulatorsToEnable.has('database')) emulators.database = { port: 9000 };
+  if (emulatorsToEnable.has('hosting')) emulators.hosting = { port: 5000 };
+
+  // 2. Rules and Indexes Handling
+  await copyRulesAndIndexes({ outputDir, options, firebaseConfig });
+
+  await writeFile(join(outputDir, 'firebase.json'), JSON.stringify(firebaseConfig, null, 2));
+}
+
+/**
+ * Copies rules and index files to the emulator directory and updates the config.
+ */
+async function copyRulesAndIndexes(opts: {
+  outputDir: string;
+  options: EmulateOptions;
+  firebaseConfig: Record<string, unknown>;
+}) {
+  const { outputDir, options, firebaseConfig } = opts;
+  const projectRoot = process.cwd();
+
+  // Helper to find and copy a file
+  const findAndCopy = async (filename: string, configPath: string[]) => {
+    const searchPaths = [
+      join(projectRoot, filename),
+      join(projectRoot, options.rulesDirectory || 'src/rules', filename),
+    ];
+
+    for (const sourcePath of searchPaths) {
+      if (existsSync(sourcePath)) {
+        const destPath = join(outputDir, filename);
+        const content = await readFile(sourcePath, 'utf-8');
+        await writeFile(destPath, content);
+
+        // Update firebaseConfig
+        let nested = firebaseConfig;
+        for (let i = 0; i < configPath.length - 1; i++) {
+          const key = configPath[i];
+          nested[key] = nested[key] || {};
+          nested = nested[key] as Record<string, unknown>;
+        }
+        nested[configPath[configPath.length - 1]] = filename;
+        return true;
+      }
     }
-  }
+    return false;
+  };
 
-  const storageRules = options.storageRules || 'storage.rules';
-  const storageRulesPaths = [
-    join(process.cwd(), storageRules),
-    join(process.cwd(), options.rulesDirectory || 'src/rules', storageRules),
+  await Promise.all([
+    findAndCopy('firestore.rules', ['firestore', 'rules']),
+    findAndCopy('firestore.indexes.json', ['firestore', 'indexes']),
+    findAndCopy('storage.rules', ['storage', 'rules']),
+  ]);
+}
+
+async function checkHasScheduler(functionFiles: string[]): Promise<boolean> {
+  // Check first 20 files for performance
+  const filesToCheck = functionFiles.slice(0, 20);
+  const results = await Promise.all(
+    filesToCheck.map(async (f) => {
+      try {
+        const content = await readFile(f, 'utf-8');
+        return content.includes('onSchedule') || content.includes('scheduler');
+      } catch {
+        return false;
+      }
+    })
+  );
+  return results.some((r) => r);
+}
+
+async function hasRuleFile(
+  options: EmulateOptions,
+  type: 'firestore' | 'storage'
+): Promise<boolean> {
+  const filename = `${type}.rules`;
+  const paths = [
+    join(process.cwd(), filename),
+    join(process.cwd(), options.rulesDirectory || 'src/rules', filename),
   ];
-
-  for (const path of storageRulesPaths) {
-    if (existsSync(path)) {
-      firebaseConfig.storage = { rules: path };
-      break;
-    }
-  }
-
-  await writeFile(join(process.cwd(), 'firebase.json'), JSON.stringify(firebaseConfig, null, 2));
+  const results = await Promise.all(paths.map((p) => exists(p)));
+  return results.some((r) => r);
 }
 
 /**
@@ -192,11 +286,12 @@ function watchAndRebuild(opts: {
   controllersPath: string;
 }): void {
   const { functionsPath, functionFiles, outputDir, options, controllersPath } = opts;
+  const projectRoot = process.cwd();
   logger.info(chalk.dim('Watching for file changes...'));
 
-  const watcher = watch(functionsPath, { recursive: true });
-
-  watcher.on('change', async (_eventType, filename) => {
+  // Watch functions
+  const functionsWatcher = watch(functionsPath, { recursive: true });
+  functionsWatcher.on('change', async (_eventType, filename) => {
     if (
       filename &&
       typeof filename === 'string' &&
@@ -211,6 +306,34 @@ function watchAndRebuild(opts: {
       }
     }
   });
+
+  // Watch rules
+  const rulesDir = join(projectRoot, options.rulesDirectory || 'src/rules');
+  if (existsSync(rulesDir)) {
+    const rulesWatcher = watch(rulesDir, { recursive: true });
+    let lastUpdate = 0;
+    const UPDATE_THRESHOLD_MS = 500;
+
+    rulesWatcher.on('change', async (_eventType, filename) => {
+      const now = Date.now();
+      if (now - lastUpdate < UPDATE_THRESHOLD_MS) return;
+
+      if (
+        filename &&
+        typeof filename === 'string' &&
+        (filename.endsWith('.rules') || filename.endsWith('.json'))
+      ) {
+        lastUpdate = now;
+        logger.info(chalk.dim(`Rule changed: ${basename(filename)}, updating...`));
+        try {
+          await generateFirebaseJson({ outputDir, options, functionFiles });
+          logger.info(chalk.green('Rules updated.'));
+        } catch (error) {
+          logger.error(`Rules update failed: ${(error as Error).message}`);
+        }
+      }
+    });
+  }
 }
 
 /**
@@ -226,6 +349,9 @@ export const emulateCommand = new Command('emulate')
   .option('--no-watch', 'Disable file watching.')
   .option('--init', 'Run init script before starting emulators.', true)
   .option('--no-init', 'Skip running init script.')
+  .option('--emulators <emulators>', 'Comma-separated list of emulators to enable.', (val) =>
+    val.split(',')
+  )
   .option('--projectId <projectId>', 'The Firebase project ID to emulate.')
   .option(
     '--only <only>',
@@ -267,7 +393,7 @@ export const emulateCommand = new Command('emulate')
     });
     logger.info(chalk.green('✅ Build complete.'));
 
-    await generateFirebaseJson({ outputDir, options });
+    await generateFirebaseJson({ outputDir, options, functionFiles });
 
     const commandArgs = ['emulators:start', '--project', options.projectId];
     if (cliOptions.only) {
@@ -280,6 +406,7 @@ export const emulateCommand = new Command('emulate')
 
     const emulatorProcess = executeCommand('firebase', {
       args: commandArgs,
+      cwd: outputDir,
       packageManager: options.packageManager,
       onStdout: (data) => {
         if (!uiLogged && data.includes('Emulator UI at')) {

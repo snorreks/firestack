@@ -52,15 +52,21 @@ export async function executeCommand(
   try {
     const subprocess = execa(finalCmd, finalArgs, {
       ...execaOptions,
-      stdout: execaOptions.stdout ?? (isVerbose ? 'inherit' : 'pipe'),
-      stderr: execaOptions.stderr ?? (isVerbose ? 'inherit' : 'pipe'),
+      stdout: execaOptions.stdout ?? (isVerbose ? ['inherit', 'pipe'] : 'pipe'),
+      stderr: execaOptions.stderr ?? (isVerbose ? ['inherit', 'pipe'] : 'pipe'),
     });
 
-    if (onStdout && subprocess.stdout) {
-      subprocess.stdout.on('data', (chunk) => onStdout(chunk.toString()));
+    if (subprocess.stdout) {
+      subprocess.stdout.on('data', (chunk) => {
+        const data = chunk.toString();
+        if (onStdout) onStdout(data);
+      });
     }
-    if (onStderr && subprocess.stderr) {
-      subprocess.stderr.on('data', (chunk) => onStderr(chunk.toString()));
+    if (subprocess.stderr) {
+      subprocess.stderr.on('data', (chunk) => {
+        const data = chunk.toString();
+        if (onStderr) onStderr(data);
+      });
     }
 
     const result = await subprocess;
