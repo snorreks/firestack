@@ -57,3 +57,4 @@ script-config.*.ts
 example/apps/functions/firestore-debug.log
 example/apps/functions/firebase.json
 example/apps/functions/firebase-debug.log
+example/apps/functions/pubsub-debug.log

@@ -1,7 +1,7 @@
 import { copyFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { cwd } from 'node:process';
-import { exists } from '$utils/common.js';
+import { exists, getDependencyVersion } from '$utils/common.js';
 
 /**
  * Creates a firebase.json file content.
@@ -21,35 +21,64 @@ export function createFirebaseConfig(nodeVersion: string): string {
   );
 }
 
-/**
- * Creates a package.json file content.
- * @param nodeVersion The node version to use.
- * @param external The external dependencies to include.
- * @returns The package.json content.
- */
-export function createPackageJson(nodeVersion: string, external: string[] = []): string {
-  const dependencies: Record<string, string> = {
-    'firebase-admin': '^13.0.0',
-    'firebase-functions': '^7.0.0',
-  };
+const getDependencies = async (options: {
+  isEmulator?: boolean;
+  external?: string[];
+}): Promise<Record<string, string> | undefined> => {
+  const { external = [], isEmulator } = options;
+  if (!isEmulator && external.length === 0) {
+    return undefined;
+  }
+
+  const dependencies: Record<string, string> = {};
+
+  if (isEmulator && external.length === 0) {
+    // Always include core Firebase dependencies with user-respected versions
+    const [adminVersion, functionsVersion] = await Promise.all([
+      getDependencyVersion('firebase-admin'),
+      getDependencyVersion('firebase-functions'),
+    ]);
+
+    dependencies['firebase-admin'] = adminVersion || '^13.0.0';
+    dependencies['firebase-functions'] = functionsVersion || '^7.0.0';
+  }
 
   for (const ext of external) {
     dependencies[ext] = '*';
   }
 
-  return JSON.stringify(
-    {
-      name: 'functions',
-      type: 'module',
-      main: 'index.js',
-      engines: {
-        node: nodeVersion,
-      },
-      dependencies,
+  return dependencies;
+};
+
+/**
+ * Creates a package.json file content.
+ * @param options - The options for creating the package.json.
+ * @returns The package.json content.
+ */
+export async function createPackageJson(options: {
+  nodeVersion: string;
+  external?: string[];
+  functionName?: string;
+  isEmulator?: boolean;
+}): Promise<string> {
+  const { nodeVersion, functionName = 'functions' } = options;
+  const dependencies = await getDependencies(options);
+
+  const pkg: Record<string, unknown> = {
+    name: `firestack-function-${functionName.replace(/_/g, '-')}`,
+    private: true,
+    type: 'module',
+    main: 'index.js',
+    engines: {
+      node: nodeVersion,
     },
-    null,
-    2
-  );
+  };
+
+  if (dependencies && Object.keys(dependencies).length > 0) {
+    pkg.dependencies = dependencies;
+  }
+
+  return JSON.stringify(pkg, null, 2);
 }
 
 /**

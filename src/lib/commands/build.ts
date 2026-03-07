@@ -7,6 +7,7 @@ import { logger } from '$logger';
 import type { NodeVersion } from '$types';
 import { buildFunction } from '$utils/build_utils.js';
 import { exists } from '$utils/common.js';
+import { createPackageJson } from '$utils/firebase_utils.js';
 
 /**
  * Options for the build command.
@@ -66,20 +67,15 @@ export const buildCommand = new Command('build')
       // 4. Post-build tasks: Generate package.json if missing
       const packageJsonPath = join(dirname(outputDir), 'package.json');
       if (!(await exists(packageJsonPath))) {
-        const pkg = {
-          name: basename(dirname(outputDir)) || 'function',
-          main: join('src', basename(outputPath)),
-          type: 'module',
-          dependencies: (options.external || []).reduce(
-            (acc, ext) => {
-              acc[ext] = '*';
-              return acc;
-            },
-            {} as Record<string, string>
-          ),
-        };
+        const functionName = basename(dirname(outputDir)) || 'function';
+        const packageJson = await createPackageJson({
+          nodeVersion: options.nodeVersion || '20',
+          external: options.external,
+          functionName,
+          isEmulator: false,
+        });
 
-        await writeFile(packageJsonPath, JSON.stringify(pkg, null, 2));
+        await writeFile(packageJsonPath, packageJson);
         logger.info(chalk.dim(`📄 Created package.json at ${packageJsonPath}`));
       }
 

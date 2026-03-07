@@ -2,18 +2,17 @@
 
 [![npm](https://img.shields.io/npm/v/@snorreks/firestack)](https://www.npmjs.com/package/@snorreks/firestack)
 
-Firestack is a CLI tool for building, testing, and deploying Firebase Cloud Functions with ease. Write your functions in TypeScript and deploy them seamlessly to Google Cloud Functions (v2), leveraging esbuild for optimal performance and a better developer experience.
+Firestack is a CLI tool for building, testing, and deploying Firebase Cloud Functions. Write your functions in standard TypeScript and deploy them to Google Cloud Functions (v2), leveraging esbuild for fast builds and a smooth developer experience.
 
 ## Features
 
 - **TypeScript First**: Write functions in standard TypeScript with modern features.
 - **Auto-Discovery**: Automatically finds and builds functions based on your file structure.
-- **Optimized Builds**: Uses esbuild to bundle functions into small, efficient packages.
-- **Multi-Environment (Flavors)**: Robust flavor support for development, staging, and production environments.
-- **Emulator Support**: Run Firebase emulators with live reload and automated initialization scripts.
+- **Parallel Execution**: Uses a worker-pool pattern for concurrent deployments.
+- **Multi-Environment (Flavors)**: Support for development, staging, and production environments.
+- **Emulator Support**: Run Firebase emulators with live reload, auto-open UI, and initialization scripts.
+- **Intelligent Caching**: Differential deployments with local and remote cache support.
 - **Rules & Indexes**: Manage and deploy Firestore and Storage rules alongside your functions.
-- **Configurable Execution**: Support for `bun`, `node`, `tsx`, and more via a configurable engine.
-- **Caching**: Flexible function deployment caching (supports remote caching for faster team deployments).
 
 ## Installation
 
@@ -27,10 +26,11 @@ bun add @snorreks/firestack
 
 ### 1. Setup Configuration
 
-Create a `firestack.json` in your project root:
+Create a `firestack.json` in your project root. You can add the `$schema` property to get autocompletion and validation in your editor:
 
 ```json
 {
+  "$schema": "https://raw.githubusercontent.com/snorreks/firestack/master/firestack.schema.json",
   "flavors": {
     "development": "my-project-dev",
     "production": "my-project-prod"
@@ -40,17 +40,17 @@ Create a `firestack.json` in your project root:
   "rulesDirectory": "src/rules",
   "scriptsDirectory": "scripts",
   "initScript": "on_emulate.ts",
-  "nodeVersion": "22",
-  "engine": "bun"
+  "nodeVersion": "24",
+  "engine": "bun",
+  "packageManager": "global"
 }
 ```
 
 ### 2. Create a Function
 
-Create a file in your functions directory (default: `src/controllers`):
+Create a file in your functions directory (e.g., `src/controllers/api/hello.ts`):
 
 ```typescript
-// src/controllers/api/hello.ts
 import { onRequest } from "@snorreks/firestack";
 
 export default onRequest(
@@ -80,122 +80,104 @@ firestack deploy --flavor development
 | `rulesDirectory`     | string  | `src/rules`       | Directory containing Firestore/Storage rules and indexes.                   |
 | `scriptsDirectory`   | string  | `scripts`         | Directory for custom maintenance/initialization scripts.                    |
 | `initScript`         | string  | `on_emulate.ts`   | Script to run automatically when starting the emulator.                     |
-| `nodeVersion`        | string  | `22`              | Node.js runtime version for Cloud Functions.                                |
-| `engine`             | string  | `bun`             | The execution engine for running scripts (e.g., `bun`, `node`, `tsx`).      |
-| `packageManager`     | string  | `npm`             | The package manager to use for `firebase` commands (`npm`, `yarn`, `pnpm`, `bun`, `global`). |
+| `nodeVersion`        | string  | `22`              | Node.js runtime version for Cloud Functions (e.g., `20`, `22`, `24`).       |
+| `engine`             | string  | `bun`             | The execution engine for running scripts (e.g., `bun`, `node`).             |
+| `packageManager`     | string  | `global`          | The package manager for `firebase` commands (`npm`, `yarn`, `pnpm`, `bun`, `global`).|
 | `minify`             | boolean | `true`            | Whether to minify the bundled function code.                               |
-| `external`           | string[]| `[]`              | List of dependencies to treat as external (not bundled) and install via npm.|
+| `sourcemap`          | boolean | `true`            | Whether to generate sourcemaps.                                             |
+| `external`           | string[]| `[]`              | Dependencies to treat as external (installed in the function env).          |
 
 ## Commands & Options
 
 ### `firestack deploy`
 Builds and deploys functions to Firebase.
 
-- `--flavor <flavor>`: The environment to deploy to (default: `development`).
-- `--dry-run`: Show deployment commands without executing them.
-- `--force`: Force deploy all functions, ignoring the deployment cache.
+- `--flavor <flavor>`: The environment to deploy to.
+- `--dry-run`: Show the deployment plan without executing it.
+- `--force`: Force deploy all functions, ignoring the cache.
 - `--only <names>`: Deploy specific functions (comma-separated).
-- `--region <region>`: Override the default deployment region.
-- `--concurrency <num>`: Number of functions to deploy in parallel (default: `5`).
-- `--retryAmount <num>`: Number of times to retry failed deployments.
-- `--no-minify`: Disable code minification.
-- `--no-sourcemap`: Disable sourcemap generation.
-- `--projectId <id>`: Manually specify the Firebase project ID.
-- `--node-version <v>`: Override the Node.js version.
-- `--external <deps>`: Comma-separated list of dependencies to exclude from bundling and install in the function environment.
-- `--packageManager <pm>`: Specify package manager for firebase commands (default: `npm`).
-- `--verbose`: Enable detailed logging.
+- `--all`: Deploy both functions AND rules in one command.
+- `--concurrency <num>`: Parallel deployments (default: `5`).
+- `--retryAmount <num>`: Auto-retry failed deployments.
+- `--verbose`: Show detailed Firebase output.
 
 ### `firestack emulate`
-Starts the Firebase emulator with live reload.
+Starts the Firebase emulator with live reload and real-time UI detection.
 
-- `--flavor <flavor>`: The flavor to use for emulation.
-- `--only <services>`: Services to emulate (default: `functions,firestore`).
-- `--init / --no-init`: Run the `initScript` on startup (default: `true`).
-- `--watch / --no-watch`: Enable/disable file watching (default: `true`).
-- `--engine <engine>`: Use a specific engine to run the init script.
-- `--packageManager <pm>`: Specify package manager for firebase commands.
-- `--external <deps>`: Dependencies to exclude from bundling.
-- `--firestoreRules <path>`: Path to Firestore rules (default: `firestore.rules`).
-- `--storageRules <path>`: Path to Storage rules (default: `storage.rules`).
+- `--open`: Automatically opens the Emulator UI in your browser once it's ready.
+- `--watch` / `--no-watch`: Enable/disable file watching for live reload (default: `true`).
+- `--init` / `--no-init`: Run/skip the initialization script (default: `true`).
+- `--projectId <id>`: Override the Firebase project ID for emulation.
+- `--only <services>`: Only start specified services (e.g., `functions,firestore`).
+- `--flavor <flavor>`: The flavor context for emulation.
+- `--verbose`: Stream full emulator logs to the console.
+
+### `firestack rules`
+Deploys security rules and indexes with differential checking.
+
+- `--only <targets>`: Specific components (e.g., `firestore`, `storage`).
+- `--force`: Force deploy even if no changes are detected.
+
+### `firestack delete`
+Removes unused functions from your Firebase project.
+
+- `--all`: Delete all functions in the project.
+- `--dry-run`: List functions that would be removed without deleting them.
 
 ### `firestack scripts [scriptName]`
 Runs a custom script from the `scriptsDirectory`. If no name is provided, an interactive selector appears.
 
 - `--flavor <flavor>`: The flavor context for the script.
-- `--engine <engine>`: The engine to run the script with (e.g., `bun`, `node`).
-- `--verbose`: Enable verbose output.
-
-### `firestack rules`
-Deploys Firestore and Storage rules/indexes.
-
-- `--only <components>`: Specific components to deploy (e.g., `firestore`, `storage`).
-
-### `firestack delete`
-Deploys unused functions from your Firebase project.
-
-- `--all`: Delete ALL functions in the project.
-- `--dry-run`: List functions that would be deleted.
+- `--engine <engine>`: Override the default execution engine.
 
 ### `firestack logs`
-View Cloud Function logs.
+View Cloud Function logs from the production environment.
 
-- `-n, --lines <number>`: Number of log lines to fetch (default: `50`).
-- `--since <duration>`: Show logs after this time (e.g., `1h`, `30m`).
-- `--open`: Open the logs in your web browser.
+- `-n, --lines <num>`: Number of lines to fetch (default: `50`).
+- `--since <time>`: Show logs after a specific time (e.g., `1h`, `30m`).
+- `--open`: Open the logs in the web browser.
 
 ## Advanced Usage
 
 ### Script Environment & Config
-When running scripts via `firestack scripts` or during emulation, Firestack can load environment-specific configurations.
-
-Create a `script-config.{flavor}.ts` file in your project root:
+When running scripts via `firestack scripts` or during emulation, Firestack can load flavor-specific configurations. Create a `script-config.{flavor}.ts` file in your project root:
 
 ```typescript
 // script-config.development.ts
 export const config = {
   apiKey: "dev-key",
-  serviceAccount: { ... }
+  baseUrl: "http://localhost:3000"
 };
 ```
 
 This config is passed to your script via the `SCRIPT_CONFIG` environment variable (JSON stringified).
 
 ### Emulator Initialization (`on_emulate.ts`)
-Automate your development setup by seeding the emulator with data:
+Automate your setup by seeding the emulator with data. Create a script in your `scriptsDirectory`:
 
 ```typescript
 // scripts/on_emulate.ts
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-export async function run(context: { projectId: string }) {
-  const db = getFirestore(initializeApp({ projectId: context.projectId }));
-  await db.collection('users').doc('dev-user').set({ name: 'Dev User' });
-  console.log('✅ Emulator seeded!');
-}
-
-export default run;
+// Firestack runs this script automatically when the emulator starts
+const db = getFirestore(initializeApp({ projectId: 'demo-project' }));
+await db.collection('users').doc('dev-user').set({ name: 'Dev User' });
+console.log('✅ Emulator seeded!');
 ```
 
 ### Remote Functions Cache
-Speed up deployments in CI/CD or across teams by using a remote cache. Create a `functions-cache.ts` in your root:
+Share deployment states across your team by creating a `functions-cache.ts` in your project root:
 
 ```typescript
 import type { FunctionsCacheGet, FunctionsCacheUpdate } from '@snorreks/firestack';
 
 export const get: FunctionsCacheGet = async ({ flavor }) => {
-  // Fetch your cache from an API, Database, or S3
-  const response = await fetch(`https://api.myapp.com/cache/${flavor}`);
-  return await response.json();
+  // Fetch cached checksums from your remote storage
 };
 
 export const update: FunctionsCacheUpdate = async ({ flavor, newFunctionsCache }) => {
-  // Save the updated cache back to your remote storage
-  await fetch(`https://api.myapp.com/cache/${flavor}`, {
-    method: 'PUT',
-    body: JSON.stringify(newFunctionsCache)
-  });
+  // Save updated checksums to your remote storage
 };
 ```
 

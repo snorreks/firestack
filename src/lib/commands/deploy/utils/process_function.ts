@@ -55,7 +55,7 @@ export async function prepareFunction(opts: ProcessFunctionOptions): Promise<Pre
     }
 
     // 1. Setup
-    await setupDirectories({ outputDir, temporaryDir, options });
+    await setupDirectories({ outputDir, temporaryDir, options, functionName });
 
     // 2. Build
     const buildSuccess = await performBuild({
@@ -145,10 +145,11 @@ interface SetupDirectoriesOptions {
   outputDir: string;
   temporaryDir: string;
   options: DeployOptions;
+  functionName: string;
 }
 
 async function setupDirectories(opts: SetupDirectoriesOptions) {
-  const { outputDir, temporaryDir, options } = opts;
+  const { outputDir, temporaryDir, options, functionName } = opts;
   const { nodeVersion } = options;
   if (!nodeVersion) throw new Error('Node version is required.');
 
@@ -162,13 +163,19 @@ async function setupDirectories(opts: SetupDirectoriesOptions) {
     mkdir(temporaryDir, { recursive: true }),
   ]);
 
+  const [firebaseConfig, packageJson] = await Promise.all([
+    Promise.resolve(createFirebaseConfig(nodeVersion)),
+    createPackageJson({
+      nodeVersion,
+      external: options.external,
+      functionName,
+      isEmulator: options.isEmulator,
+    }),
+  ]);
+
   await Promise.all([
-    writeFile(join(outputDir, 'firebase.json'), createFirebaseConfig(nodeVersion), 'utf-8'),
-    writeFile(
-      join(outputDir, 'src', 'package.json'),
-      createPackageJson(nodeVersion, options.external),
-      'utf-8'
-    ),
+    writeFile(join(outputDir, 'firebase.json'), firebaseConfig, 'utf-8'),
+    writeFile(join(outputDir, 'src', 'package.json'), packageJson, 'utf-8'),
   ]);
 }
 

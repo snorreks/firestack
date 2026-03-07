@@ -61,7 +61,10 @@ const { scripts, devDependencies, ...distPkg } = pkg;
 console.log('Creating dist/package.json...');
 await Bun.write(join(distDir, 'package.json'), `${JSON.stringify(distPkg, null, 2)}\n`);
 
-console.log('Copying README.md to dist...');
-await cp(join(__dirname, './README.md'), join(distDir, 'README.md'));
+console.log('Copying README.md and schema to dist...');
+await Promise.all([
+  cp(join(__dirname, './README.md'), join(distDir, 'README.md')),
+  cp(join(__dirname, './firestack.schema.json'), join(distDir, 'firestack.schema.json')),
+]);
 
 console.log('Done!');

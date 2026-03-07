@@ -9,6 +9,7 @@ export type PackageManager = 'npm' | 'yarn' | 'pnpm' | 'bun' | 'global';
 
 export interface DeployOptions {
   flavor: string;
+  isEmulator?: boolean;
   dryRun?: boolean;
   force?: boolean;
   verbose?: boolean;

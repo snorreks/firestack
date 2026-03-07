@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Firestack Configuration",
+  "description": "Configuration schema for firestack.json",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Path to the firestack.schema.json"
+    },
+    "functionsDirectory": {
+      "type": "string",
+      "default": "src/controllers",
+      "description": "Directory where your function controllers are located."
+    },
+    "rulesDirectory": {
+      "type": "string",
+      "default": "src/rules",
+      "description": "Directory containing Firestore/Storage rules and indexes."
+    },
+    "firestoreRules": {
+      "type": "string",
+      "description": "Specific path to firestore.rules file."
+    },
+    "storageRules": {
+      "type": "string",
+      "description": "Specific path to storage.rules file."
+    },
+    "scriptsDirectory": {
+      "type": "string",
+      "default": "scripts",
+      "description": "Directory for custom maintenance/initialization scripts."
+    },
+    "initScript": {
+      "type": "string",
+      "default": "on_emulate.ts",
+      "description": "Script to run automatically when starting the emulator."
+    },
+    "flavors": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Map of flavor names to Firebase project IDs."
+    },
+    "region": {
+      "type": "string",
+      "default": "us-central1",
+      "description": "Default region for all deployed functions."
+    },
+    "nodeVersion": {
+      "type": "string",
+      "enum": ["18", "20", "22", "24"],
+      "default": "22",
+      "description": "Node.js runtime version for Cloud Functions."
+    },
+    "engine": {
+      "type": "string",
+      "enum": ["bun", "node"],
+      "default": "bun",
+      "description": "The execution engine for running scripts."
+    },
+    "minify": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether to minify the bundled function code."
+    },
+    "sourcemap": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether to generate sourcemaps."
+    },
+    "external": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Dependencies to treat as external (installed in the function env)."
+    },
+    "packageManager": {
+      "type": "string",
+      "enum": ["npm", "yarn", "pnpm", "bun", "global"],
+      "default": "global",
+      "description": "The package manager for firebase commands."
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,5 +1,5 @@
-import { access, readdir } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { access, readdir, readFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { cwd } from 'node:process';
 
 /**
@@ -52,6 +52,33 @@ export async function findProjectRoot(): Promise<string> {
     }
     current = parent;
   }
+}
+
+/**
+ * Gets the version of a dependency from the nearest package.json file.
+ * Searches from the current working directory upwards.
+ *
+ * @param dependencyName - The name of the dependency to find.
+ * @returns The version string if found, otherwise undefined.
+ */
+export async function getDependencyVersion(dependencyName: string): Promise<string | undefined> {
+  let current = cwd();
+  while (true) {
+    const pkgPath = join(current, 'package.json');
+    if (await exists(pkgPath)) {
+      try {
+        const pkg = JSON.parse(await readFile(pkgPath, 'utf-8'));
+        const version = pkg.dependencies?.[dependencyName] || pkg.devDependencies?.[dependencyName];
+        if (version) return version;
+      } catch (_e) {
+        // Ignore parsing errors and keep searching
+      }
+    }
+    const parent = dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return undefined;
 }
 
 /**
