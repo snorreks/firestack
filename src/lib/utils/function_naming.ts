@@ -21,6 +21,9 @@ export function deriveFunctionName(funcPath: string, controllersPath: string): s
   const relativePath = relative(controllersPath, funcPath);
   const parts = relativePath.replace(/\\/g, '/').split('/');
 
+  // Check if this is an auth trigger
+  const isAuthTrigger = parts[0] === 'auth';
+
   // Remove file extension from the last part
   const fileName = parts[parts.length - 1].replace(/\.(ts|tsx|js)$/, '');
 
@@ -30,7 +33,14 @@ export function deriveFunctionName(funcPath: string, controllersPath: string): s
   // Filter out [id] placeholders and build the name
   const nameParts = pathParts.filter((part) => !part.startsWith('[')).concat(fileName);
 
-  return nameParts.join('_');
+  const functionName = nameParts.join('_');
+
+  // Auto prefix with auth_ if it's an auth trigger
+  if (isAuthTrigger) {
+    return `auth_${functionName}`;
+  }
+
+  return functionName;
 }
 
 /**

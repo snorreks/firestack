@@ -4,10 +4,6 @@
     "development": "aikami-prod",
     "production": "aikami-prod"
   },
-  "region": "us-central1",
-  "functionsDirectory": "src/controllers",
-  "rulesDirectory": "src/rules",
-  "scriptsDirectory": "scripts",
-  "initScript": "on_emulate.ts",
+  "region": "us-east1",
   "minify": false
 }

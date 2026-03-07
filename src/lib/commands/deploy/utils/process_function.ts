@@ -1,5 +1,5 @@
 import { mkdir, rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { cwd } from 'node:process';
 import chalk from 'chalk';
 import { logger } from '$logger';
@@ -43,8 +43,22 @@ export interface ProcessFunctionOptions {
  * Builds the function and checks for changes.
  */
 export async function prepareFunction(opts: ProcessFunctionOptions): Promise<PrepareResult> {
-  const { funcPath, options, environment, controllersPath } = opts;
+  const { funcPath, environment, controllersPath } = opts;
+  const options = { ...opts.options }; // Clone options to avoid concurrent modification
   const functionName = deriveFunctionName(funcPath, controllersPath);
+
+  // Downgrade Node version for Auth triggers (GCF 1st Gen doesn't support Node 24)
+  const relativePath = relative(controllersPath, funcPath).replace(/\\/g, '/');
+  const isAuthTrigger = relativePath.startsWith('auth/');
+
+  if (isAuthTrigger && options.nodeVersion === '24') {
+    logger.warn(
+      chalk.yellow(
+        `⚠️  Function '${functionName}' is an Auth trigger (GCF 1st Gen), which does not support Node.js 24. Downgrading to Node.js 22.`
+      )
+    );
+    options.nodeVersion = '22';
+  }
 
   const outputDir = join(cwd(), 'dist', functionName);
   const temporaryDir = join(cwd(), 'tmp', functionName);
@@ -164,7 +178,7 @@ async function setupDirectories(opts: SetupDirectoriesOptions) {
   ]);
 
   const [firebaseConfig, packageJson] = await Promise.all([
-    Promise.resolve(createFirebaseConfig(nodeVersion)),
+    Promise.resolve(createFirebaseConfig(nodeVersion, functionName)),
     createPackageJson({
       nodeVersion,
       external: options.external,
@@ -210,6 +224,7 @@ async function performBuild(opts: PerformBuildOptions): Promise<boolean> {
       sourcemap: options.sourcemap,
       external: options.external,
       nodeVersion: options.nodeVersion as NodeVersion,
+      keepNames: true,
     });
     return true;
   } catch (buildError) {

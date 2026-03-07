@@ -70,6 +70,10 @@ async function toDeployIndexCode(
 
   const optionsCode = JSON.stringify(options, null, 2);
 
+  if (rootFunctionBuilder === 'auth') {
+    return toV1FunctionCode(functionName, importPath, deployFunction, options);
+  }
+
   const fileCode = `
 import { ${functionCodeType} } from 'firebase-functions/${rootFunctionBuilder}';
 import functionStart from '${importPath}';
@@ -77,6 +81,48 @@ import functionStart from '${importPath}';
 export const ${functionName} = ${functionCodeType}(${optionsCode}, functionStart);
 `;
   return fileCode;
+}
+function toV1FunctionCode(
+  functionName: string,
+  importPath: string,
+  deployFunction: DeployFunction,
+  options: Record<string, unknown>
+): string {
+  const { region: regionOpt, ...runtimeOptions } = options;
+
+  const region = regionOpt || 'us-central1';
+  let chain = `functions.region(${JSON.stringify(region)})`;
+
+  if (Object.keys(runtimeOptions).length > 0) {
+    chain += `.runWith(${JSON.stringify(runtimeOptions, null, 2)})`;
+  }
+
+  chain += '.auth';
+
+  let trigger = '';
+  switch (deployFunction) {
+    case 'onAuthCreate':
+      trigger = 'user().onCreate';
+      break;
+    case 'onAuthDelete':
+      trigger = 'user().onDelete';
+      break;
+    case 'beforeAuthCreate':
+      trigger = 'user().beforeCreate';
+      break;
+    case 'beforeAuthSignIn':
+      trigger = 'user().beforeSignIn';
+      break;
+    default:
+      throw new Error(`Invalid v1 function type: ${deployFunction}`);
+  }
+
+  return `
+import * as functions from 'firebase-functions';
+import functionStart from '${importPath}';
+
+export const ${functionName} = ${chain}.${trigger}(functionStart);
+`;
 }
 
 const toRootFunction = (deployFunction: DeployFunction): FunctionBuilder => {

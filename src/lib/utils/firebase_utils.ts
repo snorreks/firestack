@@ -6,19 +6,18 @@ import { exists, getDependencyVersion } from '$utils/common.js';
 /**
  * Creates a firebase.json file content.
  * @param nodeVersion The node version to use.
+ * @param functionName The name of the function.
  * @returns The firebase.json content.
  */
-export function createFirebaseConfig(nodeVersion: string): string {
-  return JSON.stringify(
-    {
-      functions: {
-        runtime: `nodejs${nodeVersion}`,
-        source: 'src',
-      },
+export function createFirebaseConfig(nodeVersion: string, _functionName?: string): string {
+  const config = {
+    functions: {
+      runtime: `nodejs${nodeVersion}`,
+      source: 'src',
     },
-    null,
-    2
-  );
+  };
+
+  return JSON.stringify(config, null, 2);
 }
 
 const getDependencies = async (options: {

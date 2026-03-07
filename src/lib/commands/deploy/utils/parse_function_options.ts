@@ -43,6 +43,7 @@ const VALID_FIREBASE_OPTIONS = new Set([
   'timeZone',
   'retryConfig', // Also used by Task Queues
   'retry', // Used by background events (boolean)
+  'failurePolicy', // Used by v1 background events
 
   // Eventarc / PubSub / Custom events
   'eventFilters',
