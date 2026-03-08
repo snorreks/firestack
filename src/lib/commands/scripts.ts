@@ -5,28 +5,28 @@ import chalk from 'chalk';
 import { Command } from 'commander';
 import { execa } from 'execa';
 import prompts from 'prompts';
-import type { PackageManager } from '$commands/deploy/utils/options.js';
+import type { PackageManager } from '$commands/deploy/utils/options.ts';
 import { logger } from '$logger';
-import { exists } from '$utils/common.js';
-import { getScriptEnvironment } from '$utils/env.js';
+import { exists } from '$utils/common.ts';
+import { getScriptEnvironment } from '$utils/env.ts';
 
-interface ScriptsOptions {
+type ScriptsOptions = {
   flavor: string;
   scriptsDirectory?: string;
   verbose?: boolean;
   silent?: boolean;
   engine?: string;
   packageManager?: PackageManager;
-}
+};
 
-interface ScriptConfig {
+type ScriptConfig = {
   config?: Record<string, unknown>;
-}
+};
 
 /**
  * Loads script configuration for a specific flavor.
  */
-async function getScriptConfig(flavor: string): Promise<Record<string, unknown>> {
+const getScriptConfig = async (flavor: string): Promise<Record<string, unknown>> => {
   const configPath = join(cwd(), `script-config.${flavor}.ts`);
 
   if (!(await exists(configPath))) return {};
@@ -38,12 +38,12 @@ async function getScriptConfig(flavor: string): Promise<Record<string, unknown>>
     logger.debug(chalk.dim(`No custom config loaded from script-config.${flavor}.ts`));
     return {};
   }
-}
+};
 
 /**
  * Merges CLI options with firestack.json configuration.
  */
-async function getOptions(cliOptions: ScriptsOptions): Promise<ScriptsOptions> {
+const getOptions = async (cliOptions: ScriptsOptions): Promise<ScriptsOptions> => {
   const configPath = join(cwd(), 'firestack.json');
   let config: Record<string, unknown> = {};
 
@@ -71,12 +71,12 @@ async function getOptions(cliOptions: ScriptsOptions): Promise<ScriptsOptions> {
 
   logger.setLogSeverity(cliOptions);
   return options;
-}
+};
 
 /**
  * Finds all executable scripts in the scripts directory.
  */
-async function findScripts(dir: string): Promise<string[]> {
+const findScripts = async (dir: string): Promise<string[]> => {
   try {
     const entries = await readdir(dir, { withFileTypes: true });
     return entries
@@ -86,12 +86,12 @@ async function findScripts(dir: string): Promise<string[]> {
     logger.debug(chalk.dim(`Scripts directory ${dir} not found`));
     return [];
   }
-}
+};
 
 /**
  * Executes a specific script with environment variables and configuration.
  */
-async function runScript(scriptName: string, options: ScriptsOptions) {
+const runScript = async (scriptName: string, options: ScriptsOptions) => {
   const scriptsDirectory = options.scriptsDirectory;
   if (!scriptsDirectory) {
     throw new Error('Scripts directory is required.');
@@ -128,14 +128,14 @@ async function runScript(scriptName: string, options: ScriptsOptions) {
     logger.error(chalk.red(`\n❌ Error running script. Exit code: ${err.exitCode ?? 'unknown'}`));
     exit(err.exitCode ?? 1);
   }
-}
+};
 
 /**
  * Command to run a script from the scripts directory.
  */
 export const scriptsCommand = new Command('scripts')
   .description('Run a script from the scripts directory.')
-  .option('--flavor <flavor>', 'The flavor to use.', 'development')
+  .option('--flavor <flavor>', 'The flavor to use.')
   .option('--verbose', 'Enable verbose logging.')
   .option('--silent', 'Disable logging.')
   .option('--engine <engine>', 'The engine to use (e.g., "bun", "node").')

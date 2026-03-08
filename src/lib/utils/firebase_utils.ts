@@ -1,7 +1,7 @@
 import { copyFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { cwd } from 'node:process';
-import { exists, getDependencyVersion } from '$utils/common.js';
+import { exists, getDependencyVersion } from '$utils/common.ts';
 
 type CreateFirebaseConfigOptions = {
   nodeVersion: string;

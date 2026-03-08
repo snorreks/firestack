@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { cwd } from 'node:process';
 import { logger } from '$logger';
-import { exists } from '$utils/common.js';
+import { exists } from '$utils/common.ts';
 
 type GetScriptEnvironmentOptions = {
   flavor: string;

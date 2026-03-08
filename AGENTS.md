@@ -9,54 +9,25 @@
 - If a section can be a separate method, make it a separate method
 - Follow style in biome.json
 - Never use `any` type
+- Never use `null` (prefer `undefined`)
 - Never use non-null assertion (`!`)
+- Use arrow functions
+- Use `type` over `interface` (unless extending)
+- Options types that are only used in a single method should be defined inside that method, not exported
 
-## One Function Per File
+## Code Style
 
-**The package only supports ONE function per file.** Each file must contain a single function exported as default.
-
-```typescript
-// ✅ CORRECT - one function per file
-// src/controllers/api/my_handler.ts
-import { onRequest } from '@snorreks/firestack';
-
-export default onRequest((request, response) => {
-  response.send({ ok: true });
-});
-```
+- Never abbreviate variable names (use `functionName` not `fnName`, `options` not `opts`)
+- Always use braces for if/else statements, even single-line:
 
 ```typescript
-// ❌ WRONG - multiple functions in same file
-// src/controllers/api/my_handler.ts
-import { onRequest } from '@snorreks/firestack';
+// ✅ CORRECT
+if (condition) {
+  doSomething();
+}
 
-export const handler1 = onRequest((req, res) => { ... });
-export const handler2 = onRequest((req, res) => { ... }); // Won't work!
-```
-
-Each controller file should be in its own file under `controllers/`:
-```
-controllers/
-  api/
-    users.ts       <- one function
-    posts.ts       <- one function
-  firestore/
-    users/
-      [uid]/
-        created.ts <- one function
-        deleted.ts <- one function
-```
-
-## Export Default
-
-Always use `export default` at the end of the file:
-
-```typescript
-import { onRequest } from '@snorreks/firestack';
-
-export default onRequest((request, response) => {
-  response.send({ ok: true });
-});
+// ❌ WRONG
+if (condition) doSomething();
 ```
 
 ## Logging
@@ -109,7 +80,9 @@ export const processInput = (options: ProcessInputOptions): ProcessedResult => {
   const transformed = transform ? transform(input) : input;
   const result = doProcess(transformed);
 
-  logger.debug("Input processed successfully", { resultSize: result.data.length });
+  logger.debug("Input processed successfully", {
+    resultSize: result.data.length,
+  });
 
   return { success: true, data: result };
 };

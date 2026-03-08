@@ -60,5 +60,5 @@ export const VALID_FIRESTACK_OPTIONS = [
   'functionName',
   'nodeVersion',
   'assets',
-  'externals',
+  'external',
 ] as const;

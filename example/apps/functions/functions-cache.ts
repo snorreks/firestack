@@ -1,16 +1,12 @@
 import type { FunctionsCacheGet, FunctionsCacheUpdate } from '@snorreks/firestack';
 
 const baseURL = 'https://api.jsonbin.io/v3/b';
-const masterKey = '';
+const accessKey = '$2a$10$CQ4GBCW8od4zQ8sV7WugXucaGegle0e.kt7XiVNxtsaoJR1BFJMCC';
 
 const getBinId = (flavor: string): string => {
   switch (flavor) {
-    case 'development':
-      return '6331878ea1610e63863950af';
-    case 'production':
-      return '635841e60e6a79321e345e8c';
-    case 'staging':
-      return '64312542ebd26539d0a6c9ee';
+    case 'example':
+      return '69addb6843b1c97be9c21860';
     default:
       throw new Error(`Unknown flavor: ${flavor}`);
   }
@@ -22,7 +18,7 @@ export const get: FunctionsCacheGet = async ({ flavor }) => {
     method: 'GET',
     headers: {
       'X-Bin-Meta': 'false',
-      'X-Master-Key': masterKey,
+      'X-Access-Key': accessKey,
     },
   });
 
@@ -47,7 +43,7 @@ export const update: FunctionsCacheUpdate = async ({ flavor, newFunctionsCache }
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
-      'X-Master-Key': masterKey,
+      'X-Access-Key': accessKey,
     },
     body: JSON.stringify(mergedFunctionsCache),
   });

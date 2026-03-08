@@ -8,30 +8,30 @@ import {
   type CacheContext,
   getCacheContext,
   updateRemoteCache,
-} from '$commands/deploy/utils/functions_cache.js';
-import { type DeployOptions, getDeployOptions } from '$commands/deploy/utils/options.js';
+} from '$commands/deploy/utils/functions_cache.ts';
+import { type DeployOptions, getDeployOptions } from '$commands/deploy/utils/options.ts';
 import { logger } from '$logger';
-import { loadChecksums } from '$utils/checksum.js';
-import { executeCommand } from '$utils/command.js';
-import { exists } from '$utils/common.js';
-import { findRuleFiles, type RuleFile } from './utils/rule_files.js';
+import { loadChecksums } from '$utils/checksum.ts';
+import { executeCommand } from '$utils/command.ts';
+import { exists } from '$utils/common.ts';
+import { findRuleFiles, type RuleFile } from './utils/rule_files.ts';
 
 /**
  * Options for the rules command.
  */
-interface RulesOptions extends DeployOptions {
+type RulesOptions = DeployOptions & {
   only?: string;
   force?: boolean;
   cacheContext?: CacheContext;
-}
+};
 
 /**
  * Main action for the rules command.
  */
 export const rulesAction = async (cliOptions: RulesOptions) => {
-  const options = await getDeployOptions(cliOptions);
+  const rulesOptions = await getDeployOptions(cliOptions);
 
-  if (!options.projectId) {
+  if (!rulesOptions.projectId) {
     logger.error(
       chalk.red(
         'Project ID not found. Please provide it using --projectId option or in firestack.json.'
@@ -41,11 +41,11 @@ export const rulesAction = async (cliOptions: RulesOptions) => {
   }
 
   // 1. Fetch cache context
-  const cacheContext = cliOptions.cacheContext ?? (await getCacheContext(options.flavor));
+  const cacheContext = cliOptions.cacheContext ?? (await getCacheContext(rulesOptions.flavor));
   const { remoteUtils, mergedCache: previousCache } = cacheContext;
 
-  const rulesDir = join(cwd(), options.rulesDirectory || 'src/rules');
-  const allRuleFiles = await findRuleFiles(options.rulesDirectory || 'src/rules');
+  const rulesDir = join(cwd(), rulesOptions.rulesDirectory || 'src/rules');
+  const allRuleFiles = await findRuleFiles(rulesOptions.rulesDirectory || 'src/rules');
 
   if (allRuleFiles.length === 0) {
     logger.warn(chalk.yellow('No rule or index files found to deploy.'));
@@ -54,8 +54,8 @@ export const rulesAction = async (cliOptions: RulesOptions) => {
 
   // 2. Filter rules based on 'only' option
   let ruleFiles = allRuleFiles;
-  if (options.only) {
-    const onlyTargets = options.only.split(',').map((t) => t.trim());
+  if (rulesOptions.only) {
+    const onlyTargets = rulesOptions.only.split(',').map((t) => t.trim());
     ruleFiles = allRuleFiles.filter((r) => onlyTargets.includes(r.type));
   }
 
@@ -69,7 +69,7 @@ export const rulesAction = async (cliOptions: RulesOptions) => {
     ruleFiles,
     rulesDir,
     previousCache,
-    force: options.force,
+    force: rulesOptions.force,
   });
 
   if (skippedRules.length > 0) {
@@ -90,10 +90,14 @@ export const rulesAction = async (cliOptions: RulesOptions) => {
   logger.info(`🔍 Found ${chalk.bold.cyan(rulesToDeploy.length)} rule/index file(s) to deploy.`);
 
   // 4. Prepare deployment in a temporary directory
-  const tempDir = await prepareDeploymentDir(rulesToDeploy, rulesDir);
+  const tempDirectory = await prepareDeploymentDirectory(rulesToDeploy, rulesDir);
 
   // 5. Execute deployment
-  const success = await executeDeployment(rulesToDeploy, tempDir, options);
+  const success = await executeDeployment({
+    rulesToDeploy,
+    tempDirectory,
+    rulesOptions,
+  });
 
   if (!success) {
     logger.error(chalk.red('❌ Failed to deploy rules.'));
@@ -103,29 +107,34 @@ export const rulesAction = async (cliOptions: RulesOptions) => {
   logger.info(chalk.bold.green('✅ Rules and indexes deployed successfully.'));
 
   // 6. Update caches in parallel
-  const cachesUpdated = await updateCaches(options, newChecksums, previousCache, remoteUtils);
+  const cachesUpdated = await updateCaches({
+    rulesOptions,
+    newChecksums,
+    previousCache,
+    remoteUtils,
+  });
   if (cachesUpdated) {
     logger.info(chalk.dim('🌐 Caches synchronized.'));
   }
 };
 
-interface ChangeDetectionResult {
+type ChangeDetectionResult = {
   rulesToDeploy: RuleFile[];
   newChecksums: Record<string, string>;
   skippedRules: string[];
-}
+};
 
-interface DetectChangesOptions {
+type DetectChangesOptions = {
   ruleFiles: RuleFile[];
   rulesDir: string;
   previousCache: Record<string, string>;
   force?: boolean;
-}
+};
 
 /**
  * Detects which rule files have changed.
  */
-async function detectChanges(opts: DetectChangesOptions): Promise<ChangeDetectionResult> {
+const detectChanges = async (opts: DetectChangesOptions): Promise<ChangeDetectionResult> => {
   const { ruleFiles, rulesDir, previousCache, force } = opts;
   const algorithm = 'md5';
   const rulesToDeploy: RuleFile[] = [];
@@ -135,7 +144,7 @@ async function detectChanges(opts: DetectChangesOptions): Promise<ChangeDetectio
   const checkResults = await Promise.all(
     ruleFiles.map(async (rule) => {
       const sourcePath = join(rulesDir, rule.name);
-      if (!(await exists(sourcePath))) return null;
+      if (!(await exists(sourcePath))) return undefined;
 
       const content = await readFile(sourcePath, 'utf-8');
       const checksum = createHash(algorithm).update(content).digest('hex');
@@ -164,16 +173,19 @@ async function detectChanges(opts: DetectChangesOptions): Promise<ChangeDetectio
   }
 
   return { rulesToDeploy, newChecksums, skippedRules };
-}
+};
 
 /**
  * Prepares a temporary directory with firebase.json and rule files.
  */
-async function prepareDeploymentDir(rulesToDeploy: RuleFile[], rulesDir: string): Promise<string> {
+const prepareDeploymentDirectory = async (
+  rulesToDeploy: RuleFile[],
+  rulesDir: string
+): Promise<string> => {
   const uniqueId = Math.random().toString(36).slice(2, 8);
-  const tempDir = join(cwd(), 'dist', `rules-deploy-${uniqueId}`);
+  const tempDirectory = join(cwd(), 'dist', `rules-deploy-${uniqueId}`);
 
-  await mkdir(tempDir, { recursive: true });
+  await mkdir(tempDirectory, { recursive: true });
 
   // Create firebase.json config
   const firebaseConfig: Record<string, unknown> = {};
@@ -195,26 +207,28 @@ async function prepareDeploymentDir(rulesToDeploy: RuleFile[], rulesDir: string)
 
   // Write config and copy files in parallel
   await Promise.all([
-    writeFile(join(tempDir, 'firebase.json'), JSON.stringify(firebaseConfig, null, 2)),
+    writeFile(join(tempDirectory, 'firebase.json'), JSON.stringify(firebaseConfig, null, 2)),
     ...rulesToDeploy.map(async (rule) => {
       const sourcePath = join(rulesDir, rule.name);
-      const destPath = join(tempDir, rule.name);
+      const destPath = join(tempDirectory, rule.name);
       await copyFile(sourcePath, destPath);
       logger.debug(`Copied ${rule.name} to deployment directory.`);
     }),
   ]);
 
-  return tempDir;
-}
+  return tempDirectory;
+};
 
 /**
  * Executes the firebase deploy command.
  */
-async function executeDeployment(
-  rulesToDeploy: RuleFile[],
-  tempDir: string,
-  options: RulesOptions
-): Promise<boolean> {
+const executeDeployment = async (options: {
+  rulesToDeploy: RuleFile[];
+  tempDirectory: string;
+  rulesOptions: RulesOptions;
+}): Promise<boolean> => {
+  const { rulesToDeploy, tempDirectory, rulesOptions } = options;
+
   const hasFirestore = rulesToDeploy.some(
     (r) => r.type === 'firestore' || r.type === 'firestoreIndexes'
   );
@@ -226,7 +240,7 @@ async function executeDeployment(
 
   if (deployTargets.length === 0) return false;
 
-  const projectId = options.projectId;
+  const projectId = rulesOptions.projectId;
   if (!projectId) {
     throw new Error('Project ID is required for deployment.');
   }
@@ -237,28 +251,24 @@ async function executeDeployment(
 
   const result = await executeCommand('firebase', {
     args: commandArgs,
-    cwd: tempDir,
-    packageManager: options.packageManager,
+    cwd: tempDirectory,
+    packageManager: rulesOptions.packageManager,
   });
 
   return result.success;
-}
+};
 
 /**
  * Updates local and remote caches.
  */
-async function updateCaches(
-  options: RulesOptions,
-  newChecksums: Record<string, string>,
-  previousCache: Record<string, string>,
-  remoteUtils: {
-    update?: (options: {
-      flavor: string;
-      newFunctionsCache: Record<string, string>;
-    }) => Promise<void>;
-  }
-): Promise<boolean> {
-  const checksumsFolder = join(cwd(), 'dist', '.checksums', options.flavor);
+const updateCaches = async (options: {
+  rulesOptions: RulesOptions;
+  newChecksums: Record<string, string>;
+  previousCache: Record<string, string>;
+  remoteUtils: CacheContext['remoteUtils'];
+}): Promise<boolean> => {
+  const { rulesOptions, newChecksums, previousCache, remoteUtils } = options;
+  const checksumsFolder = join(cwd(), 'dist', '.checksums', rulesOptions.flavor);
   const updatePromises: Promise<void>[] = [];
 
   // Update local cache
@@ -268,7 +278,7 @@ async function updateCaches(
     }
     const currentLocalChecksums = await loadChecksums({
       outputDirectory: join(cwd(), 'dist'),
-      flavor: options.flavor,
+      flavor: rulesOptions.flavor,
     });
     const updatedLocalChecksums = { ...currentLocalChecksums, ...newChecksums };
     await writeFile(
@@ -280,35 +290,31 @@ async function updateCaches(
 
   let remoteSuccess = true;
   // Update remote cache
-  if (remoteUtils.update) {
+  if (remoteUtils.updateCacheCallable) {
     const updatedRemoteCache = { ...previousCache, ...newChecksums };
     remoteSuccess = await updateRemoteCache({
-      updateFn: remoteUtils.update,
-      flavor: options.flavor,
+      updateCacheCallable: remoteUtils.updateCacheCallable,
+      flavor: rulesOptions.flavor,
       newCache: updatedRemoteCache,
     });
   }
 
   await Promise.all(updatePromises);
   return remoteSuccess;
-}
+};
 
 /**
  * The rules command definition.
  */
 export const rulesCommand = new Command('rules')
   .description('Deploys Firestore, Storage rules, and indexes.')
-  .option('--flavor <flavor>', 'The flavor to use for deployment.', 'development')
+  .option('--flavor <flavor>', 'The flavor to use for deployment.')
   .option('--verbose', 'Whether to run the command with verbose logging.')
   .option('--projectId <projectId>', 'The Firebase project ID to deploy to.')
   .option('--only <only>', 'Only deploy the specified components (e.g., "firestore,storage").')
   .option('--force', 'Force deploy all rules, even if no files changed.')
   .option(
     '--packageManager <packageManager>',
-    'The package manager to use (npm, yarn, pnpm, bun, global).',
-    'global'
-  )
-  .option('--external <external>', 'Comma-separated list of external dependencies.', (val) =>
-    val.split(',')
+    'The package manager to use (npm, yarn, pnpm, bun, global).'
   )
   .action(rulesAction);

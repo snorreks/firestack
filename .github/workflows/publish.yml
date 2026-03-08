@@ -6,7 +6,34 @@ on:
       - master
 
 jobs:
+  validate:
+    name: Lint, Check & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+          cache: true
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run lint, check and test in parallel
+        # biome check . (via lint script) covers both linting and formatting
+        # tsc --noEmit (via check script) covers type checking
+        # bun test (via test script) runs the tests
+        run: |
+          bun run build
+          bun run lint &
+          bun run check &
+          bun run test &
+          wait
+
   publish:
+    name: Bump & Publish
+    needs: validate
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -19,10 +46,14 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+          cache: true
 
       - uses: actions/setup-node@v4
         with:
           node-version: "24.x"
+
+      - name: Install dependencies
+        run: bun install
 
       - name: Get current version
         id: version
@@ -39,7 +70,6 @@ jobs:
 
       - name: Build and Publish to npmjs (OIDC)
         run: |
-          bun install
           bun run build
           cd dist
           # Publish using OIDC (no token needed!)

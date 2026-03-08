@@ -2,7 +2,7 @@ import type { Buffer } from 'node:buffer';
 import type { Response } from 'express';
 import type { CallableRequest, Request } from 'firebase-functions/v2/https';
 import type { CallableFunctions, HttpsOptions, RequestFunctions } from '$types';
-import { FirestackError, HttpStatusCode, HttpsError } from './errors.js';
+import { FirestackError, HttpStatusCode, HttpsError } from './errors.ts';
 
 export interface FirebaseRequest<
   T extends Record<string, string> = Record<string, string>,

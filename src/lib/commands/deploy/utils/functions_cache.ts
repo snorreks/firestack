@@ -2,8 +2,8 @@ import { join } from 'node:path';
 import { cwd } from 'node:process';
 import { logger } from '$logger';
 import type { FunctionsCache, FunctionsCacheGet, FunctionsCacheUpdate } from '$types';
-import { loadChecksums } from '$utils/checksum.js';
-import { exists } from '$utils/common.js';
+import { loadChecksums } from '$utils/checksum.ts';
+import { exists } from '$utils/common.ts';
 
 type RemoteCacheModule = {
   get: FunctionsCacheGet;
@@ -65,7 +65,7 @@ export const getRemoteCacheUtils = async (): Promise<{
 
   if (!(await exists(cacheFilePath))) {
     logger.debug('Remote cache user script (functions-cache.ts) not found');
-    return { get: undefined, update: undefined };
+    return { getCacheCallable: undefined, updateCacheCallable: undefined };
   }
   logger.debug('Remote cache user script (functions-cache.ts) found!');
 

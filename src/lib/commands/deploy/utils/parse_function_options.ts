@@ -81,7 +81,7 @@ export const extractAndValidateOptions = (options: {
     if (VALID_FIREBASE_OPTIONS.includes(key as (typeof VALID_FIREBASE_OPTIONS)[number])) {
       functionOptions[key as (typeof VALID_FIREBASE_OPTIONS)[number]] = value as OptionValue;
     } else if (VALID_FIRESTACK_OPTIONS.includes(key as (typeof VALID_FIRESTACK_OPTIONS)[number])) {
-      firestackOptions[key as (typeof VALID_FIRESTACK_OPTIONS)[number]] = value as OptionValue;
+      (firestackOptions as Record<string, unknown>)[key] = value;
     } else {
       logger.debug(`Ignoring invalid/unknown Firebase function option '${key}' in ${functionPath}`);
     }

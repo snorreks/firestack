@@ -2,30 +2,30 @@ import { join } from 'node:path';
 import { cwd, exit } from 'node:process';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { rulesAction } from '$commands/rules/index.js';
+import { rulesAction } from '$commands/rules/index.ts';
 import { logger } from '$logger';
-import { loadChecksums } from '$utils/checksum.js';
-import { runFunctions } from '$utils/run-functions.js';
-import { getEnvironment } from './utils/environment.js';
-import { findFunctions } from './utils/find_functions.js';
-import { getCacheContext, updateRemoteCache } from './utils/functions_cache.js';
-import { type DeployOptions, getDeployOptions } from './utils/options.js';
+import { loadChecksums } from '$utils/checksum.ts';
+import { runFunctions } from '$utils/run-functions.ts';
+import { getEnvironment } from './utils/environment.ts';
+import { findFunctions } from './utils/find_functions.ts';
+import { getCacheContext, updateRemoteCache } from './utils/functions_cache.ts';
+import { type DeployOptions, getDeployOptions } from './utils/options.ts';
 import {
   type FunctionMetadata,
   filterFunctionsByOnly,
   parseFunctionMetadata,
-} from './utils/parse_function_metadata.js';
+} from './utils/parse_function_metadata.ts';
 import {
   executeFunctionDeployment,
   type PrepareResult,
   type ProcessResult,
   prepareFunction,
-} from './utils/process_function.js';
-import { retryFailedFunctions } from './utils/retry_failed_functions.js';
+} from './utils/process_function.ts';
+import { retryFailedFunctions } from './utils/retry_failed_functions.ts';
 
-export interface ExtendedDeployOptions extends DeployOptions {
+export type ExtendedDeployOptions = DeployOptions & {
   all?: boolean;
-}
+};
 
 /**
  * Main deployment action that orchestrates the entire process.
@@ -76,8 +76,8 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
     )
   );
 
-  // Filter out nulls (non-deployable files)
-  let functionMetadata = functionMetadataList.filter((m): m is FunctionMetadata => m !== null);
+  // Filter out undefineds (non-deployable files)
+  let functionMetadata = functionMetadataList.filter((m): m is FunctionMetadata => m !== undefined);
 
   // Filter if '--only' is specified
   if (deployOptions.only) {
@@ -104,6 +104,7 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
           deployOptions,
           environment,
           functionsDirectoryPath,
+          metadata,
         })
     ),
     deployOptions.concurrency
@@ -148,7 +149,7 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
       deployedCount++;
       if (result.status === 'failed') {
         logger.error(`❌ Failed: ${chalk.bold(result.functionName)}`);
-      } else if (deployOptions.verbose) {
+      } else if (logger.verbose) {
         logger.debug(`[${deployedCount}/${totalToDeploy}] Deployed ${result.functionName}`);
       }
       return result;
@@ -175,7 +176,7 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
   if (failedFunctions.length > 0) {
     failedFunctions = await retryFailedFunctions({
       failedFunctions,
-      functionPaths,
+      functionPaths: functionFiles,
       deployOptions,
       environment,
       functionsDirectoryPath,
@@ -212,7 +213,7 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
 
 export const deployCommand = new Command('deploy')
   .description('Builds and deploys all Firebase functions.')
-  .option('--flavor <flavor>', 'The flavor to use for deployment.', 'development')
+  .option('--flavor <flavor>', 'The flavor to use for deployment.')
   .option('--dry-run', 'Show the deployment commands without executing them.')
   .option('--force', 'Force deploy all functions, even if no files changed.')
   .option('--verbose', 'Whether to run the command with verbose logging.')
@@ -235,7 +236,6 @@ export const deployCommand = new Command('deploy')
   )
   .option(
     '--packageManager <packageManager>',
-    'The package manager to use (npm, yarn, pnpm, bun, global).',
-    'global'
+    'The package manager to use (npm, yarn, pnpm, bun, global).'
   )
   .action(deployAction);

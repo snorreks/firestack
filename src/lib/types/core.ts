@@ -1,4 +1,4 @@
-import type { NodeVersion } from './helper-options.js';
+import type { NodeVersion } from './helper-options.ts';
 
 export interface ExecutorBaseOptions {
   /** Don't log anything */

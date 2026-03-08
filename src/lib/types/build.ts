@@ -1,5 +1,5 @@
-import type { ExecutorBaseBuildOptions } from './core.js';
-import type { PackageManager } from './deploy.js';
+import type { ExecutorBaseBuildOptions } from './core.ts';
+import type { PackageManager } from './deploy.ts';
 
 export interface BuildExecutorOptions extends ExecutorBaseBuildOptions {
   /**

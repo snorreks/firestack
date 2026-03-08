@@ -2,7 +2,7 @@ import { writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { logger } from '$logger';
 import type { DeployFunction, FunctionBuilder, FunctionOptions } from '$types';
-import { extractDatabaseRef, extractDocumentPath } from '$utils/function_naming.js';
+import { extractDatabaseRef, extractDocumentPath } from '$utils/function_naming.ts';
 
 type CreateIndexFileOptions = {
   functionName: string;

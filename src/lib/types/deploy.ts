@@ -1,6 +1,6 @@
-import type { ExecutorBaseBuildOptions } from './core.js';
-import type { DeployFunction, FunctionBuilder } from './function-types.js';
-import type { AllFunctionOptions, NodeVersion } from './helper-options.js';
+import type { ExecutorBaseBuildOptions } from './core.ts';
+import type { DeployFunction, FunctionBuilder } from './function-types.ts';
+import type { AllFunctionOptions, NodeVersion } from './helper-options.ts';
 
 export type PackageManager = 'npm' | 'yarn' | 'pnpm' | 'bun' | 'global';
 

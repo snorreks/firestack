@@ -29,10 +29,11 @@
   "homepage": "https://github.com/snorreks/firestack#readme",
   "scripts": {
     "build": "bun run ./build.ts",
-    "lint": "biome lint .",
+    "lint": "biome check .",
     "format": "biome format --write .",
     "fix": "biome check --write .",
     "check": "tsc --noEmit",
+    "test": "cd example && bun run build && bun test tests",
     "publish": "bun run ./build.ts && cd dist && npm publish --access public"
   },
   "dependencies": {
@@ -56,10 +57,16 @@
   "keywords": [
     "firebase",
     "cloud-functions",
+    "google-cloud-functions",
+    "serverless",
     "gcp",
     "deploy",
-    "typescript"
+    "typescript",
+    "esbuild",
+    "gemini-cli",
+    "dx"
   ],
   "author": "Snorreks",
-  "license": "MIT"
+  "license": "MIT",
+  "sideEffects": false
 }

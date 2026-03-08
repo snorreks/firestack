@@ -4,7 +4,7 @@ import type { HttpsOptions as FirebaseHttpsOptions } from 'firebase-functions/v2
 import type { GlobalOptions } from 'firebase-functions/v2/options';
 import type { ScheduleOptions as FBScheduleOptions } from 'firebase-functions/v2/scheduler';
 import type { StorageOptions } from 'firebase-functions/v2/storage';
-import type { VALID_FIREBASE_OPTIONS, VALID_FIRESTACK_OPTIONS } from '$constants';
+import type { VALID_FIREBASE_OPTIONS } from '$constants';
 export type NodeVersion = '18' | '20' | '22' | '24';
 
 export interface BaseFunctionOptions<T extends string = string> extends GlobalOptions {
@@ -99,9 +99,10 @@ export type AllFunctionOptions = {
 export type OptionValue = string | boolean | Record<string, unknown>;
 //
 export type FunctionOptions = Partial<Record<(typeof VALID_FIREBASE_OPTIONS)[number], OptionValue>>;
+
 export type FirestackOptions = {
-  functionName: string;
-  nodeVersion: NodeVersion;
+  functionName?: string;
+  nodeVersion?: NodeVersion;
   assets?: string[];
-  externals?: string[];
+  external?: string[];
 };

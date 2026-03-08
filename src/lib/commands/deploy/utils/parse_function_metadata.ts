@@ -2,8 +2,8 @@ import { readFile } from 'node:fs/promises';
 import { relative } from 'node:path';
 import { logger } from '$logger';
 import type { DeployFunction, FirestackOptions, FunctionOptions, NodeVersion } from '$types';
-import { deriveFunctionName } from '$utils/function_naming.js';
-import { extractAndValidateOptions } from './parse_function_options.js';
+import { deriveFunctionName } from '$utils/function_naming.ts';
+import { extractAndValidateOptions } from './parse_function_options.ts';
 
 export type FunctionMetadata = {
   functionPath: string;
@@ -62,7 +62,9 @@ export const filterFunctionsByOnly = (options: {
   }
 
   const onlySet = new Set(only);
-  const matched = functionMetadata.filter((f) => onlySet.has(f.firestackOptions.functionName));
+  const matched = functionMetadata.filter((f) =>
+    onlySet.has(f.firestackOptions.functionName as string)
+  );
 
   if (matched.length !== only.length) {
     const missing = only.filter(

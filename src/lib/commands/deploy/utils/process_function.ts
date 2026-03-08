@@ -1,22 +1,29 @@
-import { mkdir, rm, writeFile } from 'node:fs/promises';
-import { join, relative } from 'node:path';
+import { copyFile, mkdir, rm, writeFile } from 'node:fs/promises';
+import { dirname, join, relative } from 'node:path';
 import { cwd } from 'node:process';
 import chalk from 'chalk';
 import { logger } from '$logger';
-import type { ChecksumData, FirestackOptions, FunctionOptions, NodeVersion } from '$types';
-import { buildFunction } from '$utils/build_utils.js';
-import { cacheChecksumLocal, checkForChanges } from '$utils/checksum.js';
-import { executeCommand } from '$utils/command.js';
-import { findProjectRoot } from '$utils/common.js';
+import type {
+  ChecksumData,
+  DeployFunction,
+  FirestackOptions,
+  FunctionOptions,
+  NodeVersion,
+} from '$types';
+import { buildFunction } from '$utils/build_utils.ts';
+import { cacheChecksumLocal, checkForChanges } from '$utils/checksum.ts';
+import { executeCommand } from '$utils/command.ts';
+import { findProjectRoot } from '$utils/common.ts';
 import {
   createFirebaseConfig,
   createPackageJson,
   toDotEnvironmentCode,
-} from '$utils/firebase_utils.js';
-import { deriveFunctionName } from '$utils/function_naming.js';
-import { getEnvironmentNeeded } from '$utils/read-compiled-file.js';
-import { createTemporaryIndexFunctionFile } from './create_deploy_index.js';
-import type { DeployOptions } from './options.js';
+} from '$utils/firebase_utils.ts';
+import { deriveFunctionName } from '$utils/function_naming.ts';
+import { getEnvironmentNeeded } from '$utils/read-compiled-file.ts';
+import { createTemporaryIndexFunctionFile } from './create_deploy_index.ts';
+import type { DeployOptions } from './options.ts';
+import type { FunctionMetadata } from './parse_function_metadata.ts';
 
 export type ProcessResult = {
   functionName: string;
@@ -27,8 +34,9 @@ export type PrepareResult = {
   functionName: string;
   status: 'to-deploy' | 'skipped' | 'failed' | 'dry-run';
   deployFunctionData?: ChecksumData;
-  outputDir?: string;
-  temporaryDir?: string;
+  outputDirectory?: string;
+  temporaryDirectory?: string;
+  metadata?: FunctionMetadata;
 };
 
 /**
@@ -40,61 +48,73 @@ export const prepareFunction = async (options: {
   deployOptions: DeployOptions;
   environment: Record<string, string>;
   functionsDirectoryPath: string;
-  functionName?: string;
+  metadata?: FunctionMetadata;
 }): Promise<PrepareResult> => {
-  const {
-    deployOptions,
-    functionPath,
-    environment,
-    functionsDirectoryPath,
-    functionName: overrideFunctionName,
-  } = options;
+  const { deployOptions, functionPath, environment, functionsDirectoryPath, metadata } = options;
 
-  // Use override functionName if provided, otherwise derive from path
-  const functionName = overrideFunctionName ?? deriveFunctionName(options);
+  // Use functionName from firestackOptions if available, otherwise derive from path
+  const functionName = metadata?.firestackOptions?.functionName ?? deriveFunctionName(options);
+
+  // Use nodeVersion from firestackOptions if available
+  let nodeVersion = metadata?.firestackOptions?.nodeVersion ?? deployOptions.nodeVersion;
 
   // Downgrade Node version for Auth triggers (GCF 1st Gen doesn't support Node 24)
   const relativePath = relative(functionsDirectoryPath, functionPath).replace(/\\/g, '/');
   const isAuthTrigger = relativePath.startsWith('auth/');
 
-  if (isAuthTrigger && deployOptions.nodeVersion === '24') {
+  if (isAuthTrigger && nodeVersion === '24') {
     logger.warn(
       chalk.yellow(
         `⚠️  Function '${functionName}' is an Auth trigger (GCF 1st Gen), which does not support Node.js 24. Downgrading to Node.js 22.`
       )
     );
-    deployOptions.nodeVersion = '22';
+    nodeVersion = '22';
   }
 
-  const outputDir = join(cwd(), 'dist', functionName);
-  const temporaryDir = join(cwd(), 'tmp', functionName);
+  const outputDirectory = join(cwd(), 'dist', functionName);
+  const temporaryDirectory = join(cwd(), 'tmp', functionName);
 
   try {
-    if (!deployOptions.nodeVersion) {
+    if (!nodeVersion) {
       throw new Error('Node version is required for deployment.');
     }
 
     // 1. Setup
-    await setupDirectories({ outputDir, temporaryDir, deployOptions, functionName });
+    await setupDirectories({
+      outputDirectory,
+      temporaryDirectory,
+      nodeVersion,
+      functionName,
+      deployOptions,
+      firestackOptions: metadata?.firestackOptions,
+    });
+
+    if (!metadata) {
+      throw new Error('Metadata is required for build.');
+    }
 
     // 2. Build
     const buildSuccess = await performBuild({
       functionPath,
       functionName,
-      outputDir,
-      temporaryDir,
+      outputDirectory,
+      temporaryDirectory,
       functionsDirectoryPath,
       deployOptions,
+      functionOptions: metadata.functionOptions ?? {},
+      firestackOptions: metadata.firestackOptions,
+      nodeVersion,
+      deployFunction: metadata.deployFunction,
     });
     if (!buildSuccess) return { functionName, status: 'failed' };
 
     // 3. Env
-    const envNeeded = await setupEnvironment({ outputDir, environment });
+    const envNeeded = await setupEnvironment({ outputDirectory, environment });
 
     // 4. Check changes
     const deployFunctionData = await checkForChanges({
       functionName,
-      outputRoot: outputDir,
+      outputRoot: outputDirectory,
       flavor: deployOptions.flavor,
       force: deployOptions.force,
       outputDirectory: join(cwd(), 'dist'),
@@ -104,16 +124,30 @@ export const prepareFunction = async (options: {
     if (!deployFunctionData) {
       // Cleanup early if skipped
       if (!deployOptions.debug) {
-        await rm(temporaryDir, { recursive: true, force: true }).catch(() => {});
+        await rm(temporaryDirectory, { recursive: true, force: true }).catch(() => {});
       }
       return { functionName, status: 'skipped' };
     }
 
     if (deployOptions.dryRun) {
-      return { functionName, status: 'dry-run', deployFunctionData, outputDir, temporaryDir };
+      return {
+        functionName,
+        status: 'dry-run',
+        deployFunctionData,
+        outputDirectory,
+        temporaryDirectory,
+        metadata,
+      };
     }
 
-    return { functionName, status: 'to-deploy', deployFunctionData, outputDir, temporaryDir };
+    return {
+      functionName,
+      status: 'to-deploy',
+      deployFunctionData,
+      outputDirectory,
+      temporaryDirectory,
+      metadata,
+    };
   } catch (error) {
     logger.error(`❌ Failed to prepare ${functionName}: ${(error as Error).message}`);
     return { functionName, status: 'failed' };
@@ -129,19 +163,24 @@ export const executeFunctionDeployment = async (options: {
   deployOptions: DeployOptions;
 }): Promise<ProcessResult> => {
   const { prepareResult, deployOptions } = options;
-  const { functionName, outputDir, temporaryDir, deployFunctionData } = prepareResult;
+  const { functionName, outputDirectory, temporaryDirectory, deployFunctionData, metadata } =
+    prepareResult;
 
-  if (!outputDir || !deployFunctionData) {
+  if (!outputDirectory || !deployFunctionData) {
     return { functionName, status: 'failed' };
   }
 
   try {
     // 1. Dependencies
-    const installSuccess = await installDependencies({ outputDir, deployOptions });
+    const installSuccess = await installDependencies({
+      outputDirectory,
+      deployOptions,
+      firestackOptions: metadata?.firestackOptions,
+    });
     if (!installSuccess) return { functionName, status: 'failed' };
 
     // 2. Deploy
-    const deploySuccess = await deployAction({ functionName, outputDir, deployOptions });
+    const deploySuccess = await deployAction({ functionName, outputDirectory, deployOptions });
     if (!deploySuccess) return { functionName, status: 'failed' };
 
     // 3. Cache
@@ -151,8 +190,8 @@ export const executeFunctionDeployment = async (options: {
     logger.error(`❌ Failed to deploy ${functionName}: ${(error as Error).message}`);
     return { functionName, status: 'failed' };
   } finally {
-    if (!deployOptions.debug && temporaryDir) {
-      await rm(temporaryDir, { recursive: true, force: true }).catch(() => {});
+    if (!deployOptions.debug && temporaryDirectory) {
+      await rm(temporaryDirectory, { recursive: true, force: true }).catch(() => {});
     }
   }
 };
@@ -160,12 +199,19 @@ export const executeFunctionDeployment = async (options: {
 const setupDirectories = async (options: {
   outputDirectory: string;
   temporaryDirectory: string;
-  deployOptions: DeployOptions;
+  nodeVersion: NodeVersion;
   functionName: string;
+  deployOptions: DeployOptions;
+  firestackOptions?: FirestackOptions;
 }) => {
-  const { outputDirectory, temporaryDirectory, deployOptions, functionName } = options;
-  const { nodeVersion } = deployOptions;
-  if (!nodeVersion) throw new Error('Node version is required.');
+  const {
+    outputDirectory,
+    temporaryDirectory,
+    nodeVersion,
+    functionName,
+    deployOptions,
+    firestackOptions,
+  } = options;
 
   await Promise.all([
     rm(outputDirectory, { recursive: true, force: true }),
@@ -181,7 +227,7 @@ const setupDirectories = async (options: {
     Promise.resolve(createFirebaseConfig({ nodeVersion, functionName })),
     createPackageJson({
       nodeVersion,
-      external: deployOptions.external,
+      external: firestackOptions?.external ?? deployOptions.external,
       functionName,
       isEmulator: deployOptions.isEmulator,
     }),
@@ -191,6 +237,20 @@ const setupDirectories = async (options: {
     writeFile(join(outputDirectory, 'firebase.json'), firebaseConfig, 'utf-8'),
     writeFile(join(outputDirectory, 'src', 'package.json'), packageJson, 'utf-8'),
   ]);
+
+  // Handle assets
+  const assets = firestackOptions?.assets;
+  if (assets && assets.length > 0) {
+    const projectRoot = await findProjectRoot();
+    await Promise.all(
+      assets.map(async (asset) => {
+        const sourcePath = join(projectRoot, asset);
+        const destPath = join(outputDirectory, 'src', asset);
+        await mkdir(dirname(destPath), { recursive: true });
+        await copyFile(sourcePath, destPath);
+      })
+    );
+  }
 };
 
 const performBuild = async (options: {
@@ -201,6 +261,9 @@ const performBuild = async (options: {
   functionsDirectoryPath: string;
   deployOptions: DeployOptions;
   functionOptions: FunctionOptions;
+  firestackOptions?: FirestackOptions;
+  nodeVersion: NodeVersion;
+  deployFunction: DeployFunction;
 }): Promise<boolean> => {
   const {
     functionPath,
@@ -210,6 +273,9 @@ const performBuild = async (options: {
     functionsDirectoryPath,
     deployOptions,
     functionOptions,
+    firestackOptions,
+    nodeVersion,
+    deployFunction,
   } = options;
   const outputFile = join(outputDirectory, 'src', 'index.js');
 
@@ -220,7 +286,7 @@ const performBuild = async (options: {
       temporaryDirectory,
       functionOptions,
       functionsDirectoryPath,
-      deployFunction: deployOptions.deployFunction,
+      deployFunction,
     });
 
     const projectRoot = await findProjectRoot();
@@ -230,8 +296,8 @@ const performBuild = async (options: {
       configPath: join(projectRoot, 'package.json'),
       minify: deployOptions.minify,
       sourcemap: deployOptions.sourcemap,
-      external: deployOptions.external,
-      nodeVersion: deployOptions.nodeVersion,
+      external: firestackOptions?.external ?? deployOptions.external,
+      nodeVersion,
       keepNames: deployOptions.keepNames,
     });
     return true;
@@ -258,9 +324,11 @@ const setupEnvironment = async (options: {
 const installDependencies = async (options: {
   outputDirectory: string;
   deployOptions: DeployOptions;
+  firestackOptions?: FirestackOptions;
 }): Promise<boolean> => {
-  const { outputDirectory, deployOptions } = options;
-  if (!deployOptions.external || deployOptions.external.length === 0) return true;
+  const { outputDirectory, deployOptions, firestackOptions } = options;
+  const external = firestackOptions?.external ?? deployOptions.external;
+  if (!external || external.length === 0) return true;
 
   const result = await executeCommand('npm', {
     args: ['install'],

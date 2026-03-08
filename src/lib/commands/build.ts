@@ -3,23 +3,25 @@ import { basename, dirname, join } from 'node:path';
 import { cwd, exit } from 'node:process';
 import chalk from 'chalk';
 import { Command } from 'commander';
+import { DEFAULT_NODE_VERSION } from '$constants';
+import { getFirestackConfig } from '$lib/utils/options';
 import { logger } from '$logger';
 import type { NodeVersion } from '$types';
-import { buildFunction } from '$utils/build_utils.js';
-import { exists } from '$utils/common.js';
-import { createPackageJson } from '$utils/firebase_utils.js';
+import { buildFunction } from '$utils/build_utils.ts';
+import { exists } from '$utils/common.ts';
+import { createPackageJson } from '$utils/firebase_utils.ts';
 
 /**
  * Options for the build command.
  */
-interface BuildOptions {
+type BuildOptions = {
   input: string;
   output: string;
   external?: string[];
-  nodeVersion?: NodeVersion;
+  nodeVersion: NodeVersion;
   minify?: boolean;
   sourcemap?: boolean;
-}
+};
 
 /**
  * The build command definition.
@@ -31,7 +33,7 @@ export const buildCommand = new Command('build')
   .option('--external <external>', 'Comma-separated list of external dependencies.', (val) =>
     val.split(',')
   )
-  .option('--node-version <nodeVersion>', 'The Node.js version to target.', '20')
+  .option('--node-version <nodeVersion>', 'The Node.js version to target.')
   .option('--minify', 'Whether to minify the output.', true)
   .option('--no-minify', 'Do not minify the output.')
   .option('--sourcemap', 'Whether to generate sourcemaps.', true)
@@ -51,17 +53,22 @@ export const buildCommand = new Command('build')
     const outputDir = dirname(outputPath);
 
     try {
+      const firestackConfig = await getFirestackConfig();
+
       // 2. Prepare Output Directory
       await mkdir(outputDir, { recursive: true });
+
+      const nodeVersion =
+        options.nodeVersion ?? firestackConfig.nodeVersion ?? DEFAULT_NODE_VERSION;
 
       // 3. Perform Build
       await buildFunction({
         inputFile: inputPath,
         outputFile: outputPath,
-        external: options.external,
-        nodeVersion: options.nodeVersion,
-        minify: options.minify,
-        sourcemap: options.sourcemap,
+        external: options.external ?? firestackConfig.external,
+        nodeVersion,
+        minify: options.minify ?? firestackConfig.minify,
+        sourcemap: options.sourcemap ?? firestackConfig.sourcemap,
       });
 
       // 4. Post-build tasks: Generate package.json if missing
@@ -69,7 +76,7 @@ export const buildCommand = new Command('build')
       if (!(await exists(packageJsonPath))) {
         const functionName = basename(dirname(outputDir)) || 'function';
         const packageJson = await createPackageJson({
-          nodeVersion: options.nodeVersion || '20',
+          nodeVersion,
           external: options.external,
           functionName,
           isEmulator: false,

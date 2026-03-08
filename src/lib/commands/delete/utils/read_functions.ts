@@ -1,19 +1,19 @@
 import { join } from 'node:path';
 import client from 'firebase-tools';
-import { findFunctions } from '$commands/deploy/utils/find_functions.js';
-import type { DeployOptions } from '$commands/deploy/utils/options.js';
+import { findFunctions } from '$commands/deploy/utils/find_functions.ts';
+import type { DeployOptions } from '$commands/deploy/utils/options.ts';
 import { logger } from '$logger';
-import { deriveFunctionName } from '$utils/function_naming.js';
+import { deriveFunctionName } from '$utils/function_naming.ts';
 
-export async function getLocalFunctionNames(options: DeployOptions): Promise<string[]> {
+export const getLocalFunctionNames = async (deployOptions: DeployOptions): Promise<string[]> => {
   try {
-    if (!options.functionsDirectory) {
+    if (!deployOptions.functionsDirectory) {
       throw new Error('Functions directory is required for getLocalFunctionNames.');
     }
-    const functionsPath = join(process.cwd(), options.functionsDirectory);
+    const functionsPath = join(process.cwd(), deployOptions.functionsDirectory);
     const localFunctionFiles = await findFunctions(functionsPath);
     const localFunctionNames = localFunctionFiles.map((file) =>
-      deriveFunctionName({ funcPath: file, controllersPath: functionsPath })
+      deriveFunctionName({ functionPath: file, functionsDirectoryPath: functionsPath })
     );
     logger.debug('localFunctionNames', localFunctionNames);
     return localFunctionNames;
@@ -21,15 +21,15 @@ export async function getLocalFunctionNames(options: DeployOptions): Promise<str
     logger.error('getLocalFunctionNames', error);
     throw error;
   }
-}
+};
 
-export async function getOnlineFunctionNames(options: DeployOptions): Promise<string[]> {
+export const getOnlineFunctionNames = async (deployOptions: DeployOptions): Promise<string[]> => {
   try {
-    if (!options.projectId) {
+    if (!deployOptions.projectId) {
       throw new Error('Project ID is required for getOnlineFunctionNames.');
     }
     const onlineFunctions = await client.functions.list({
-      project: options.projectId,
+      project: deployOptions.projectId,
     });
     const onlineFunctionNames = onlineFunctions.map(
       (functionData: { id: string }) => functionData.id
@@ -40,13 +40,13 @@ export async function getOnlineFunctionNames(options: DeployOptions): Promise<st
     logger.error('getOnlineFunctionNames', error);
     throw error;
   }
-}
+};
 
-export async function getUnusedFunctionNames(options: DeployOptions): Promise<string[]> {
+export const getUnusedFunctionNames = async (deployOptions: DeployOptions): Promise<string[]> => {
   try {
     const [localFunctionNames, onlineFunctionNames] = await Promise.all([
-      getLocalFunctionNames(options),
-      getOnlineFunctionNames(options),
+      getLocalFunctionNames(deployOptions),
+      getOnlineFunctionNames(deployOptions),
     ]);
 
     const unusedFunctionNames = onlineFunctionNames.filter(
@@ -57,4 +57,4 @@ export async function getUnusedFunctionNames(options: DeployOptions): Promise<st
     logger.error('getUnusedFunctionNames', error);
     throw error;
   }
-}
+};

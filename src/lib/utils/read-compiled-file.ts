@@ -28,9 +28,9 @@ export const getEnvironmentNeeded = async (options: {
     const escapedKeys = envKeys.map((key) => key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
     const regex = new RegExp(`\\b(${escapedKeys.join('|')})\\b`, 'g');
 
-    let match: RegExpExecArray | null;
+    let match: RegExpExecArray | undefined;
     // biome-ignore lint/suspicious/noAssignInExpressions: valid use case for regex
-    while ((match = regex.exec(code)) !== null) {
+    while ((match = regex.exec(code) || undefined) !== undefined) {
       const varName = match[1];
       if (environment[varName]) {
         needed[varName] = environment[varName];

@@ -1,25 +1,25 @@
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { type DeployOptions, getDeployOptions } from '$commands/deploy/utils/options.js';
+import { type DeployOptions, getDeployOptions } from '$commands/deploy/utils/options.ts';
 import { logger } from '$logger';
-import { executeCommand } from '$utils/command.js';
+import { executeCommand } from '$utils/command.ts';
 
 /**
  * Options specifically for the logs command.
  */
-interface LogsOptions extends DeployOptions {
+type LogsOptions = DeployOptions & {
   only?: string;
   lines?: string;
   since?: string;
   open?: boolean;
-}
+};
 
 /**
  * Command definition to view Firebase Cloud Functions logs.
  */
 export const logsCommand = new Command('logs')
   .description('View logs from Firebase Cloud Functions.')
-  .option('--flavor <flavor>', 'The flavor to use for logs.', 'development')
+  .option('--flavor <flavor>', 'The flavor to use for logs.')
   .option('--verbose', 'Whether to run the command with verbose logging.')
   .option('--projectId <projectId>', 'The Firebase project ID.')
   .option('--only <only>', 'Only show logs for specific function(s).')
@@ -28,8 +28,7 @@ export const logsCommand = new Command('logs')
   .option('--open', 'Open logs in web browser.')
   .option(
     '--packageManager <packageManager>',
-    'The package manager to use (npm, yarn, pnpm, bun, global).',
-    'global'
+    'The package manager to use (npm, yarn, pnpm, bun, global).'
   )
   .option('--external <external>', 'Comma-separated list of external dependencies.', (val) =>
     val.split(',')

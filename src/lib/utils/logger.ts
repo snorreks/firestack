@@ -32,6 +32,8 @@ export type LoggerInterface = {
    */
   readonly currentLogSeverity: LogSeverity;
 
+  readonly verbose: boolean;
+
   /**
    * Sets the log severity based on the provided options.
    * @param options - Options containing silent and verbose flags.
@@ -137,6 +139,10 @@ const createLoggerService = (): LoggerInterface => {
   };
 
   return {
+    get verbose(): boolean {
+      return currentLogSeverity === 'debug';
+    },
+
     get currentLogSeverity() {
       return currentLogSeverity;
     },
@@ -151,7 +157,7 @@ const createLoggerService = (): LoggerInterface => {
 };
 
 // biome ignore noStaticOnlyClass: Factory pattern is intentional for singleton
-let loggerInstance: LoggerInterface | null = null;
+let loggerInstance: LoggerInterface | undefined;
 
 const getLogger = (): LoggerInterface => {
   if (!loggerInstance) {

@@ -1,12 +1,12 @@
 import { logger } from '$logger';
-import { deriveFunctionName } from '$utils/function_naming.js';
-import { runFunctions } from '$utils/run-functions.js';
-import type { DeployOptions } from './options.js';
+import { deriveFunctionName } from '$utils/function_naming.ts';
+import { runFunctions } from '$utils/run-functions.ts';
+import type { DeployOptions } from './options.ts';
 import {
   executeFunctionDeployment,
   type ProcessResult,
   prepareFunction,
-} from './process_function.js';
+} from './process_function.ts';
 
 /**
  * Retries failed function deployments.

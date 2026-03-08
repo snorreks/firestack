@@ -1,7 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { dirname as _dirname, dirname } from 'node:path';
 import { type BuildOptions, build, type SameShape } from 'esbuild';
-import { DEFAULT_NODE_VERSION } from '$lib/constants';
 import { logger } from '$logger';
 import type { NodeVersion } from '$types';
 
@@ -15,7 +14,7 @@ export type BuildFunctionOptions = {
   sourceRoot?: string;
   keepNames?: boolean;
   footer?: string;
-  nodeVersion?: NodeVersion;
+  nodeVersion: NodeVersion;
   requireFix?: boolean;
   tsconfig?: string;
   __dirnameFix?: boolean;
@@ -64,7 +63,7 @@ export const buildFunction = async (options: BuildFunctionOptions): Promise<void
     sourceRoot,
     keepNames,
     footer,
-    sourcemap,
+    sourcemap = true,
     tsconfig,
     minify = true,
   } = options;
@@ -86,7 +85,7 @@ export const buildFunction = async (options: BuildFunctionOptions): Promise<void
       tsconfig,
       outfile: outputFile,
       platform: 'node',
-      target: `node${options.nodeVersion || DEFAULT_NODE_VERSION}`,
+      target: `node${options.nodeVersion}`,
       keepNames,
       sourceRoot,
     } as const;

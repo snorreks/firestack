@@ -1,10 +1,7 @@
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { cwd, exit } from 'node:process';
 import { DEFAULT_NODE_VERSION } from '$constants';
+import { getFirestackConfig } from '$lib/utils/options';
 import { logger } from '$logger';
 import type { NodeVersion } from '$types';
-import { exists } from '$utils/common.js';
 
 export type PackageManager = 'npm' | 'yarn' | 'pnpm' | 'bun' | 'global';
 
@@ -60,30 +57,14 @@ export type FirestackConfig = {
  * @returns The merged deployment options.
  */
 export const getDeployOptions = async (cliOptions: DeployOptions): Promise<DeployOptions> => {
-  const configPath = join(cwd(), 'firestack.json');
-  let config: FirestackConfig = {};
-  try {
-    const configContent = await readFile(configPath, 'utf-8');
-    config = JSON.parse(configContent);
-    logger.debug(`Using configuration from ${configPath}`);
-  } catch (e) {
-    const error = e as Error & { code?: string };
-    if (error.code === 'ENOENT') {
-      logger.debug('firestack.json not found, using command-line options.');
-    } else {
-      logger.error(`Failed to read firestack.json at ${configPath}: ${error.message}`);
-      exit(1);
-    }
-  }
-
-  const [hasBunLock, hasBunLockb] = await Promise.all([
-    exists(join(cwd(), 'bun.lock')),
-    exists(join(cwd(), 'bun.lockb')),
-  ]);
-  const defaultPackageManager = hasBunLock || hasBunLockb ? 'bun' : 'global';
+  const config: FirestackConfig = await getFirestackConfig();
+  const flavors = config.flavors ?? {};
+  const firstFlavor = Object.keys(flavors)[0];
+  const flavor = cliOptions.flavor ?? firstFlavor;
 
   const options: DeployOptions = {
     ...cliOptions,
+    flavor,
     functionsDirectory:
       cliOptions.functionsDirectory || config.functionsDirectory || 'src/controllers',
     rulesDirectory: cliOptions.rulesDirectory || config.rulesDirectory || 'src/rules',
@@ -93,12 +74,12 @@ export const getDeployOptions = async (cliOptions: DeployOptions): Promise<Deplo
     initScript: cliOptions.initScript || config.initScript || 'on_emulate.ts',
     region: cliOptions.region || config.region,
     nodeVersion: cliOptions.nodeVersion || config.nodeVersion || DEFAULT_NODE_VERSION,
-    projectId: cliOptions.projectId || config.flavors?.[cliOptions.flavor],
+    projectId: cliOptions.projectId || flavors[flavor],
     engine: cliOptions.engine || config.engine || 'bun',
     minify: cliOptions.minify ?? config.minify ?? true,
     sourcemap: cliOptions.sourcemap ?? config.sourcemap ?? true,
     external: cliOptions.external || config.external || [],
-    packageManager: cliOptions.packageManager || config.packageManager || defaultPackageManager,
+    packageManager: cliOptions.packageManager || config.packageManager || 'global',
     emulators: cliOptions.emulators || config.emulators,
   };
 

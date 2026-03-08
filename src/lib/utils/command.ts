@@ -1,5 +1,5 @@
 import { type ExecaError, execa } from 'execa';
-import type { PackageManager } from '$commands/deploy/utils/options.js';
+import type { PackageManager } from '$commands/deploy/utils/options.ts';
 import { logger } from '$logger';
 
 export type CommandOptions = {

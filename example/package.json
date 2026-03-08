@@ -17,7 +17,7 @@
     "logs": "moon run functions:logs --",
     "check": "moon run :check --",
     "fix": "moon run :fix --",
-    "test": "bun test tests/cli.test.ts",
+    "test": "bun test tests",
     "sync": "cd .. && bun run build && cd example/apps/functions && bun install && cd ../../packages/types && bun install"
   },
   "devDependencies": {

@@ -1,11 +1,11 @@
 import { Command } from 'commander';
-import { buildCommand } from '$commands/build.js';
-import { deleteCommand } from '$commands/delete/index.js';
-import { deployCommand } from '$commands/deploy/index.js';
-import { emulateCommand } from '$commands/emulate.js';
-import { logsCommand } from '$commands/logs.js';
-import { rulesCommand } from '$commands/rules/index.js';
-import { scriptsCommand } from '$commands/scripts.js';
+import { buildCommand } from '$commands/build.ts';
+import { deleteCommand } from '$commands/delete/index.ts';
+import { deployCommand } from '$commands/deploy/index.ts';
+import { emulateCommand } from '$commands/emulate.ts';
+import { logsCommand } from '$commands/logs.ts';
+import { rulesCommand } from '$commands/rules/index.ts';
+import { scriptsCommand } from '$commands/scripts.ts';
 
 const program = new Command();
 
