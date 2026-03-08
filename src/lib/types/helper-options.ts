@@ -1,10 +1,10 @@
 import type { ReferenceOptions as FBReferenceOptions } from 'firebase-functions/v2/database';
 import type { DocumentOptions as FBDocumentOptions } from 'firebase-functions/v2/firestore';
 import type { HttpsOptions as FirebaseHttpsOptions } from 'firebase-functions/v2/https';
-
 import type { GlobalOptions } from 'firebase-functions/v2/options';
 import type { ScheduleOptions as FBScheduleOptions } from 'firebase-functions/v2/scheduler';
 import type { StorageOptions } from 'firebase-functions/v2/storage';
+import type { VALID_FIREBASE_OPTIONS, VALID_FIRESTACK_OPTIONS } from '$constants';
 export type NodeVersion = '18' | '20' | '22' | '24';
 
 export interface BaseFunctionOptions<T extends string = string> extends GlobalOptions {
@@ -87,11 +87,21 @@ export interface ObjectTriggerOptions extends Omit<BaseFunctionOptions, 'region'
 
 export type AuthTriggerOptions = Omit<BaseFunctionOptions, 'region'>;
 
-export type FunctionOptions = {
+export type AllFunctionOptions = {
   https: HttpsOptions;
   firestore: DocumentOptions;
   scheduler: ScheduleOptions;
   storage: ObjectTriggerOptions;
   database: ReferenceOptions;
   auth: AuthTriggerOptions;
+};
+
+export type OptionValue = string | boolean | Record<string, unknown>;
+//
+export type FunctionOptions = Partial<Record<(typeof VALID_FIREBASE_OPTIONS)[number], OptionValue>>;
+export type FirestackOptions = {
+  functionName: string;
+  nodeVersion: NodeVersion;
+  assets?: string[];
+  externals?: string[];
 };

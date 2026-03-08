@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { type DeployOptions, getOptions } from '$commands/deploy/utils/options.js';
+import { type DeployOptions, getDeployOptions } from '$commands/deploy/utils/options.js';
 import { logger } from '$logger';
 import { executeCommand } from '$utils/command.js';
 
@@ -35,7 +35,7 @@ export const logsCommand = new Command('logs')
     val.split(',')
   )
   .action(async (cliOptions: LogsOptions) => {
-    const options = await getOptions(cliOptions);
+    const options = await getDeployOptions(cliOptions);
 
     if (!options.projectId) {
       logger.error(

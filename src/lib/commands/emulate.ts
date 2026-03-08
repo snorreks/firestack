@@ -15,7 +15,7 @@ import { deriveFunctionName } from '$utils/function_naming.js';
 import { createTemporaryIndexFunctionFile } from './deploy/utils/create_deploy_index.js';
 import { getEnvironment } from './deploy/utils/environment.js';
 import { findFunctions } from './deploy/utils/find_functions.js';
-import { type DeployOptions, getOptions } from './deploy/utils/options.js';
+import { type DeployOptions, getDeployOptions } from './deploy/utils/options.js';
 
 interface EmulateOptions extends DeployOptions {
   only?: string;
@@ -358,7 +358,7 @@ export const emulateCommand = new Command('emulate')
     'Only start the emulator for specified services (e.g., "functions,firestore").'
   )
   .action(async (cliOptions: EmulateOptions) => {
-    const options = await getOptions(cliOptions);
+    const options = await getDeployOptions(cliOptions);
 
     if (!options.projectId) {
       logger.error(

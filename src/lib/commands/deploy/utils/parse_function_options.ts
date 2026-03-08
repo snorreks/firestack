@@ -9,71 +9,22 @@ import {
   ScriptTarget,
   type SourceFile,
 } from 'typescript';
-import { functions } from '$constants';
+import { functions, VALID_FIREBASE_OPTIONS, VALID_FIRESTACK_OPTIONS } from '$constants';
 import { logger } from '$logger';
-import type { DeployFunction } from '$types';
+import type { DeployFunction, FirestackOptions, FunctionOptions, OptionValue } from '$types';
 
-// Valid configuration keys for Firebase v2 functions
-const VALID_FIREBASE_OPTIONS = new Set([
-  // Global / Instance / Runtime options
-  'region',
-  'memory',
-  'timeoutSeconds',
-  'minInstances',
-  'maxInstances',
-  'vpcConnector',
-  'vpcConnectorEgressSettings',
-  'serviceAccount',
-  'ingressSettings',
-  'cpu',
-  'labels',
-  'secrets',
-  'concurrency',
-  'invoker',
-  'omit',
-  'cors',
-  'preserveExternalChanges',
-
-  // App Check (HTTP/Callable)
-  'enforceAppCheck',
-  'consumeAppCheckToken',
-
-  // Scheduled Function triggers
-  'schedule',
-  'timeZone',
-  'retryConfig', // Also used by Task Queues
-  'retry', // Used by background events (boolean)
-  'failurePolicy', // Used by v1 background events
-
-  // Eventarc / PubSub / Custom events
-  'eventFilters',
-  'eventFilterPathPatterns',
-  'topic',
-  'eventType',
-  'channel',
-
-  // Firestore triggers
-  'document',
-  'database', // For multi-database support in v2
-
-  // Realtime Database triggers
-  'ref',
-  'instance',
-
-  // Storage triggers
-  'bucket',
-
-  // Task Queue triggers
-  'rateLimits',
-]);
-
-export function extractAndValidateOptions(
-  fileContent: string,
-  funcPath: string,
-  defaultRegion?: string
-): { deployFunction?: DeployFunction; options: Record<string, unknown> } {
+export const extractAndValidateOptions = (options: {
+  fileContent: string;
+  functionPath: string;
+  defaultRegion?: string;
+}): {
+  deployFunction?: DeployFunction;
+  functionOptions: FunctionOptions;
+  firestackOptions: FirestackOptions;
+} => {
+  const { fileContent, functionPath, defaultRegion } = options;
   // Parsing with ScriptTarget.Latest and setParentNodes to false (default) is incredibly fast
-  const sourceFile = createSourceFile(funcPath, fileContent, ScriptTarget.Latest, true);
+  const sourceFile = createSourceFile(functionPath, fileContent, ScriptTarget.Latest, true);
 
   let deployFunction: DeployFunction | undefined;
   let optionsString = '{}';
@@ -107,7 +58,7 @@ export function extractAndValidateOptions(
   });
 
   if (!deployFunction) {
-    return { options: {} };
+    return { functionOptions: {}, firestackOptions: {} };
   }
 
   // 3. Parse options object safely-ish
@@ -115,7 +66,7 @@ export function extractAndValidateOptions(
   try {
     parsedOptions = new Function(`return ${optionsString}`)();
   } catch (_e) {
-    logger.warn(`Failed to parse options in ${funcPath}. Using empty options.`);
+    logger.warn(`Failed to parse options in ${functionPath}. Using empty options.`);
   }
 
   // 4. Apply Default Region (File-level region takes priority)
@@ -124,72 +75,80 @@ export function extractAndValidateOptions(
   }
 
   // 5. Validate the extracted options
-  const validatedOptions: Record<string, unknown> = {};
+  const functionOptions: FunctionOptions = {};
+  const firestackOptions: FirestackOptions = {};
   for (const [key, value] of Object.entries(parsedOptions)) {
-    if (VALID_FIREBASE_OPTIONS.has(key)) {
-      validatedOptions[key] = value;
+    if (VALID_FIREBASE_OPTIONS.includes(key as (typeof VALID_FIREBASE_OPTIONS)[number])) {
+      functionOptions[key as (typeof VALID_FIREBASE_OPTIONS)[number]] = value as OptionValue;
+    } else if (VALID_FIRESTACK_OPTIONS.includes(key as (typeof VALID_FIRESTACK_OPTIONS)[number])) {
+      firestackOptions[key as (typeof VALID_FIRESTACK_OPTIONS)[number]] = value as OptionValue;
     } else {
-      logger.debug(`Ignoring invalid/unknown Firebase function option '${key}' in ${funcPath}`);
+      logger.debug(`Ignoring invalid/unknown Firebase function option '${key}' in ${functionPath}`);
     }
   }
 
   // 6. Enforce V2 specific requirements (Fail early!)
-  validateV2Options(deployFunction, validatedOptions, funcPath);
+  validateV2Options({
+    ...options,
+    deployFunction,
+    functionOptions,
+  });
 
-  return { deployFunction, options: validatedOptions };
-}
+  return { deployFunction, functionOptions, firestackOptions };
+};
 
 /**
  * Enforces V2 specific requirements and types, throwing errors early
  * during the build step rather than failing during deployment.
  */
-function validateV2Options(
-  deployFunction: DeployFunction,
-  options: Record<string, unknown>,
-  funcPath: string
-): void {
+const validateV2Options = (options: {
+  deployFunction: DeployFunction;
+  functionOptions: Record<string, unknown>;
+  functionPath: string;
+}): void => {
+  const { deployFunction, functionOptions, functionPath } = options;
   // 1. Required Trigger Properties
-  if (deployFunction === 'onSchedule' && !options.schedule) {
+  if (deployFunction === 'onSchedule' && !functionOptions.schedule) {
     throw new Error(
-      `[Firestack] Build failed: 'onSchedule' in ${funcPath} requires a 'schedule' property.`
+      `[Firestack] Build failed: 'onSchedule' in ${functionPath} requires a 'schedule' property.`
     );
   }
 
   // 2. Type Validations for Common V2 Properties
-  if ('memory' in options) {
-    const mem = options.memory;
+  if ('memory' in functionOptions) {
+    const mem = functionOptions.memory;
     if (typeof mem !== 'string' && typeof mem !== 'number') {
       throw new Error(
-        `[Firestack] Build failed: 'memory' in ${funcPath} must be a string (e.g., '256MB') or a number.`
+        `[Firestack] Build failed: 'memory' in ${functionPath} must be a string (e.g., '256MB') or a number.`
       );
     }
   }
 
-  if ('concurrency' in options) {
-    const conc = options.concurrency;
+  if ('concurrency' in functionOptions) {
+    const conc = functionOptions.concurrency;
     if (typeof conc !== 'number' || conc < 1) {
       throw new Error(
-        `[Firestack] Build failed: 'concurrency' in ${funcPath} must be a positive number.`
+        `[Firestack] Build failed: 'concurrency' in ${functionPath} must be a positive number.`
       );
     }
   }
 
-  if ('timeoutSeconds' in options) {
-    const timeout = options.timeoutSeconds;
+  if ('timeoutSeconds' in functionOptions) {
+    const timeout = functionOptions.timeoutSeconds;
     // Firebase Gen 2 allows up to 3600 seconds (60 mins)
     if (typeof timeout !== 'number' || timeout > 3600 || timeout < 1) {
       throw new Error(
-        `[Firestack] Build failed: 'timeoutSeconds' in ${funcPath} must be a number between 1 and 3600.`
+        `[Firestack] Build failed: 'timeoutSeconds' in ${functionPath} must be a number between 1 and 3600.`
       );
     }
   }
-}
+};
 
 /**
  * Searches the AST for a variable declaration matching the given name
  * and extracts its object literal value if it exists.
  */
-function findVariableObjectLiteral(sourceFile: SourceFile, varName: string): string | undefined {
+const findVariableObjectLiteral = (sourceFile: SourceFile, varName: string): string | undefined => {
   let objectString: string | undefined;
 
   forEachChild(sourceFile, (node) => {
@@ -204,4 +163,4 @@ function findVariableObjectLiteral(sourceFile: SourceFile, varName: string): str
   });
 
   return objectString;
-}
+};

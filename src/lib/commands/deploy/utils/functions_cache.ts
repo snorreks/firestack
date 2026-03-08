@@ -5,26 +5,26 @@ import type { FunctionsCache, FunctionsCacheGet, FunctionsCacheUpdate } from '$t
 import { loadChecksums } from '$utils/checksum.js';
 import { exists } from '$utils/common.js';
 
-interface RemoteCacheModule {
+type RemoteCacheModule = {
   get: FunctionsCacheGet;
   update: FunctionsCacheUpdate;
-}
+};
 
-export interface CacheContext {
+export type CacheContext = {
   remoteUtils: {
-    get: FunctionsCacheGet | undefined;
-    update: FunctionsCacheUpdate | undefined;
+    getCacheCallable: FunctionsCacheGet | undefined;
+    updateCacheCallable: FunctionsCacheUpdate | undefined;
   };
   localCache: Record<string, string>;
   mergedCache: Record<string, string>;
-}
+};
 
 /**
  * Fetches the complete cache context (local and remote) in parallel.
  * @param flavor The flavor to fetch the cache for.
  * @returns The cache context.
  */
-export async function getCacheContext(flavor: string): Promise<CacheContext> {
+export const getCacheContext = async (flavor: string): Promise<CacheContext> => {
   const [remoteUtils, localCache] = await Promise.all([
     getRemoteCacheUtils(),
     loadChecksums({
@@ -35,8 +35,11 @@ export async function getCacheContext(flavor: string): Promise<CacheContext> {
 
   let mergedCache: Record<string, string> = { ...localCache };
 
-  if (remoteUtils.get) {
-    const remoteCache = await fetchRemoteCache({ getFn: remoteUtils.get, flavor });
+  if (remoteUtils.getCacheCallable) {
+    const remoteCache = await fetchRemoteCache({
+      getCacheCallable: remoteUtils.getCacheCallable,
+      flavor,
+    });
     if (remoteCache) {
       logger.debug('Using remote cache, merging with local');
       mergedCache = { ...mergedCache, ...remoteCache };
@@ -48,16 +51,16 @@ export async function getCacheContext(flavor: string): Promise<CacheContext> {
     localCache,
     mergedCache,
   };
-}
+};
 
 /**
  * Gets the remote cache utilities from functions-cache.ts (user provided script).
  * @returns An object containing the get and update functions for the remote cache.
  */
-export async function getRemoteCacheUtils(): Promise<{
-  get: FunctionsCacheGet | undefined;
-  update: FunctionsCacheUpdate | undefined;
-}> {
+export const getRemoteCacheUtils = async (): Promise<{
+  getCacheCallable: FunctionsCacheGet | undefined;
+  updateCacheCallable: FunctionsCacheUpdate | undefined;
+}> => {
   const cacheFilePath = join(cwd(), 'functions-cache.ts');
 
   if (!(await exists(cacheFilePath))) {
@@ -71,55 +74,49 @@ export async function getRemoteCacheUtils(): Promise<{
 
     if (!cacheModule.get || !cacheModule.update) {
       logger.warn('Remote cache user script found but missing get or update functions');
-      return { get: undefined, update: undefined };
+      return { getCacheCallable: undefined, updateCacheCallable: undefined };
     }
 
     return {
-      get: cacheModule.get,
-      update: cacheModule.update,
+      getCacheCallable: cacheModule.get,
+      updateCacheCallable: cacheModule.update,
     };
   } catch (error) {
     logger.debug('Error importing remote cache user script:', error);
-    return { get: undefined, update: undefined };
+    return { getCacheCallable: undefined, updateCacheCallable: undefined };
   }
-}
-
-interface FetchRemoteCacheOptions {
-  getFn: FunctionsCacheGet;
-  flavor: string;
-}
+};
 
 /**
  * Fetches the current remote cache using the provided get function.
  */
-export async function fetchRemoteCache(
-  opts: FetchRemoteCacheOptions
-): Promise<FunctionsCache | undefined> {
-  const { getFn, flavor } = opts;
+export const fetchRemoteCache = async (options: {
+  getCacheCallable: FunctionsCacheGet;
+  flavor: string;
+}): Promise<FunctionsCache | undefined> => {
+  const { getCacheCallable, flavor } = options;
   try {
-    return await getFn({ flavor });
+    return await getCacheCallable({ flavor });
   } catch (error) {
     logger.debug('Failed to fetch remote cache:', error);
     return undefined;
   }
-}
-
-interface UpdateRemoteCacheOptions {
-  updateFn: FunctionsCacheUpdate;
-  flavor: string;
-  newCache: FunctionsCache;
-}
+};
 
 /**
  * Updates the remote cache using the provided update function.
  */
-export async function updateRemoteCache(opts: UpdateRemoteCacheOptions): Promise<boolean> {
-  const { updateFn, flavor, newCache } = opts;
+export const updateRemoteCache = async (options: {
+  updateCacheCallable: FunctionsCacheUpdate;
+  flavor: string;
+  newCache: FunctionsCache;
+}): Promise<boolean> => {
+  const { updateCacheCallable, flavor, newCache } = options;
   try {
-    await updateFn({ flavor, newFunctionsCache: newCache });
+    await updateCacheCallable({ flavor, newFunctionsCache: newCache });
     return true;
   } catch (error) {
     logger.error('Failed to update remote cache:', error);
     return false;
   }
-}
+};

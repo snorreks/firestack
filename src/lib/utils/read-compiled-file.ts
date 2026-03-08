@@ -1,21 +1,17 @@
 import { readFile } from 'node:fs/promises';
 import { logger } from '$logger';
 
-type GetEnvironmentNeededOptions = {
-  outputDir: string;
-  environment: Record<string, string>;
-};
-
 /**
  * Reads a compiled file from the dist directory.
  * @param options - The options containing output directory and environment variables.
  * @returns The needed environment variables as a record.
  */
-export const getEnvironmentNeeded = async (
-  options: GetEnvironmentNeededOptions
-): Promise<Record<string, string> | undefined> => {
-  const { outputDir, environment } = options;
-  const outputPath = `${outputDir}/src/index.js`;
+export const getEnvironmentNeeded = async (options: {
+  outputDirectory: string;
+  environment: Record<string, string>;
+}): Promise<Record<string, string> | undefined> => {
+  const { outputDirectory, environment } = options;
+  const outputPath = `${outputDirectory}/src/index.js`;
   try {
     const code = await readFile(outputPath, 'utf-8');
     const needed: Record<string, string> = {};

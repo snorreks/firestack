@@ -1,6 +1,6 @@
 import type { ExecutorBaseBuildOptions } from './core.js';
 import type { DeployFunction, FunctionBuilder } from './function-types.js';
-import type { FunctionOptions, NodeVersion } from './helper-options.js';
+import type { AllFunctionOptions, NodeVersion } from './helper-options.js';
 
 export type PackageManager = 'npm' | 'yarn' | 'pnpm' | 'bun' | 'global';
 
@@ -172,7 +172,7 @@ export type BuildFunctionData<T extends FunctionBuilder = FunctionBuilder> = Omi
   BuildFunctionLiteData<T>,
   'sentry'
 > &
-  FunctionOptions[T] & {
+  AllFunctionOptions[T] & {
     /**
      * If the type is `onCreate`, `onUpdate`, or `onDelete`, this is
      * required

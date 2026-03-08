@@ -9,7 +9,7 @@ import {
   getCacheContext,
   updateRemoteCache,
 } from '$commands/deploy/utils/functions_cache.js';
-import { type DeployOptions, getOptions } from '$commands/deploy/utils/options.js';
+import { type DeployOptions, getDeployOptions } from '$commands/deploy/utils/options.js';
 import { logger } from '$logger';
 import { loadChecksums } from '$utils/checksum.js';
 import { executeCommand } from '$utils/command.js';
@@ -29,7 +29,7 @@ interface RulesOptions extends DeployOptions {
  * Main action for the rules command.
  */
 export const rulesAction = async (cliOptions: RulesOptions) => {
-  const options = await getOptions(cliOptions);
+  const options = await getDeployOptions(cliOptions);
 
   if (!options.projectId) {
     logger.error(

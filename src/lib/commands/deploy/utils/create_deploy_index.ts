@@ -1,77 +1,84 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { logger } from '$logger';
-import type { DeployFunction, FunctionBuilder } from '$types';
+import type { DeployFunction, FunctionBuilder, FunctionOptions } from '$types';
 import { extractDatabaseRef, extractDocumentPath } from '$utils/function_naming.js';
-import { extractAndValidateOptions } from './parse_function_options.js'; // <-- Import new parser
 
-export interface BuildFunctionData {
+type CreateIndexFileOptions = {
   functionName: string;
-  funcPath: string;
+  functionPath: string;
   temporaryDirectory: string;
-  controllersPath: string;
-  region?: string;
-}
+  functionsDirectoryPath: string;
+  deployFunction: DeployFunction;
+  functionOptions: FunctionOptions;
+};
 
-export async function createTemporaryIndexFunctionFile(
-  buildFunctionData: BuildFunctionData
-): Promise<string> {
-  logger.debug('Creating temporary index file', buildFunctionData);
+export const createTemporaryIndexFunctionFile = async (
+  options: CreateIndexFileOptions
+): Promise<string> => {
+  logger.debug('Creating temporary index file', options);
 
-  const code = await toDeployIndexCode(buildFunctionData);
-  if (!code) {
-    return buildFunctionData.funcPath;
-  }
+  const code = await toDeployIndexCode(options);
 
-  const temporaryFilePath = join(
-    buildFunctionData.temporaryDirectory,
-    `${buildFunctionData.functionName}.ts`
-  );
+  const temporaryFilePath = join(options.temporaryDirectory, `${options.functionName}.ts`);
 
   await writeFile(temporaryFilePath, code, 'utf8');
 
   return temporaryFilePath;
-}
+};
 
-async function toDeployIndexCode(
-  buildFunctionData: BuildFunctionData
-): Promise<string | undefined> {
-  const { functionName, funcPath, temporaryDirectory, controllersPath, region } = buildFunctionData;
-
-  const fileContent = await readFile(funcPath, 'utf8');
-
-  // Hand off the heavy lifting to our new parser
-  const { deployFunction, options } = extractAndValidateOptions(fileContent, funcPath, region);
-
-  if (!deployFunction) {
-    logger.debug(`No valid deploy function found in ${funcPath}`);
-    return undefined;
-  }
+const toDeployIndexCode = async (options: CreateIndexFileOptions): Promise<string> => {
+  const { deployFunction, functionPath, temporaryDirectory } = options;
 
   const rootFunctionBuilder = toRootFunction(deployFunction);
-  const functionCodeType = toFunctionCodeType(deployFunction);
 
-  const importPath = `${relative(temporaryDirectory, funcPath)
+  const importPath = `${relative(temporaryDirectory, functionPath)
     .replaceAll('\\', '/')
     .replace(/\.(ts|js)$/, '')}.ts`;
 
-  // Apply custom document/ref paths based on function type
-  if (rootFunctionBuilder === 'firestore') {
-    const documentPath = extractDocumentPath({ funcPath, controllersPath });
-    if (documentPath) {
-      options.document = documentPath;
-    }
-  } else if (rootFunctionBuilder === 'database') {
-    const refPath = extractDatabaseRef({ funcPath, controllersPath });
-    if (refPath) {
-      options.ref = refPath;
-    }
+  if (rootFunctionBuilder === 'auth') {
+    return toV1FunctionCode({
+      ...options,
+      importPath,
+    });
   }
 
-  const optionsCode = JSON.stringify(options, null, 2);
+  return toV2FunctionCode({
+    ...options,
+    importPath,
+    rootFunctionBuilder,
+  });
+};
 
-  if (rootFunctionBuilder === 'auth') {
-    return toV1FunctionCode(functionName, importPath, deployFunction, options);
+const toV2FunctionCode = (
+  options: CreateIndexFileOptions & {
+    importPath: string;
+    rootFunctionBuilder: FunctionBuilder;
+  }
+): string => {
+  const {
+    functionOptions,
+    importPath,
+    functionName,
+    deployFunction,
+    rootFunctionBuilder,
+    functionsDirectoryPath,
+    functionPath,
+  } = options;
+  const optionsCode = JSON.stringify(functionOptions, null, 2);
+  const functionCodeType = toFunctionCodeType(deployFunction);
+
+  // Apply custom document/ref paths based on function type
+  if (rootFunctionBuilder === 'firestore') {
+    const documentPath = extractDocumentPath({ functionPath, functionsDirectoryPath });
+    if (documentPath) {
+      functionOptions.document = documentPath;
+    }
+  } else if (rootFunctionBuilder === 'database') {
+    const refPath = extractDatabaseRef({ functionPath, functionsDirectoryPath });
+    if (refPath) {
+      functionOptions.ref = refPath;
+    }
   }
 
   const fileCode = `
@@ -81,14 +88,15 @@ import functionStart from '${importPath}';
 export const ${functionName} = ${functionCodeType}(${optionsCode}, functionStart);
 `;
   return fileCode;
-}
-function toV1FunctionCode(
-  functionName: string,
-  importPath: string,
-  deployFunction: DeployFunction,
-  options: Record<string, unknown>
-): string {
-  const { region: regionOpt, ...runtimeOptions } = options;
+};
+
+const toV1FunctionCode = (
+  options: CreateIndexFileOptions & {
+    importPath: string;
+  }
+): string => {
+  const { functionOptions, importPath, functionName, deployFunction } = options;
+  const { region: regionOpt, ...runtimeOptions } = functionOptions;
 
   const region = regionOpt || 'us-central1';
   let chain = `region(${JSON.stringify(region)})`;
@@ -123,7 +131,7 @@ import functionStart from '${importPath}';
 
 export const ${functionName} = ${chain}.${trigger}(functionStart);
 `;
-}
+};
 
 const toRootFunction = (deployFunction: DeployFunction): FunctionBuilder => {
   switch (deployFunction) {

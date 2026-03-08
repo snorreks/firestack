@@ -15,5 +15,9 @@ export default onAuthCreate(
   },
   {
     timeoutSeconds: 30,
+    functionName: 'auth_created_renamed',
+    nodeVersion: '20',
+    assets: [''],
+    external: ['is-thirteen'],
   }
 );

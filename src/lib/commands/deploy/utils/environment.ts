@@ -8,7 +8,7 @@ import { logger } from '$logger';
  * @param flavor The flavor to get the environment variables for.
  * @returns The environment variables.
  */
-export async function getEnvironment(flavor: string): Promise<Record<string, string>> {
+export const getEnvironment = async (flavor: string): Promise<Record<string, string>> => {
   const envPath = join(cwd(), `.env.${flavor}`);
   try {
     const envContent = await readFile(envPath, 'utf-8');
@@ -33,4 +33,4 @@ export async function getEnvironment(flavor: string): Promise<Record<string, str
     }
     throw e;
   }
-}
+};

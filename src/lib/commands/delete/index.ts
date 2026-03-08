@@ -1,7 +1,7 @@
 import { exit } from 'node:process';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { type DeployOptions, getOptions } from '$commands/deploy/utils/options.js';
+import { type DeployOptions, getDeployOptions } from '$commands/deploy/utils/options.js';
 import { logger } from '$logger';
 import { deleteFunctions } from './utils/delete_functions.js';
 import { getOnlineFunctionNames, getUnusedFunctionNames } from './utils/read_functions.js';
@@ -32,7 +32,7 @@ export const deleteCommand = new Command('delete')
     val.split(',')
   )
   .action(async (cliOptions: DeleteOptions) => {
-    const options = await getOptions(cliOptions);
+    const options = await getDeployOptions(cliOptions);
 
     if (!options.projectId) {
       logger.error(

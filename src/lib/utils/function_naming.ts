@@ -1,14 +1,4 @@
-/**
- * @file Utilities for deriving function names and document paths from file paths.
- * @license MIT
- */
-
 import { relative } from 'node:path';
-
-type DeriveFunctionNameOptions = {
-  funcPath: string;
-  controllersPath: string;
-};
 
 /**
  * Derives a function name from a file path relative to the controllers directory.
@@ -17,22 +7,23 @@ type DeriveFunctionNameOptions = {
  * - `api/test_api.ts` → `test_api`
  * - `firestore/users/[uid]/created.ts` → `users_created`
  * - `scheduler/daily.ts` → `daily`
+ * - `auth/created.ts` → `created` (auth triggers don't get a prefix)
  *
  * @param options - The options containing file paths.
  * @returns The derived function name.
  */
-export const deriveFunctionName = (options: DeriveFunctionNameOptions): string => {
-  const { funcPath, controllersPath } = options;
-  const relativePath = relative(controllersPath, funcPath);
+export const deriveFunctionName = (options: {
+  functionPath: string;
+  functionsDirectoryPath: string;
+}): string => {
+  const { functionPath, functionsDirectoryPath } = options;
+  const relativePath = relative(functionsDirectoryPath, functionPath);
   const parts = relativePath.replace(/\\/g, '/').split('/');
-
-  // Check if this is an auth trigger
-  const isAuthTrigger = parts[0] === 'auth';
 
   // Remove file extension from the last part
   const fileName = parts[parts.length - 1].replace(/\.(ts|tsx|js)$/, '');
 
-  // Remove the first part (trigger type like 'firestore', 'api', etc.)
+  // Remove the first part (trigger type like 'firestore', 'api', 'auth', etc.)
   const pathParts = parts.slice(1, -1);
 
   // Filter out [id] placeholders and build the name
@@ -40,17 +31,7 @@ export const deriveFunctionName = (options: DeriveFunctionNameOptions): string =
 
   const functionName = nameParts.join('_');
 
-  // Auto prefix with auth_ if it's an auth trigger
-  if (isAuthTrigger) {
-    return `auth_${functionName}`;
-  }
-
   return functionName;
-};
-
-type ExtractDocumentPathOptions = {
-  funcPath: string;
-  controllersPath: string;
 };
 
 /**
@@ -63,9 +44,12 @@ type ExtractDocumentPathOptions = {
  * @param options - The options containing file paths.
  * @returns The Firestore document path, or undefined if not a Firestore trigger.
  */
-export const extractDocumentPath = (options: ExtractDocumentPathOptions): string | undefined => {
-  const { funcPath, controllersPath } = options;
-  const relativePath = relative(controllersPath, funcPath);
+export const extractDocumentPath = (options: {
+  functionPath: string;
+  functionsDirectoryPath: string;
+}): string | undefined => {
+  const { functionPath, functionsDirectoryPath } = options;
+  const relativePath = relative(functionsDirectoryPath, functionPath);
   const parts = relativePath.replace(/\\/g, '/').split('/');
 
   // Check if this is a firestore trigger
@@ -89,20 +73,18 @@ export const extractDocumentPath = (options: ExtractDocumentPathOptions): string
   return documentPath || undefined;
 };
 
-type ExtractDatabaseRefOptions = {
-  funcPath: string;
-  controllersPath: string;
-};
-
 /**
  * Extracts a database reference path from a file path.
  *
  * @param options - The options containing file paths.
  * @returns The database reference path, or undefined if not a database trigger.
  */
-export const extractDatabaseRef = (options: ExtractDatabaseRefOptions): string | undefined => {
-  const { funcPath, controllersPath } = options;
-  const relativePath = relative(controllersPath, funcPath);
+export const extractDatabaseRef = (options: {
+  functionPath: string;
+  functionsDirectoryPath: string;
+}): string | undefined => {
+  const { functionPath, functionsDirectoryPath } = options;
+  const relativePath = relative(functionsDirectoryPath, functionPath);
   const parts = relativePath.replace(/\\/g, '/').split('/');
 
   // Check if this is a database trigger

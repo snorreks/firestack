@@ -8,24 +8,20 @@ import {
   prepareFunction,
 } from './process_function.js';
 
-export interface RetryFailedFunctionsOptions {
-  failedFunctions: ProcessResult[];
-  functionFiles: string[];
-  options: DeployOptions;
-  environment: Record<string, string>;
-  functionsPath: string;
-}
-
 /**
  * Retries failed function deployments.
  */
-export async function retryFailedFunctions(
-  opts: RetryFailedFunctionsOptions
-): Promise<ProcessResult[]> {
-  const { functionFiles, options, environment, functionsPath } = opts;
-  let { failedFunctions } = opts;
+export const retryFailedFunctions = async (options: {
+  failedFunctions: ProcessResult[];
+  functionPaths: string[];
+  deployOptions: DeployOptions;
+  environment: Record<string, string>;
+  functionsDirectoryPath: string;
+}): Promise<ProcessResult[]> => {
+  const { functionPaths, deployOptions, environment, functionsDirectoryPath } = options;
+  let { failedFunctions } = options;
 
-  const retryAmount = Number(options.retryAmount) || 0;
+  const retryAmount = Number(deployOptions.retryAmount) || 0;
 
   if (failedFunctions.length > 0 && retryAmount > 0) {
     logger.warn(`\nRetrying ${failedFunctions.length} failed functions...`);
@@ -33,29 +29,29 @@ export async function retryFailedFunctions(
     for (let i = 0; i < retryAmount; i++) {
       logger.warn(`Retry attempt ${i + 1}/${retryAmount}`);
 
-      const retryFiles = functionFiles.filter((file) => {
-        const functionName = deriveFunctionName({ funcPath: file, controllersPath: functionsPath });
+      const retryFiles = functionPaths.filter((functionPath) => {
+        const functionName = deriveFunctionName({ functionPath, functionsDirectoryPath });
         return failedFunctions.some((f) => f.functionName === functionName);
       });
 
       const retryResults = await runFunctions<ProcessResult>(
-        retryFiles.map((path) => async () => {
+        retryFiles.map((functionPath) => async () => {
           // 1. Re-prepare
-          const prep = await prepareFunction({
-            funcPath: path,
-            options,
+          const prepareResult = await prepareFunction({
+            functionPath,
+            deployOptions,
             environment,
-            controllersPath: functionsPath,
+            functionsDirectoryPath,
           });
 
-          if (prep.status !== 'to-deploy' && prep.status !== 'dry-run') {
-            return { functionName: prep.functionName, status: 'failed' };
+          if (prepareResult.status !== 'to-deploy' && prepareResult.status !== 'dry-run') {
+            return { functionName: prepareResult.functionName, status: 'failed' };
           }
 
           // 2. Re-execute
-          return await executeFunctionDeployment({ prepareResult: prep, options });
+          return await executeFunctionDeployment({ prepareResult, deployOptions });
         }),
-        options.concurrency
+        deployOptions.concurrency
       );
 
       const newlyFailed = retryResults.filter((r): r is ProcessResult => r?.status === 'failed');
@@ -70,4 +66,4 @@ export async function retryFailedFunctions(
   }
 
   return failedFunctions;
-}
+};

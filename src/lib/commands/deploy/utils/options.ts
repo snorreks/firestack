@@ -3,11 +3,12 @@ import { join } from 'node:path';
 import { cwd, exit } from 'node:process';
 import { DEFAULT_NODE_VERSION } from '$constants';
 import { logger } from '$logger';
+import type { NodeVersion } from '$types';
 import { exists } from '$utils/common.js';
 
 export type PackageManager = 'npm' | 'yarn' | 'pnpm' | 'bun' | 'global';
 
-export interface DeployOptions {
+export type DeployOptions = {
   flavor: string;
   isEmulator?: boolean;
   dryRun?: boolean;
@@ -26,15 +27,16 @@ export interface DeployOptions {
   scriptsDirectory?: string;
   initScript?: string;
   projectId?: string;
-  nodeVersion?: string;
+  nodeVersion: NodeVersion;
   debug?: boolean;
   engine?: string;
   external?: string[];
   packageManager?: PackageManager;
   emulators?: string[];
-}
+  keepNames?: boolean;
+};
 
-export interface FirestackConfig {
+export type FirestackConfig = {
   functionsDirectory?: string;
   rulesDirectory?: string;
   firestoreRules?: string;
@@ -50,14 +52,14 @@ export interface FirestackConfig {
   external?: string[];
   packageManager?: PackageManager;
   emulators?: string[];
-}
+};
 
 /**
  * Gets the deployment options by merging CLI options with the firestack.json configuration.
  * @param cliOptions The options provided via the command line.
  * @returns The merged deployment options.
  */
-export async function getOptions(cliOptions: DeployOptions): Promise<DeployOptions> {
+export const getDeployOptions = async (cliOptions: DeployOptions): Promise<DeployOptions> => {
   const configPath = join(cwd(), 'firestack.json');
   let config: FirestackConfig = {};
   try {
@@ -105,4 +107,4 @@ export async function getOptions(cliOptions: DeployOptions): Promise<DeployOptio
   logger.debug('Options:', options);
 
   return options;
-}
+};

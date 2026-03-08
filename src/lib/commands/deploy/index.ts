@@ -1,4 +1,4 @@
-import { basename, join } from 'node:path';
+import { join } from 'node:path';
 import { cwd, exit } from 'node:process';
 import chalk from 'chalk';
 import { Command } from 'commander';
@@ -9,7 +9,12 @@ import { runFunctions } from '$utils/run-functions.js';
 import { getEnvironment } from './utils/environment.js';
 import { findFunctions } from './utils/find_functions.js';
 import { getCacheContext, updateRemoteCache } from './utils/functions_cache.js';
-import { type DeployOptions, getOptions } from './utils/options.js';
+import { type DeployOptions, getDeployOptions } from './utils/options.js';
+import {
+  type FunctionMetadata,
+  filterFunctionsByOnly,
+  parseFunctionMetadata,
+} from './utils/parse_function_metadata.js';
 import {
   executeFunctionDeployment,
   type PrepareResult,
@@ -26,9 +31,9 @@ export interface ExtendedDeployOptions extends DeployOptions {
  * Main deployment action that orchestrates the entire process.
  */
 export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
-  const options = await getOptions(cliOptions);
+  const deployOptions = await getDeployOptions(cliOptions);
 
-  if (!options.projectId) {
+  if (!deployOptions.projectId) {
     logger.error(
       chalk.red('❌ Project ID not found. Provide it with --projectId or in firestack.json.')
     );
@@ -39,8 +44,8 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
   logger.info(chalk.bold.green('🚀 Starting deployment...'));
 
   const [cacheContext, environment] = await Promise.all([
-    getCacheContext(options.flavor),
-    getEnvironment(options.flavor),
+    getCacheContext(deployOptions.flavor),
+    getEnvironment(deployOptions.flavor),
   ]);
 
   const { remoteUtils, mergedCache: previousCache } = cacheContext;
@@ -51,42 +56,57 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
     await rulesAction({ ...cliOptions, cacheContext });
   }
 
-  // 3. Functions Discovery
-  if (!options.functionsDirectory) {
+  // 3. Functions Discovery & Metadata Parsing
+  if (!deployOptions.functionsDirectory) {
     throw new Error('Functions directory is required for deployment.');
   }
 
-  const functionsPath = join(cwd(), options.functionsDirectory);
-  let functionFiles = await findFunctions(functionsPath);
+  const functionsDirectoryPath = join(cwd(), deployOptions.functionsDirectory);
+  const functionFiles = await findFunctions(functionsDirectoryPath);
+
+  // Parse metadata for all functions in parallel
+  const functionMetadataList = await Promise.all(
+    functionFiles.map((functionPath) =>
+      parseFunctionMetadata({
+        functionPath,
+        functionsDirectoryPath,
+        defaultRegion: deployOptions.region,
+        defaultNodeVersion: deployOptions.nodeVersion,
+      })
+    )
+  );
+
+  // Filter out nulls (non-deployable files)
+  let functionMetadata = functionMetadataList.filter((m): m is FunctionMetadata => m !== null);
 
   // Filter if '--only' is specified
-  if (options.only) {
-    const onlyFunctions = options.only.split(',').map((f) => f.trim());
-    functionFiles = functionFiles.filter((file) => {
-      const functionName = basename(file).replace(/\.(ts|tsx|js)$/, '');
-      return onlyFunctions.includes(functionName);
+  if (deployOptions.only) {
+    const onlyFunctions = deployOptions.only.split(',').map((f) => f.trim());
+    functionMetadata = filterFunctionsByOnly({
+      functionMetadata,
+      only: onlyFunctions,
     });
   }
 
-  if (functionFiles.length === 0) {
+  if (functionMetadata.length === 0) {
     logger.warn(chalk.yellow('⚠️  No functions found to deploy.'));
     return;
   }
 
-  logger.info(`🔍 Found ${chalk.bold.cyan(functionFiles.length)} function(s) to deploy.`);
+  logger.info(`🔍 Found ${chalk.bold.cyan(functionMetadata.length)} function(s) to deploy.`);
 
   // 4. Phase 1: Planning (Build & Check Changes)
   const prepareResults = await runFunctions<PrepareResult>(
-    functionFiles.map(
-      (path) => () =>
+    functionMetadata.map(
+      (metadata) => () =>
         prepareFunction({
-          funcPath: path,
-          options,
+          functionPath: metadata.functionPath,
+          deployOptions,
           environment,
-          controllersPath: functionsPath,
+          functionsDirectoryPath,
         })
     ),
-    options.concurrency
+    deployOptions.concurrency
   );
 
   // 5. Aggregate and Log Plan
@@ -124,16 +144,16 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
 
   const deployResults = await runFunctions<ProcessResult>(
     toDeploy.map((prep) => async () => {
-      const result = await executeFunctionDeployment({ prepareResult: prep, options });
+      const result = await executeFunctionDeployment({ prepareResult: prep, deployOptions });
       deployedCount++;
       if (result.status === 'failed') {
         logger.error(`❌ Failed: ${chalk.bold(result.functionName)}`);
-      } else if (options.verbose) {
+      } else if (deployOptions.verbose) {
         logger.debug(`[${deployedCount}/${totalToDeploy}] Deployed ${result.functionName}`);
       }
       return result;
     }),
-    options.concurrency
+    deployOptions.concurrency
   );
 
   const finalResults = deployResults.filter((r): r is ProcessResult => !!r);
@@ -155,10 +175,10 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
   if (failedFunctions.length > 0) {
     failedFunctions = await retryFailedFunctions({
       failedFunctions,
-      functionFiles,
-      options,
+      functionPaths,
+      deployOptions,
       environment,
-      functionsPath,
+      functionsDirectoryPath,
     });
   }
 
@@ -171,16 +191,16 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
   }
 
   // 9. Synchronize Remote Cache
-  if (remoteUtils.update) {
+  if (remoteUtils.updateCacheCallable) {
     const latestLocalCache = await loadChecksums({
       outputDirectory: join(cwd(), 'dist'),
-      flavor: options.flavor,
+      flavor: deployOptions.flavor,
     });
 
     const newRemoteCacheData = { ...previousCache, ...latestLocalCache };
     const success = await updateRemoteCache({
-      updateFn: remoteUtils.update,
-      flavor: options.flavor,
+      updateCacheCallable: remoteUtils.updateCacheCallable,
+      flavor: deployOptions.flavor,
       newCache: newRemoteCacheData,
     });
     if (success) {

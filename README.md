@@ -87,6 +87,29 @@ export default onRequest(
 );
 ```
 
+**Important: One Function Per File**
+
+Firestack auto-discovers functions based on your file structure. Each file must contain **exactly ONE function** exported as default:
+
+```
+src/controllers/
+  api/
+    hello.ts       <- one function (export default)
+    goodbye.ts     <- another function
+  firestore/
+    users/
+      [uid]/
+        created.ts <- Firestore onCreate trigger
+        deleted.ts <- Firestore onDelete trigger
+  scheduler/
+    daily.ts       <- Scheduled function
+```
+
+The file name and path determine the function name and trigger type:
+- `api/hello.ts` → HTTP function named `hello`
+- `firestore/users/[uid]/created.ts` → Firestore trigger on `users/{uid}` collection
+- `scheduler/daily.ts` → Scheduled function
+
 ### 3. Deploy
 
 ```bash
