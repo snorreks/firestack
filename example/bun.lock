@@ -5,9 +5,9 @@
     "": {
       "name": "bunfire-example",
       "devDependencies": {
-        "@biomejs/biome": "^2.4.6",
-        "@moonrepo/cli": "^2.0.4",
-        "typescript": "^5.9.3",
+        "@biomejs/biome": "latest",
+        "@moonrepo/cli": "latest",
+        "typescript": "latest",
       },
     },
     "apps/functions": {
