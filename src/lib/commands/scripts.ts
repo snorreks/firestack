@@ -101,7 +101,7 @@ async function runScript(scriptName: string, options: ScriptsOptions) {
 
   // Parallel fetch of environment and config
   const [env, scriptConfig] = await Promise.all([
-    getScriptEnvironment(options.flavor),
+    getScriptEnvironment({ flavor: options.flavor }),
     getScriptConfig(options.flavor),
   ]);
 

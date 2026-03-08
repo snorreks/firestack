@@ -84,7 +84,7 @@ async function buildEmulatorFunctions(opts: {
   const exports: string[] = [];
 
   for (const funcFile of functionFiles) {
-    const funcName = deriveFunctionName(funcFile, controllersPath);
+    const funcName = deriveFunctionName({ funcPath: funcFile, controllersPath });
 
     const generatedFile = await createTemporaryIndexFunctionFile({
       funcPath: funcFile,
@@ -133,7 +133,7 @@ async function buildEmulatorFunctions(opts: {
   }
 
   if (Object.keys(emulatorEnv).length > 0) {
-    await writeFile(join(outputDir, '.env'), toDotEnvironmentCode(emulatorEnv));
+    await writeFile(join(outputDir, '.env'), toDotEnvironmentCode({ env: emulatorEnv }));
     logger.debug('Generated .env file for emulator');
   }
 

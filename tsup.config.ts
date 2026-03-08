@@ -12,4 +12,5 @@ export default defineConfig({
   dts: true,
   outDir: 'dist',
   clean: true,
+  external: ['firebase-functions', 'firebase-tools', /^firebase-/],
 });

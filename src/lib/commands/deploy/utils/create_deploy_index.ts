@@ -57,12 +57,12 @@ async function toDeployIndexCode(
 
   // Apply custom document/ref paths based on function type
   if (rootFunctionBuilder === 'firestore') {
-    const documentPath = extractDocumentPath(funcPath, controllersPath);
+    const documentPath = extractDocumentPath({ funcPath, controllersPath });
     if (documentPath) {
       options.document = documentPath;
     }
   } else if (rootFunctionBuilder === 'database') {
-    const refPath = extractDatabaseRef(funcPath, controllersPath);
+    const refPath = extractDatabaseRef({ funcPath, controllersPath });
     if (refPath) {
       options.ref = refPath;
     }
@@ -91,7 +91,7 @@ function toV1FunctionCode(
   const { region: regionOpt, ...runtimeOptions } = options;
 
   const region = regionOpt || 'us-central1';
-  let chain = `functions.region(${JSON.stringify(region)})`;
+  let chain = `region(${JSON.stringify(region)})`;
 
   if (Object.keys(runtimeOptions).length > 0) {
     chain += `.runWith(${JSON.stringify(runtimeOptions, null, 2)})`;
@@ -118,7 +118,7 @@ function toV1FunctionCode(
   }
 
   return `
-import * as functions from 'firebase-functions';
+import { region } from 'firebase-functions/v1';
 import functionStart from '${importPath}';
 
 export const ${functionName} = ${chain}.${trigger}(functionStart);

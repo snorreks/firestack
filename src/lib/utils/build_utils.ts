@@ -5,7 +5,7 @@ import { DEFAULT_NODE_VERSION } from '$lib/constants';
 import { logger } from '$logger';
 import type { NodeVersion } from '$types';
 
-interface BuildFunctionOptions {
+export type BuildFunctionOptions = {
   inputFile: string;
   outputFile: string;
   configPath?: string;
@@ -20,10 +20,17 @@ interface BuildFunctionOptions {
   tsconfig?: string;
   __dirnameFix?: boolean;
   __filenameFix?: boolean;
-}
+};
+
+type ToBannerOptions = {
+  __dirnameFix?: boolean;
+  __filenameFix?: boolean;
+  requireFix?: boolean;
+  inputFile: string;
+};
 
 const toBanner = (
-  options: BuildFunctionOptions
+  options: ToBannerOptions
 ):
   | {
       js: string;
@@ -36,8 +43,8 @@ const toBanner = (
 
   let js = '';
   if (__dirnameFix) {
-    const dirname = _dirname(inputFile).replace(/\\/g, '\\\\');
-    js += `const __dirname='${dirname}';`;
+    const dir = _dirname(inputFile).replace(/\\/g, '\\\\');
+    js += `const __dirname='${dir}';`;
   }
   if (__filenameFix) {
     const filename = inputFile.replace(/\\/g, '\\\\');
@@ -49,7 +56,7 @@ const toBanner = (
   return { js };
 };
 
-export async function buildFunction(options: BuildFunctionOptions): Promise<void> {
+export const buildFunction = async (options: BuildFunctionOptions): Promise<void> => {
   const {
     inputFile,
     outputFile,
@@ -98,4 +105,4 @@ export async function buildFunction(options: BuildFunctionOptions): Promise<void
     });
     throw error;
   }
-}
+};

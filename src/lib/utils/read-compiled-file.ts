@@ -1,15 +1,20 @@
 import { readFile } from 'node:fs/promises';
 import { logger } from '$logger';
 
+type GetEnvironmentNeededOptions = {
+  outputDir: string;
+  environment: Record<string, string>;
+};
+
 /**
  * Reads a compiled file from the dist directory.
- * @param outputPath The path to the compiled file.
- * @returns The contents of the file as a string.
+ * @param options - The options containing output directory and environment variables.
+ * @returns The needed environment variables as a record.
  */
-export async function getEnvironmentNeeded(
-  outputDir: string,
-  environment: Record<string, string>
-): Promise<Record<string, string> | undefined> {
+export const getEnvironmentNeeded = async (
+  options: GetEnvironmentNeededOptions
+): Promise<Record<string, string> | undefined> => {
+  const { outputDir, environment } = options;
   const outputPath = `${outputDir}/src/index.js`;
   try {
     const code = await readFile(outputPath, 'utf-8');
@@ -41,4 +46,4 @@ export async function getEnvironmentNeeded(
     logger.debug(`Could not read compiled file at ${outputPath}:`, error);
     return undefined;
   }
-}
+};

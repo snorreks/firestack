@@ -5,6 +5,11 @@
 
 import { relative } from 'node:path';
 
+type DeriveFunctionNameOptions = {
+  funcPath: string;
+  controllersPath: string;
+};
+
 /**
  * Derives a function name from a file path relative to the controllers directory.
  *
@@ -13,11 +18,11 @@ import { relative } from 'node:path';
  * - `firestore/users/[uid]/created.ts` → `users_created`
  * - `scheduler/daily.ts` → `daily`
  *
- * @param funcPath The absolute path to the function file.
- * @param controllersPath The absolute path to the controllers directory.
+ * @param options - The options containing file paths.
  * @returns The derived function name.
  */
-export function deriveFunctionName(funcPath: string, controllersPath: string): string {
+export const deriveFunctionName = (options: DeriveFunctionNameOptions): string => {
+  const { funcPath, controllersPath } = options;
   const relativePath = relative(controllersPath, funcPath);
   const parts = relativePath.replace(/\\/g, '/').split('/');
 
@@ -41,7 +46,12 @@ export function deriveFunctionName(funcPath: string, controllersPath: string): s
   }
 
   return functionName;
-}
+};
+
+type ExtractDocumentPathOptions = {
+  funcPath: string;
+  controllersPath: string;
+};
 
 /**
  * Extracts a Firestore document path from a file path.
@@ -50,11 +60,11 @@ export function deriveFunctionName(funcPath: string, controllersPath: string): s
  * - `firestore/users/[uid]/created.ts` → `users/{uid}`
  * - `firestore/users/[uid]/notifications/[notificationId]/created.ts` → `users/{uid}/notifications/{notificationId}`
  *
- * @param funcPath The absolute path to the function file.
- * @param controllersPath The absolute path to the controllers directory.
+ * @param options - The options containing file paths.
  * @returns The Firestore document path, or undefined if not a Firestore trigger.
  */
-export function extractDocumentPath(funcPath: string, controllersPath: string): string | undefined {
+export const extractDocumentPath = (options: ExtractDocumentPathOptions): string | undefined => {
+  const { funcPath, controllersPath } = options;
   const relativePath = relative(controllersPath, funcPath);
   const parts = relativePath.replace(/\\/g, '/').split('/');
 
@@ -77,16 +87,21 @@ export function extractDocumentPath(funcPath: string, controllersPath: string): 
     .join('/');
 
   return documentPath || undefined;
-}
+};
+
+type ExtractDatabaseRefOptions = {
+  funcPath: string;
+  controllersPath: string;
+};
 
 /**
  * Extracts a database reference path from a file path.
  *
- * @param funcPath The absolute path to the function file.
- * @param controllersPath The absolute path to the controllers directory.
+ * @param options - The options containing file paths.
  * @returns The database reference path, or undefined if not a database trigger.
  */
-export function extractDatabaseRef(funcPath: string, controllersPath: string): string | undefined {
+export const extractDatabaseRef = (options: ExtractDatabaseRefOptions): string | undefined => {
+  const { funcPath, controllersPath } = options;
   const relativePath = relative(controllersPath, funcPath);
   const parts = relativePath.replace(/\\/g, '/').split('/');
 
@@ -109,4 +124,4 @@ export function extractDatabaseRef(funcPath: string, controllersPath: string): s
     .join('/')}`;
 
   return refPath;
-}
+};

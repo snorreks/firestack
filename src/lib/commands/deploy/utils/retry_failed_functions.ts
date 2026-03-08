@@ -34,7 +34,7 @@ export async function retryFailedFunctions(
       logger.warn(`Retry attempt ${i + 1}/${retryAmount}`);
 
       const retryFiles = functionFiles.filter((file) => {
-        const functionName = deriveFunctionName(file, functionsPath);
+        const functionName = deriveFunctionName({ funcPath: file, controllersPath: functionsPath });
         return failedFunctions.some((f) => f.functionName === functionName);
       });
 

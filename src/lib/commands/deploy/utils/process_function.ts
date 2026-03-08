@@ -45,7 +45,7 @@ export interface ProcessFunctionOptions {
 export async function prepareFunction(opts: ProcessFunctionOptions): Promise<PrepareResult> {
   const { funcPath, environment, controllersPath } = opts;
   const options = { ...opts.options }; // Clone options to avoid concurrent modification
-  const functionName = deriveFunctionName(funcPath, controllersPath);
+  const functionName = deriveFunctionName({ funcPath, controllersPath });
 
   // Downgrade Node version for Auth triggers (GCF 1st Gen doesn't support Node 24)
   const relativePath = relative(controllersPath, funcPath).replace(/\\/g, '/');
@@ -178,7 +178,7 @@ async function setupDirectories(opts: SetupDirectoriesOptions) {
   ]);
 
   const [firebaseConfig, packageJson] = await Promise.all([
-    Promise.resolve(createFirebaseConfig(nodeVersion, functionName)),
+    Promise.resolve(createFirebaseConfig({ nodeVersion, functionName })),
     createPackageJson({
       nodeVersion,
       external: options.external,
@@ -240,10 +240,10 @@ interface SetupEnvironmentOptions {
 
 async function setupEnvironment(opts: SetupEnvironmentOptions) {
   const { outputDir, environment } = opts;
-  const envNeeded = await getEnvironmentNeeded(outputDir, environment);
+  const envNeeded = await getEnvironmentNeeded({ outputDir, environment });
   logger.debug(`Environment needed for ${outputDir}:`, envNeeded);
   if (envNeeded) {
-    const envCode = toDotEnvironmentCode(envNeeded);
+    const envCode = toDotEnvironmentCode({ env: envNeeded });
     await writeFile(join(outputDir, '.env'), envCode, 'utf-8');
   }
   return envNeeded;

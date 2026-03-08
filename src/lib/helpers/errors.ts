@@ -23,6 +23,12 @@ export const HttpStatusCode: Record<FunctionsErrorCode, number> = {
   unauthenticated: 401,
 };
 
+type FirestackErrorOptions = {
+  code: FunctionsErrorCode;
+  message: string;
+  details?: unknown;
+};
+
 /**
  * Custom error class for Firestack that can be used in both onRequest and onCall.
  * When thrown in onCall, it will be automatically converted to HttpsError.
@@ -37,3 +43,13 @@ export class FirestackError extends HttpsError {
     super(code, message, details);
   }
 }
+
+/**
+ * Creates a FirestackError instance.
+ * @param options - Error options including code, message, and optional details.
+ * @returns A new FirestackError instance.
+ */
+export const createFirestackError = (options: FirestackErrorOptions): HttpsError => {
+  const { code, message, details } = options;
+  return new HttpsError(code, message, details);
+};

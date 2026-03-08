@@ -8,12 +8,26 @@ const algorithm = 'md5';
 const encoding = 'hex';
 const checksumsFileName = 'checksums.json';
 
+type ExistsOptions = {
+  path: string;
+};
+
+type ChecksumsFilePathOptions = {
+  outputDirectory: string;
+  flavor: string;
+};
+
+type LoadChecksumsOptions = {
+  outputDirectory: string;
+  flavor: string;
+};
+
 /**
  * Checks if a file or directory exists using promises.
  */
-const exists = async (path: string): Promise<boolean> => {
+const exists = async (options: ExistsOptions): Promise<boolean> => {
   try {
-    await access(path);
+    await access(options.path);
     return true;
   } catch {
     return false;
@@ -25,18 +39,18 @@ const exists = async (path: string): Promise<boolean> => {
  * @param options - Options containing output directory and flavor.
  * @returns The path to the checksums JSON file.
  */
-export const checksumsFilePath = (options: { outputDirectory: string; flavor: string }): string =>
+export const checksumsFilePath = (options: ChecksumsFilePathOptions): string =>
   join(options.outputDirectory, '.checksums', options.flavor, checksumsFileName);
 
 /**
  * Loads all cached checksums for a specific flavor asynchronously.
  */
-export const loadChecksums = async (options: {
-  outputDirectory: string;
-  flavor: string;
-}): Promise<Record<string, string>> => {
+export const loadChecksums = async (
+  options: LoadChecksumsOptions
+): Promise<Record<string, string>> => {
   const path = checksumsFilePath(options);
-  if (await exists(path)) {
+  const pathExists = await exists({ path });
+  if (pathExists) {
     try {
       const content = await readFile(path, 'utf-8');
       return JSON.parse(content);
@@ -49,15 +63,24 @@ export const loadChecksums = async (options: {
 };
 
 /**
+ * Generates a checksum for the given code.
+ * @param code - The code to hash.
+ * @returns The generated checksum string.
+ */
+const generateChecksum = (code: string): string => {
+  const hash = createHash(algorithm);
+  hash.update(code);
+  return hash.digest(encoding);
+};
+
+/**
  * Checks if a function's code or environment has changed.
- * @param deployFunction - The function data to check.
+ * @param options - The function data to check.
  * @returns A promise that resolves to the ChecksumData if changes are detected, or undefined otherwise.
  */
-export const checkForChanges = async (
-  deployFunction: ChecksumData
-): Promise<ChecksumData | undefined> => {
+export const checkForChanges = async (options: ChecksumData): Promise<ChecksumData | undefined> => {
   try {
-    const { environment, outputRoot } = deployFunction;
+    const { environment, outputRoot } = options;
 
     const newCode = await readFile(join(outputRoot, 'src/index.js'), 'utf-8');
 
@@ -67,32 +90,21 @@ export const checkForChanges = async (
           .join('')
       : '';
 
-    const allChecksums = await loadChecksums(deployFunction);
-    const cachedChecksum = deployFunction.checksum ?? allChecksums[deployFunction.functionName];
+    const allChecksums = await loadChecksums(options);
+    const cachedChecksum = options.checksum ?? allChecksums[options.functionName];
     const newChecksum = generateChecksum(newCode + environmentString);
 
-    if (!deployFunction.force && cachedChecksum && cachedChecksum === newChecksum) {
+    if (!options.force && cachedChecksum && cachedChecksum === newChecksum) {
       return undefined;
     }
 
-    deployFunction.checksum = newChecksum;
-    return deployFunction;
+    options.checksum = newChecksum;
+    return options;
   } catch (error) {
-    logger.warn(`Error checking for local changes with ${deployFunction.functionName}.`);
+    logger.warn(`Error checking for local changes with ${options.functionName}.`);
     logger.debug(error);
-    return deployFunction;
+    return options;
   }
-};
-
-/**
- * Generates a checksum for the given code.
- * @param code - The code to hash.
- * @returns The generated checksum string.
- */
-const generateChecksum = (code: string): string => {
-  const hash = createHash(algorithm);
-  hash.update(code);
-  return hash.digest(encoding);
 };
 
 /**
@@ -112,7 +124,8 @@ export const cacheChecksumLocal = async (data: ChecksumData): Promise<void> => {
     const path = checksumsFilePath(data);
     const folderPath = join(data.outputDirectory, '.checksums', data.flavor);
 
-    if (!(await exists(folderPath))) {
+    const folderExists = await exists({ path: folderPath });
+    if (!folderExists) {
       await mkdir(folderPath, { recursive: true });
     }
 

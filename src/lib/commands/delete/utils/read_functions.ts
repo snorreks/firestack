@@ -13,7 +13,7 @@ export async function getLocalFunctionNames(options: DeployOptions): Promise<str
     const functionsPath = join(process.cwd(), options.functionsDirectory);
     const localFunctionFiles = await findFunctions(functionsPath);
     const localFunctionNames = localFunctionFiles.map((file) =>
-      deriveFunctionName(file, functionsPath)
+      deriveFunctionName({ funcPath: file, controllersPath: functionsPath })
     );
     logger.debug('localFunctionNames', localFunctionNames);
     return localFunctionNames;

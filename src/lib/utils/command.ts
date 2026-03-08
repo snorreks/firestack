@@ -1,22 +1,43 @@
-import { type ExecaError, type Options as ExecaOptions, execa } from 'execa';
-import type { PackageManager } from '$lib/commands/deploy/utils/options.js';
+import { type ExecaError, execa } from 'execa';
+import type { PackageManager } from '$commands/deploy/utils/options.js';
 import { logger } from '$logger';
 
-export interface CommandOptions extends ExecaOptions {
+export type CommandOptions = {
   args?: string[];
   packageManager?: PackageManager;
   onStdout?: (data: string) => void;
   onStderr?: (data: string) => void;
-}
+  cwd?: string;
+  stdout?: 'pipe' | 'inherit' | ['inherit', 'pipe'];
+  stderr?: 'pipe' | 'inherit' | ['inherit', 'pipe'];
+  stdio?: 'pipe' | 'inherit' | ['inherit', 'pipe'];
+  env?: Record<string, string>;
+};
 
 /**
  * A wrapper for execa that supports local command execution via package managers.
  */
-export async function executeCommand(
-  cmd: string,
-  options: CommandOptions = {}
-): Promise<{ code: number; stdout: string; stderr: string; success: boolean }> {
-  const { args = [], packageManager = 'global', onStdout, onStderr, ...execaOptions } = options;
+export const executeCommand = async (
+  cmdOrOptions: string | { cmd: string; options?: CommandOptions },
+  execaOptions?: CommandOptions
+): Promise<{ code: number; stdout: string; stderr: string; success: boolean }> => {
+  // Support both old syntax: executeCommand('cmd', { args: [] })
+  // and new syntax: executeCommand({ cmd: 'cmd', options: { args: [] } })
+  const { cmd, options } =
+    typeof cmdOrOptions === 'string'
+      ? { cmd: cmdOrOptions, options: execaOptions }
+      : { cmd: cmdOrOptions.cmd, options: cmdOrOptions.options };
+
+  const {
+    args = [],
+    packageManager = 'global',
+    onStdout,
+    onStderr,
+    cwd,
+    stdout,
+    stderr,
+    env,
+  } = options ?? {};
 
   let finalCmd = cmd;
   let finalArgs = [...args];
@@ -43,17 +64,18 @@ export async function executeCommand(
   }
 
   logger.debug(`Executing: ${finalCmd} ${finalArgs.join(' ')}`);
-  if (execaOptions.cwd) {
-    logger.debug(`Working directory: ${execaOptions.cwd}`);
+  if (cwd) {
+    logger.debug(`Working directory: ${cwd}`);
   }
 
   const isVerbose = logger.currentLogSeverity === 'debug';
 
   try {
     const subprocess = execa(finalCmd, finalArgs, {
-      ...execaOptions,
-      stdout: execaOptions.stdout ?? (isVerbose ? ['inherit', 'pipe'] : 'pipe'),
-      stderr: execaOptions.stderr ?? (isVerbose ? ['inherit', 'pipe'] : 'pipe'),
+      cwd,
+      env,
+      stdout: stdout ?? (isVerbose ? ['inherit', 'pipe'] : 'pipe'),
+      stderr: stderr ?? (isVerbose ? ['inherit', 'pipe'] : 'pipe'),
     });
 
     if (subprocess.stdout) {
@@ -86,4 +108,4 @@ export async function executeCommand(
       success: false,
     };
   }
-}
+};

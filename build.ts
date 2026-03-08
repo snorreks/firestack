@@ -9,7 +9,47 @@ const __dirname = join(fileURLToPath(import.meta.url), '..');
 
 await Promise.all([
   new Promise((resolve) => {
-    const proc = spawn('bun', ['x', 'tsup'], {
+    const proc = spawn(
+      'bun',
+      [
+        'x',
+        'esbuild',
+        'src/main.ts',
+        '--bundle',
+        '--platform=node',
+        '--format=esm',
+        '--outdir=dist',
+        '--packages=external',
+      ],
+      {
+        cwd: __dirname,
+        stdio: 'inherit',
+      }
+    );
+    proc.on('close', () => resolve(0));
+  }),
+  new Promise((resolve) => {
+    const proc = spawn(
+      'bun',
+      [
+        'x',
+        'esbuild',
+        'src/index.ts',
+        '--bundle',
+        '--platform=node',
+        '--format=esm',
+        '--outdir=dist',
+        '--packages=external',
+      ],
+      {
+        cwd: __dirname,
+        stdio: 'inherit',
+      }
+    );
+    proc.on('close', () => resolve(0));
+  }),
+  new Promise((resolve) => {
+    const proc = spawn('bun', ['x', 'tsc', '-p', 'tsconfig.build.json'], {
       cwd: __dirname,
       stdio: 'inherit',
     });
@@ -17,7 +57,6 @@ await Promise.all([
   }),
   cp(join(__dirname, 'README.md'), join(__dirname, 'dist', 'README.md')),
   cp(join(__dirname, 'firestack.schema.json'), join(__dirname, 'dist', 'firestack.schema.json')),
-  rm(join(__dirname, 'dist', 'main.d.ts'), { force: true }),
 ]);
 
 const mainJsPath = join(__dirname, 'dist', 'main.js');
@@ -27,5 +66,7 @@ await writeFile(mainJsPath, `#!/usr/bin/env node\n${mainJs}`);
 const pkg = JSON.parse(await readFile(join(__dirname, 'package.json'), 'utf-8'));
 const { scripts, devDependencies, ...distPkg } = pkg;
 await writeFile(join(__dirname, 'dist', 'package.json'), `${JSON.stringify(distPkg, null, 2)}\n`);
+
+await rm(join(__dirname, 'dist', 'main.d.ts'), { force: true });
 
 console.log('Done!');

@@ -4,15 +4,23 @@ import { cwd } from 'node:process';
 import { logger } from '$logger';
 import { exists } from '$utils/common.js';
 
+type GetScriptEnvironmentOptions = {
+  flavor: string;
+};
+
 /**
  * Loads environment variables from a .env file.
- * @param flavor The flavor to load.
+ * @param options - The options containing the flavor.
  * @returns A promise that resolves to the loaded environment variables.
  */
-export async function getScriptEnvironment(flavor: string): Promise<Record<string, string>> {
+export const getScriptEnvironment = async (
+  options: GetScriptEnvironmentOptions
+): Promise<Record<string, string>> => {
+  const { flavor } = options;
   const envPath = join(cwd(), `.env.${flavor}`);
 
-  if (!(await exists(envPath))) {
+  const envExists = await exists(envPath);
+  if (!envExists) {
     logger.debug(`.env.${flavor} not found`);
     return {};
   }
@@ -33,4 +41,4 @@ export async function getScriptEnvironment(flavor: string): Promise<Record<strin
     logger.debug(`Failed to read .env.${flavor}:`, error);
     return {};
   }
-}
+};
