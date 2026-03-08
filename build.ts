@@ -25,7 +25,17 @@ const [buildResult] = await Promise.all([
   new Promise((resolve) => {
     const proc = spawn(
       'bun',
-      ['x', 'tsup', 'src/index.ts', '--dts-only', '--no-clean', '--format', 'esm', '--outDir', 'dist'],
+      [
+        'x',
+        'tsup',
+        'src/index.ts',
+        '--dts-only',
+        '--no-clean',
+        '--format',
+        'esm',
+        '--outDir',
+        'dist',
+      ],
       {
         cwd: __dirname,
         stdio: 'inherit',
