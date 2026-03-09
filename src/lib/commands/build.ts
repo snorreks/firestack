@@ -39,8 +39,6 @@ export const buildCommand = new Command('build')
   .option('--sourcemap', 'Whether to generate sourcemaps.', true)
   .option('--no-sourcemap', 'Do not generate sourcemaps.')
   .action(async (input: string, output: string, options: BuildOptions) => {
-    logger.info(chalk.bold.green('🛠️  Starting build...'));
-
     const inputPath = join(cwd(), input);
     const outputPath = join(cwd(), output);
 
@@ -71,20 +69,17 @@ export const buildCommand = new Command('build')
         sourcemap: options.sourcemap ?? firestackConfig.sourcemap,
       });
 
-      // 4. Post-build tasks: Generate package.json if missing
-      const packageJsonPath = join(dirname(outputDir), 'package.json');
-      if (!(await exists(packageJsonPath))) {
-        const functionName = basename(dirname(outputDir)) || 'function';
-        const packageJson = await createPackageJson({
-          nodeVersion,
-          external: options.external,
-          functionName,
-          isEmulator: false,
-        });
+      // 4. Post-build tasks: Generate package.json in the output directory
+      const packageJsonPath = join(outputDir, 'package.json');
+      const functionName = basename(outputDir) || 'function';
+      const packageJson = await createPackageJson({
+        nodeVersion,
+        external: options.external ?? firestackConfig.external,
+        functionName,
+        isEmulator: false,
+      });
 
-        await writeFile(packageJsonPath, packageJson);
-        logger.info(chalk.dim(`📄 Created package.json at ${packageJsonPath}`));
-      }
+      await writeFile(packageJsonPath, packageJson);
 
       logger.info(chalk.bold.green(`✅ Successfully built to ${outputPath}`));
     } catch (error) {

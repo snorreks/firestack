@@ -37,7 +37,7 @@ describe('Firestack CLI', () => {
 
       const [hasIndex, hasPackage] = await Promise.all([
         exists(join(FUNCTIONS_DIR, 'dist', 'api', 'src', 'index.js')),
-        exists(join(FUNCTIONS_DIR, 'dist', 'api', 'package.json')),
+        exists(join(FUNCTIONS_DIR, 'dist', 'api', 'src', 'package.json')),
       ]);
 
       expect(hasIndex).toBe(true);
@@ -50,7 +50,16 @@ describe('Firestack CLI', () => {
     'rules command dry-run (finds files)',
     () => {
       const result = Bun.spawnSync(
-        ['node', FIRESTACK_BIN, 'rules', '--only', 'firestore', '--packageManager', 'global'],
+        [
+          'node',
+          FIRESTACK_BIN,
+          'rules',
+          '--only',
+          'firestore',
+          '--packageManager',
+          'global',
+          '--force',
+        ],
         {
           cwd: FUNCTIONS_DIR,
         }

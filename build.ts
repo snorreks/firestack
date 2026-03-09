@@ -1,28 +1,44 @@
 #!/usr/bin/env bun
 
 import { spawn } from 'node:child_process';
-import { cp, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import esbuild from 'esbuild';
 
 const __dirname = join(fileURLToPath(import.meta.url), '..');
 
-console.log('🚀 Building with Bun...');
+console.log('🚀 Building with esbuild...');
 
-// Start all tasks in parallel
-const [buildResult] = await Promise.all([
-  // 1. Bundle JS using Bun's native builder
-  Bun.build({
-    entrypoints: ['./src/main.ts', './src/index.ts'],
-    outdir: './dist',
-    target: 'node',
-    // Equivalent to esbuild's --packages=external
-    external: ['*'],
-    naming: '[name].[ext]',
+// 4. clear dist at the start every time we run build.ts
+await rm(join(__dirname, 'dist'), { recursive: true, force: true });
+await mkdir(join(__dirname, 'dist'), { recursive: true });
+
+await Promise.all([
+  // 1. use esbuild directly
+  // 2. for main.js add #!/usr/bin/env node
+  esbuild.build({
+    entryPoints: ['src/main.ts'],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    outdir: 'dist',
+    packages: 'external',
+    banner: {
+      js: '#!/usr/bin/env node',
+    },
   }),
-
-  // 2. Generate types using tsup
-  new Promise((resolve) => {
+  // 1. use esbuild directly
+  esbuild.build({
+    entryPoints: ['src/index.ts'],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    outdir: 'dist',
+    packages: 'external',
+  }),
+  // Generate types using tsup (dts-only)
+  new Promise((resolve, reject) => {
     const proc = spawn(
       'bun',
       [
@@ -41,34 +57,22 @@ const [buildResult] = await Promise.all([
         stdio: 'inherit',
       }
     );
-    proc.on('close', () => resolve(0));
+    proc.on('close', (code) => {
+      if (code === 0) resolve(0);
+      else reject(new Error(`tsup failed with code ${code}`));
+    });
   }),
-
-  // 3. Copy assets
   cp(join(__dirname, 'README.md'), join(__dirname, 'dist', 'README.md')),
   cp(join(__dirname, 'firestack.schema.json'), join(__dirname, 'dist', 'firestack.schema.json')),
+  // 3. add the package.json function inside the parrallell stuff
+  (async () => {
+    const pkg = JSON.parse(await readFile(join(__dirname, 'package.json'), 'utf-8'));
+    const { scripts, devDependencies, ...distPkg } = pkg;
+    await writeFile(
+      join(__dirname, 'dist', 'package.json'),
+      `${JSON.stringify(distPkg, null, 2)}\n`
+    );
+  })(),
 ]);
-
-// Check if Bun build was successful
-if (!buildResult.success) {
-  console.error('❌ Build failed');
-  for (const log of buildResult.logs) {
-    console.error(log);
-  }
-  process.exit(1);
-}
-
-// 4. Add shebang to main.js
-const mainJsPath = join(__dirname, 'dist', 'main.js');
-const mainJs = await readFile(mainJsPath, 'utf-8');
-await writeFile(mainJsPath, `#!/usr/bin/env node\n${mainJs}`);
-
-// 5. Cleanup package.json for distribution
-const pkg = JSON.parse(await readFile(join(__dirname, 'package.json'), 'utf-8'));
-const { scripts, devDependencies, ...distPkg } = pkg;
-await writeFile(join(__dirname, 'dist', 'package.json'), `${JSON.stringify(distPkg, null, 2)}\n`);
-
-// Remove the d.ts for main as it's not needed for the CLI consumer
-await rm(join(__dirname, 'dist', 'main.d.ts'), { force: true });
 
 console.log('✅ Done!');

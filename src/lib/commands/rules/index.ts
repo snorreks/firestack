@@ -73,7 +73,7 @@ export const rulesAction = async (cliOptions: RulesOptions) => {
   });
 
   if (skippedRules.length > 0) {
-    logger.info(
+    logger.debug(
       chalk.yellow(
         `⏭️  Skipped rules (${skippedRules.length}): ${chalk.dim(skippedRules.join(', '))}`
       )
