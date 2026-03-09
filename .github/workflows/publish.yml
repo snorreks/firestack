@@ -27,6 +27,7 @@ jobs:
           bun run build
           bun run lint &
           bun run check &
+          cd example && bun run check &
           bun run test &
           wait
 

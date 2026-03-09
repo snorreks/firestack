@@ -4,6 +4,7 @@ import { join } from 'node:path';
 
 const PROJECT_ROOT = join(import.meta.dir, '..', '..');
 const DIST_DIR = join(PROJECT_ROOT, 'dist');
+const PKG_PATH = join(PROJECT_ROOT, 'package.json');
 
 describe('Build Output Validation', () => {
   test('essential files exist', async () => {
@@ -16,9 +17,25 @@ describe('Build Output Validation', () => {
     expect(files).toContain('firestack.schema.json');
   });
 
-  test('main.js has shebang', async () => {
+  test('main.js has shebang and correct version/commands', async () => {
     const content = await readFile(join(DIST_DIR, 'main.js'), 'utf-8');
+    const pkg = JSON.parse(await readFile(PKG_PATH, 'utf-8'));
+
     expect(content.startsWith('#!/usr/bin/env node')).toBe(true);
+
+    // Validate version matches package.json
+    expect(content).toContain(`.version("${pkg.version}")`);
+
+    // Validate commands registration
+    expect(content).toContain('.name("firestack")');
+    expect(content).toContain('program.addCommand(buildCommand)');
+    expect(content).toContain('program.addCommand(deployCommand)');
+    expect(content).toContain('program.addCommand(scriptsCommand)');
+    expect(content).toContain('program.addCommand(deleteCommand)');
+    expect(content).toContain('program.addCommand(emulateCommand)');
+    expect(content).toContain('program.addCommand(rulesCommand)');
+    expect(content).toContain('program.addCommand(logsCommand)');
+    expect(content).toContain('program.parse(process.argv)');
   });
 
   test('package.json is cleaned', async () => {
@@ -35,19 +52,8 @@ describe('Build Output Validation', () => {
     for (const file of filesToCheck) {
       const content = await readFile(join(DIST_DIR, file), 'utf-8');
       for (const alias of aliases) {
-        // Use a more specific check to avoid matching $1, etc.
-        // Usually path aliases are followed by / or used in imports/exports
-        // But since they start with $, searching for the alias itself is quite safe if we avoid $1, $2
-
-        // We look for the alias as a word (or start of word)
-        // regex: \$(lib|constants|commands|helpers|types|utils|logger)(\/|\s|['"])
         const escapedAlias = alias.replace('$', '\\$');
         const regex = new RegExp(`${escapedAlias}([/\\s'"])`, 'g');
-
-        const matches = content.match(regex);
-        if (matches) {
-          console.error(`Found alias ${alias} in ${file}:`, matches);
-        }
         expect(content).not.toMatch(regex);
       }
     }
@@ -56,9 +62,17 @@ describe('Build Output Validation', () => {
   test('index.js exports expected functions', async () => {
     const content = await readFile(join(DIST_DIR, 'index.js'), 'utf-8');
     const expectedExports = [
+      'FirestackError',
+      'HttpStatusCode',
+      'HttpsError',
+      'beforeAuthCreate',
+      'beforeAuthSignIn',
+      'createFirestackError',
       'onAuthCreate',
       'onAuthDelete',
       'onCall',
+      'onCreated',
+      'onDeleted',
       'onDocumentCreated',
       'onDocumentUpdated',
       'onDocumentDeleted',
@@ -69,6 +83,12 @@ describe('Build Output Validation', () => {
       'onObjectMetadataUpdated',
       'onRequest',
       'onSchedule',
+      'onUpdated',
+      'onValueCreated',
+      'onValueDeleted',
+      'onValueUpdated',
+      'onValueWritten',
+      'onWritten',
     ];
 
     for (const exp of expectedExports) {
@@ -79,14 +99,55 @@ describe('Build Output Validation', () => {
   test('index.d.ts exports expected types/functions', async () => {
     const content = await readFile(join(DIST_DIR, 'index.d.ts'), 'utf-8');
     const expectedExports = [
-      'declare const onAuthCreate',
-      'declare const onCall',
-      'declare const onDocumentUpdated',
-      'interface HttpsOptions',
+      'beforeAuthCreate',
+      'beforeAuthSignIn',
+      'createFirestackError',
+      'onAuthCreate',
+      'onAuthDelete',
+      'onCall',
+      'onCreated',
+      'onDeleted',
+      'onDocumentCreated',
+      'onDocumentUpdated',
+      'onDocumentDeleted',
+      'onDocumentWritten',
+      'onObjectArchived',
+      'onObjectDeleted',
+      'onObjectFinalized',
+      'onObjectMetadataUpdated',
+      'onRequest',
+      'onSchedule',
+      'onUpdated',
+      'onValueCreated',
+      'onValueDeleted',
+      'onValueUpdated',
+      'onValueWritten',
+      'onWritten',
+      'HttpsOptions',
+      'FirestoreEvent',
+      'DocumentOptions',
+      'ReferenceOptions',
+      'ScheduleOptions',
+      'FirestackError',
+      'HttpStatusCode',
     ];
 
     for (const exp of expectedExports) {
       expect(content).toContain(exp);
     }
+  });
+
+  test('README.md is valid', async () => {
+    const content = await readFile(join(DIST_DIR, 'README.md'), 'utf-8');
+    expect(content.length).toBeGreaterThan(0);
+    expect(content.toLowerCase()).toContain('firestack');
+  });
+
+  test('firestack.schema.json is valid', async () => {
+    const content = JSON.parse(await readFile(join(DIST_DIR, 'firestack.schema.json'), 'utf-8'));
+    expect(content.title).toBe('Firestack Configuration');
+    expect(content.description).toBeDefined();
+    expect(content.type).toBe('object');
+    expect(content.properties).toBeDefined();
   });
 });

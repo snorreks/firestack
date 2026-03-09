@@ -10,6 +10,16 @@ const __dirname = join(fileURLToPath(import.meta.url), '..');
 
 console.log('🚀 Building with esbuild...');
 
+// Read package.json version
+const pkg = JSON.parse(await readFile(join(__dirname, 'package.json'), 'utf-8'));
+const version = pkg.version;
+
+// Update src/main.ts version
+const mainPath = join(__dirname, 'src', 'main.ts');
+let mainContent = await readFile(mainPath, 'utf-8');
+mainContent = mainContent.replace(/\.version\(['"].*?['"]\)/, `.version('${version}')`);
+await writeFile(mainPath, mainContent);
+
 // 4. clear dist at the start every time we run build.ts
 await rm(join(__dirname, 'dist'), { recursive: true, force: true });
 await mkdir(join(__dirname, 'dist'), { recursive: true });
@@ -66,7 +76,6 @@ await Promise.all([
   cp(join(__dirname, 'firestack.schema.json'), join(__dirname, 'dist', 'firestack.schema.json')),
   // 3. add the package.json function inside the parrallell stuff
   (async () => {
-    const pkg = JSON.parse(await readFile(join(__dirname, 'package.json'), 'utf-8'));
     const { scripts, devDependencies, ...distPkg } = pkg;
     await writeFile(
       join(__dirname, 'dist', 'package.json'),
