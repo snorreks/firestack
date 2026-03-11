@@ -11,11 +11,11 @@ export type RequestFunctions = {
   ];
 };
 
-export interface CoreData {
+export type CoreData = {
   /**
    * The document's ID
    *
    * @see https://firebase.google.com/docs/reference/node/firebase.firestore.DocumentSnapshot#id
    */
   id: string;
-}
+};

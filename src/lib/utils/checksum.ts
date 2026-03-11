@@ -8,24 +8,10 @@ const algorithm = 'md5';
 const encoding = 'hex';
 const checksumsFileName = 'checksums.json';
 
-type ExistsOptions = {
-  path: string;
-};
-
-type ChecksumsFilePathOptions = {
-  outputDirectory: string;
-  flavor: string;
-};
-
-type LoadChecksumsOptions = {
-  outputDirectory: string;
-  flavor: string;
-};
-
 /**
  * Checks if a file or directory exists using promises.
  */
-const exists = async (options: ExistsOptions): Promise<boolean> => {
+const exists = async (options: { path: string }): Promise<boolean> => {
   try {
     await access(options.path);
     return true;
@@ -39,15 +25,16 @@ const exists = async (options: ExistsOptions): Promise<boolean> => {
  * @param options - Options containing output directory and flavor.
  * @returns The path to the checksums JSON file.
  */
-export const checksumsFilePath = (options: ChecksumsFilePathOptions): string =>
+export const checksumsFilePath = (options: { outputDirectory: string; flavor: string }): string =>
   join(options.outputDirectory, '.checksums', options.flavor, checksumsFileName);
 
 /**
  * Loads all cached checksums for a specific flavor asynchronously.
  */
-export const loadChecksums = async (
-  options: LoadChecksumsOptions
-): Promise<Record<string, string>> => {
+export const loadChecksums = async (options: {
+  outputDirectory: string;
+  flavor: string;
+}): Promise<Record<string, string>> => {
   const path = checksumsFilePath(options);
   const pathExists = await exists({ path });
   if (pathExists) {

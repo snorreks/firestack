@@ -7,7 +7,7 @@ import type { StorageOptions } from 'firebase-functions/v2/storage';
 import type { VALID_FIREBASE_OPTIONS } from '$constants';
 export type NodeVersion = '18' | '20' | '22' | '24';
 
-export interface BaseFunctionOptions<T extends string = string> extends GlobalOptions {
+export type BaseFunctionOptions<T extends string = string> = GlobalOptions & {
   /**
    * The name of the function. If not provided, the name of the function is
    * the path from the root of the {@link DeployDirectory} directory to the
@@ -41,49 +41,25 @@ export interface BaseFunctionOptions<T extends string = string> extends GlobalOp
   assets?: string[];
 
   nodeVersion?: NodeVersion;
-}
+};
 
-export interface HttpsOptions<T extends string | number | symbol = string>
-  extends Omit<BaseFunctionOptions<Extract<T, string>>, 'region'>,
-    FirebaseHttpsOptions {}
+export type HttpsOptions<T extends string | number | symbol = string> = Omit<
+  BaseFunctionOptions<Extract<T, string>>,
+  'region'
+> &
+  FirebaseHttpsOptions;
 
-export interface DocumentOptions
-  extends Omit<BaseFunctionOptions, 'enforceAppCheck'>,
-    Omit<FBDocumentOptions, 'document'> {
-  /**
-   * The document path where the function will listen for changed in firestore
-   *
-   * If not provided, the document path is the path from the root of the
-   * {@link DeployDirectory} to the file. Replacing all `/` and `-` with `_`.
-   * And replacing all `[]` with `{}`
-   *
-   * example // database/users/[uid]/created.ts => 'users/{uid}'
-   *
-   * example // database/users/[uid]/notifications/[notificationId] =>
-   * 'users/{uid}/notifications/{notificationId}'
-   */
-  document?: string;
-}
+export type DocumentOptions = Omit<BaseFunctionOptions, 'enforceAppCheck'> &
+  Omit<FBDocumentOptions, 'document'>;
 
-export interface ReferenceOptions
-  extends Omit<BaseFunctionOptions, 'enforceAppCheck'>,
-    FBReferenceOptions {
-  ref: string;
-}
+export type ReferenceOptions = Omit<BaseFunctionOptions, 'enforceAppCheck'> &
+  FBReferenceOptions & {
+    ref: string;
+  };
 
-export interface ScheduleOptions extends BaseFunctionOptions, FBScheduleOptions {
-  /**
-   * When to execute the function. If the function is a scheduled function,
-   * this property is required.
-   *
-   * @see https://firebase.google.com/docs/functions/schedule-functions
-   */
-  schedule: string;
-  /** The timezone to use when determining the function's execution time. */
-  timeZone?: string;
-}
+export type ScheduleOptions = Omit<BaseFunctionOptions, 'enforceAppCheck'> & FBScheduleOptions;
 
-export interface ObjectTriggerOptions extends Omit<BaseFunctionOptions, 'region'>, StorageOptions {}
+export type ObjectTriggerOptions = Omit<BaseFunctionOptions, 'region'> & StorageOptions;
 
 export type AuthTriggerOptions = Omit<BaseFunctionOptions, 'region'>;
 

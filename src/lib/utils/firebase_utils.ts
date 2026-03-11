@@ -3,17 +3,15 @@ import { join } from 'node:path';
 import { cwd } from 'node:process';
 import { exists, getDependencyVersion } from '$utils/common.ts';
 
-type CreateFirebaseConfigOptions = {
-  nodeVersion: string;
-  functionName?: string;
-};
-
 /**
  * Creates a firebase.json file content.
  * @param options - The options for creating the config.
  * @returns The firebase.json content.
  */
-export const createFirebaseConfig = (options: CreateFirebaseConfigOptions): string => {
+export const createFirebaseConfig = (options: {
+  nodeVersion: string;
+  functionName?: string;
+}): string => {
   const { nodeVersion } = options;
   const config = {
     functions: {
@@ -25,14 +23,10 @@ export const createFirebaseConfig = (options: CreateFirebaseConfigOptions): stri
   return JSON.stringify(config, null, 2);
 };
 
-type GetDependenciesOptions = {
+const getDependencies = async (options: {
   isEmulator?: boolean;
   external?: string[];
-};
-
-const getDependencies = async (
-  options: GetDependenciesOptions
-): Promise<Record<string, string> | undefined> => {
+}): Promise<Record<string, string> | undefined> => {
   const { external = [], isEmulator } = options;
   if (!isEmulator && external.length === 0) {
     return undefined;
@@ -58,19 +52,17 @@ const getDependencies = async (
   return dependencies;
 };
 
-type CreatePackageJsonOptions = {
-  nodeVersion: string;
-  external?: string[];
-  functionName?: string;
-  isEmulator?: boolean;
-};
-
 /**
  * Creates a package.json file content.
  * @param options - The options for creating the package.json.
  * @returns The package.json content.
  */
-export const createPackageJson = async (options: CreatePackageJsonOptions): Promise<string> => {
+export const createPackageJson = async (options: {
+  nodeVersion: string;
+  external?: string[];
+  functionName?: string;
+  isEmulator?: boolean;
+}): Promise<string> => {
   const { nodeVersion, functionName = 'functions' } = options;
   const dependencies = await getDependencies(options);
 
@@ -91,32 +83,26 @@ export const createPackageJson = async (options: CreatePackageJsonOptions): Prom
   return JSON.stringify(pkg, null, 2);
 };
 
-type ToDotEnvironmentCodeOptions = {
-  env: Record<string, string>;
-};
-
 /**
  * Generates dot environment code.
  * @param options - The environment variables.
  * @returns The dot environment code.
  */
-export const toDotEnvironmentCode = (options: ToDotEnvironmentCodeOptions): string => {
+export const toDotEnvironmentCode = (options: { env: Record<string, string> }): string => {
   const { env } = options;
   return Object.entries(env)
     .map(([key, value]) => `${key}=${value}`)
     .join('\n');
 };
 
-type CopyEnvFileOptions = {
-  flavor: string;
-  outputDir: string;
-};
-
 /**
  * Copies the environment file to the output directory.
  * @param options - The options for copying the env file.
  */
-export const copyEnvFile = async (options: CopyEnvFileOptions): Promise<void> => {
+export const copyEnvFile = async (options: {
+  flavor: string;
+  outputDir: string;
+}): Promise<void> => {
   const { flavor, outputDir } = options;
   const envSourcePath = join(cwd(), `.env.${flavor}`);
   const envDestPath = join(outputDir, '.env');

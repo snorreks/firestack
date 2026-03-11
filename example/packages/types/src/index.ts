@@ -1,8 +1,8 @@
 import type { CoreData } from '@snorreks/firestack';
 
-export interface UserData extends CoreData {
+export type UserData = CoreData & {
   email: string;
-}
+};
 
 export type CallableFunctions = {
   test_callable: [

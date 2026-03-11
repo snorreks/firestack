@@ -49,25 +49,28 @@ Create a `firestack.json` in your project root. You can add the `$schema` proper
 Alternatively, you can use the remote schema if you are not using a local installation:
 `https://raw.githubusercontent.com/snorreks/firestack/master/firestack.schema.json`
 
-## Gemini CLI Integration (Skill)
+## AI Agent Integration (Skill)
 
-If you use [Gemini CLI](https://github.com/google/gemini-cli) (or other AI-powered agents), you can install the **Firestack Skill** to give your agent native knowledge of your project's deployment workflows, triggers, and configuration.
+If you use AI-powered agents like **OpenCode, Qwen, Claude, or Gemini**, you can install the **Firestack Skill** to give your agent native knowledge of your project's deployment workflows, triggers, and configuration.
 
 ### Install the Skill
 
-Download the `firestack.skill` file and run:
+You can download the [firestack.skill](https://raw.githubusercontent.com/snorreks/firestack/master/firestack.skill) file directly or install it via the command line:
 
 ```bash
-# Install to your current project workspace
+# 1. Download the skill file
+curl -L -O https://raw.githubusercontent.com/snorreks/firestack/master/firestack.skill
+
+# 2. Install to your current project workspace
 gemini skills install firestack.skill --scope workspace
 
 # OR Install for all your projects (user scope)
-gemini skills install firestack.skill --scope user
+# gemini skills install firestack.skill --scope user
 ```
 
 ### Activate
 
-After installation, run `/skills reload` in your interactive Gemini session. Your agent will now understand how to deploy functions, manage emulators, and write v2 triggers according to Firestack standards.
+After installation, run `/skills reload` in your interactive session. Your agent will now understand how to deploy functions, manage emulators, and write v2 triggers according to Firestack standards.
 
 ### 2. Create a Function
 
@@ -106,9 +109,33 @@ src/controllers/
 ```
 
 The file name and path determine the function name and trigger type:
+
 - `api/hello.ts` → HTTP function named `hello`
 - `firestore/users/[uid]/created.ts` → Firestore trigger on `users/{uid}` collection
 - `scheduler/daily.ts` → Scheduled function
+
+### Advanced Function Options
+
+You can customize individual functions by passing options in the second argument of the wrapper:
+
+```typescript
+export default onAuthCreate(
+  async (user, context) => {
+    /* ... */
+  },
+  {
+    functionName: "custom_name", // Override the auto-derived name
+    nodeVersion: "20", // Override default Node.js version
+    assets: ["src/assets/img.png"], // Copy assets to the function dist
+    external: ["is-thirteen"], // Dependencies to keep external
+  },
+);
+```
+
+- **`external`**: Listed dependencies are treated as external by `esbuild`. Firestack automatically generates a `package.json` in the function's deployment directory and runs `npm install` before deployment.
+- **`assets`**: Specified files are copied to the function's `dist` directory, making them available at runtime relative to your function code.
+- **`nodeVersion`**: Specific runtime version for this function. Useful if certain triggers have different compatibility requirements.
+- **`functionName`**: Explicitly name the function in Firebase, bypassing the directory-based naming convention.
 
 ### 3. Deploy
 

@@ -1,6 +1,6 @@
-export interface FunctionsCache {
+export type FunctionsCache = {
   [functionName: string]: string;
-}
+};
 
 /**
  * Having a cloud-cache.ts file in the root of the project allows you to get

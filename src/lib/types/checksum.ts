@@ -1,4 +1,4 @@
-export interface ChecksumData {
+export type ChecksumData = {
   functionName: string;
   outputRoot: string;
   flavor: string;
@@ -6,4 +6,4 @@ export interface ChecksumData {
   outputDirectory: string;
   checksum?: string;
   environment?: Record<string, string>;
-}
+};

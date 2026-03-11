@@ -1,7 +1,7 @@
 import type { ExecutorBaseBuildOptions } from './core.ts';
 import type { PackageManager } from './deploy.ts';
 
-export interface BuildExecutorOptions extends ExecutorBaseBuildOptions {
+export type BuildExecutorOptions = ExecutorBaseBuildOptions & {
   /**
    * Clear output directory.
    *
@@ -60,4 +60,4 @@ export interface BuildExecutorOptions extends ExecutorBaseBuildOptions {
   minify?: boolean;
 
   extension?: 'js' | 'mjs' | 'cjs';
-}
+};

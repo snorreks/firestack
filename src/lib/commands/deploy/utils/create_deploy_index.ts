@@ -65,7 +65,6 @@ const toV2FunctionCode = (
     functionsDirectoryPath,
     functionPath,
   } = options;
-  const optionsCode = JSON.stringify(functionOptions, null, 2);
   const functionCodeType = toFunctionCodeType(deployFunction);
 
   // Apply custom document/ref paths based on function type
@@ -80,6 +79,8 @@ const toV2FunctionCode = (
       functionOptions.ref = refPath;
     }
   }
+
+  const optionsCode = JSON.stringify(functionOptions, null, 2);
 
   const fileCode = `
 import { ${functionCodeType} } from 'firebase-functions/${rootFunctionBuilder}';

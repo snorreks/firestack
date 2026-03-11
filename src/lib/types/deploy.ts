@@ -4,7 +4,7 @@ import type { AllFunctionOptions, NodeVersion } from './helper-options.ts';
 
 export type PackageManager = 'npm' | 'yarn' | 'pnpm' | 'bun' | 'global';
 
-interface SharedDeployExecutorBaseOptions extends ExecutorBaseBuildOptions {
+type SharedDeployExecutorBaseOptions = ExecutorBaseBuildOptions & {
   /** The project flavor */
   flavor?: string;
   /** The default region is us-central1 */
@@ -44,9 +44,9 @@ interface SharedDeployExecutorBaseOptions extends ExecutorBaseBuildOptions {
   pnpmFix?: boolean;
 
   useLogger?: boolean;
-}
+};
 
-export interface DeployExecutorOptions extends SharedDeployExecutorBaseOptions {
+export type DeployExecutorOptions = SharedDeployExecutorBaseOptions & {
   /**
    * The output directory of the build
    *
@@ -101,11 +101,11 @@ export interface DeployExecutorOptions extends SharedDeployExecutorBaseOptions {
   deploySentry?: boolean;
 
   retryAmount?: number;
-}
+};
 
 export type Environment = { [key: string]: string | undefined };
 
-export interface SentryLiteData {
+export type SentryLiteData = {
   /** The name of the project in sentry. */
   project: string;
   /** The organization name in sentry. */
@@ -116,14 +116,14 @@ export interface SentryLiteData {
    * @see {@link https://docs.sentry.io/product/cli/configuration/#auth-token}
    */
   token: string;
-}
+};
 
-export interface SentryData extends SentryLiteData {
+export type SentryData = SentryLiteData & {
   /** The name of the release. */
   release: string;
-}
+};
 
-export interface BaseDeployOptions extends SharedDeployExecutorBaseOptions {
+export type BaseDeployOptions = SharedDeployExecutorBaseOptions & {
   firebaseProjectId: string;
   projectRoot: string;
   workspaceRoot: string;
@@ -150,23 +150,23 @@ export interface BaseDeployOptions extends SharedDeployExecutorBaseOptions {
   pnpmFix?: boolean;
 
   minify?: boolean;
-}
+};
 
-export interface BuildFunctionLiteData<T extends FunctionBuilder = FunctionBuilder>
-  extends BaseDeployOptions {
-  /**
-   * The type of the function.
-   *
-   * @see {@link DeployFunction}
-   */
-  deployFunction: DeployFunction;
+export type BuildFunctionLiteData<T extends FunctionBuilder = FunctionBuilder> =
+  BaseDeployOptions & {
+    /**
+     * The type of the function.
+     *
+     * @see {@link DeployFunction}
+     */
+    deployFunction: DeployFunction;
 
-  rootFunctionBuilder: T;
-  /** The absolute path of the deploy file */
-  absolutePath: string;
+    rootFunctionBuilder: T;
+    /** The absolute path of the deploy file */
+    absolutePath: string;
 
-  relativeDeployFilePath: string;
-}
+    relativeDeployFilePath: string;
+  };
 
 export type BuildFunctionData<T extends FunctionBuilder = FunctionBuilder> = Omit<
   BuildFunctionLiteData<T>,

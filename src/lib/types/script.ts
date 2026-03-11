@@ -1,8 +1,8 @@
 // Type definitions for script functions
 
-export interface ScriptContext {
+export type FirestackScriptContext = {
   projectId: string;
   flavor: string;
-}
+};
 
-export type ScriptFunction = (context: ScriptContext) => Promise<unknown>;
+export type ScriptFunction = (context: FirestackScriptContext) => Promise<unknown>;

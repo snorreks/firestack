@@ -1,11 +1,8 @@
+import type { FirestackScriptContext } from '@snorreks/firestack';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-export interface InitContext {
-  projectId: string;
-}
-
-export async function run(context: InitContext): Promise<void> {
+export async function run(context: FirestackScriptContext): Promise<void> {
   console.log(`Initializing Firestore for emulation (Project: ${context.projectId})...`);
   console.log(`FIRESTORE_EMULATOR_HOST: ${process.env.FIRESTORE_EMULATOR_HOST}`);
 

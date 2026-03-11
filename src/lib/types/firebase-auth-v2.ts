@@ -1,6 +1,6 @@
 import type { AuthUserRecord } from 'firebase-functions/v2/identity';
 
-export interface AuthEventContext {
+export type AuthEventContext = {
   eventId: string;
   eventType: string;
   resource: string;
@@ -11,9 +11,9 @@ export interface AuthEventContext {
     uid: string;
   };
   data: AuthUserRecord;
-}
+};
 
-export interface BeforeCreateResponse {
+export type BeforeCreateResponse = {
   customClaims?: object;
   disabled?: boolean;
   displayName?: string;
@@ -22,9 +22,9 @@ export interface BeforeCreateResponse {
   password?: string;
   phoneNumber?: string;
   photoURL?: string;
-}
+};
 
-export interface BeforeSignInResponse {
+export type BeforeSignInResponse = {
   customClaims?: object;
   sessionClaims?: object;
-}
+};

@@ -1,15 +1,15 @@
 import type { NodeVersion } from './helper-options.ts';
 
-export interface ExecutorBaseOptions {
+export type ExecutorBaseOptions = {
   /** Don't log anything */
   silent?: boolean;
   /** Get verbose logs */
   verbose?: boolean;
 
   debug?: boolean;
-}
+};
 
-export interface ExecutorBaseBuildOptions extends ExecutorBaseOptions {
+export type ExecutorBaseBuildOptions = ExecutorBaseOptions & {
   /**
    * The name of the tsconfig file in the project root.
    *
@@ -48,4 +48,4 @@ export interface ExecutorBaseBuildOptions extends ExecutorBaseOptions {
   sourcemap?: boolean;
 
   requireFix?: boolean;
-}
+};

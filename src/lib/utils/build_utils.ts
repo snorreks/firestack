@@ -4,33 +4,12 @@ import { type BuildOptions, build, type SameShape } from 'esbuild';
 import { logger } from '$logger';
 import type { NodeVersion } from '$types';
 
-export type BuildFunctionOptions = {
-  inputFile: string;
-  outputFile: string;
-  configPath?: string;
-  minify?: boolean;
-  sourcemap?: boolean;
-  external?: string[];
-  sourceRoot?: string;
-  keepNames?: boolean;
-  footer?: string;
-  nodeVersion: NodeVersion;
-  requireFix?: boolean;
-  tsconfig?: string;
-  __dirnameFix?: boolean;
-  __filenameFix?: boolean;
-};
-
-type ToBannerOptions = {
+const toBanner = (options: {
   __dirnameFix?: boolean;
   __filenameFix?: boolean;
   requireFix?: boolean;
   inputFile: string;
-};
-
-const toBanner = (
-  options: ToBannerOptions
-):
+}):
   | {
       js: string;
     }
@@ -55,7 +34,22 @@ const toBanner = (
   return { js };
 };
 
-export const buildFunction = async (options: BuildFunctionOptions): Promise<void> => {
+export const buildFunction = async (options: {
+  inputFile: string;
+  outputFile: string;
+  configPath?: string;
+  minify?: boolean;
+  sourcemap?: boolean;
+  external?: string[];
+  sourceRoot?: string;
+  keepNames?: boolean;
+  footer?: string;
+  nodeVersion: NodeVersion;
+  requireFix?: boolean;
+  tsconfig?: string;
+  __dirnameFix?: boolean;
+  __filenameFix?: boolean;
+}): Promise<void> => {
   const {
     inputFile,
     outputFile,

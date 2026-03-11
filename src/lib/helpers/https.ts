@@ -4,16 +4,16 @@ import type { CallableRequest, Request } from 'firebase-functions/v2/https';
 import type { CallableFunctions, HttpsOptions, RequestFunctions } from '$types';
 import { FirestackError, HttpStatusCode, HttpsError } from './errors.ts';
 
-export interface FirebaseRequest<
+export type FirebaseRequest<
   T extends Record<string, string> = Record<string, string>,
   _ResBody = unknown,
   ReqBody = unknown,
-> extends Request {
+> = Request & {
   /** The wire format representation of the request body. */
   rawBody: Buffer;
   body: ReqBody;
   params: T;
-}
+};
 
 export type RequestHandler<
   AllFunctions extends RequestFunctions,
