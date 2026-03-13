@@ -1,4 +1,5 @@
 import type { PackageManager } from './deploy.ts';
+import type { FirebaseEmulator } from './emulators.ts';
 import type { NodeVersion } from './helper-options.ts';
 
 export type FirestackConfig = {
@@ -16,7 +17,7 @@ export type FirestackConfig = {
   sourcemap?: boolean;
   external?: string[];
   packageManager?: PackageManager;
-  emulators?: string[];
-  emulatorPorts?: Record<string, number>;
+  emulators?: FirebaseEmulator[];
+  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
 };

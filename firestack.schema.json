@@ -46,6 +46,39 @@
     "region": {
       "type": "string",
       "default": "us-central1",
+      "enum": [
+        "us-central1",
+        "us-east1",
+        "us-east4",
+        "us-west1",
+        "us-west2",
+        "us-west3",
+        "us-west4",
+        "northamerica-northeast1",
+        "southamerica-east1",
+        "europe-central2",
+        "europe-north1",
+        "europe-southwest1",
+        "europe-west1",
+        "europe-west2",
+        "europe-west3",
+        "europe-west4",
+        "europe-west6",
+        "europe-west8",
+        "europe-west9",
+        "asia-east1",
+        "asia-east2",
+        "asia-northeast1",
+        "asia-northeast2",
+        "asia-northeast3",
+        "asia-southeast1",
+        "asia-southeast2",
+        "asia-south1",
+        "australia-southeast1",
+        "me-west1",
+        "me-central1",
+        "africa-south1"
+      ],
       "description": "Default region for all deployed functions."
     },
     "nodeVersion": {
@@ -88,9 +121,48 @@
       "type": "array",
       "items": {
         "type": "string",
-        "enum": ["auth", "functions", "firestore", "pubsub", "storage", "database", "hosting"]
+        "enum": [
+          "auth",
+          "functions",
+          "firestore",
+          "database",
+          "hosting",
+          "pubsub",
+          "storage",
+          "eventarc",
+          "extensions",
+          "ui",
+          "hub",
+          "logging",
+          "appcheck"
+        ]
       },
       "description": "List of emulators to enable during emulation."
+    },
+    "emulatorPorts": {
+      "type": "object",
+      "properties": {
+        "auth": { "type": "integer" },
+        "functions": { "type": "integer" },
+        "firestore": { "type": "integer" },
+        "database": { "type": "integer" },
+        "hosting": { "type": "integer" },
+        "pubsub": { "type": "integer" },
+        "storage": { "type": "integer" },
+        "eventarc": { "type": "integer" },
+        "extensions": { "type": "integer" },
+        "ui": { "type": "integer" },
+        "hub": { "type": "integer" },
+        "logging": { "type": "integer" },
+        "appcheck": { "type": "integer" }
+      },
+      "additionalProperties": false,
+      "description": "Custom ports for individual emulators (e.g., { \"auth\": 9099 })."
+    },
+    "keepNames": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether to keep original function names in the bundled code (useful for debugging)."
     }
   },
   "additionalProperties": false

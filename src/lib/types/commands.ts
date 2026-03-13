@@ -1,4 +1,5 @@
 import type { PackageManager } from './deploy.ts';
+import type { FirebaseEmulator } from './emulators.ts';
 import type { NodeVersion } from './helper-options.ts';
 
 // TODO cleanup cli vs command options vs firestack config
@@ -30,8 +31,8 @@ export type DeployCliOptions = BaseCliOptions & {
   scriptsDirectory?: string;
   initScript?: string;
   engine?: string;
-  emulators?: string[];
-  emulatorPorts?: Record<string, number>;
+  emulators?: FirebaseEmulator[];
+  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
   isEmulator?: boolean;
   all?: boolean;
@@ -61,8 +62,8 @@ export type DeployCommandOptions = {
   retryAmount?: number;
   firestoreRules?: string;
   storageRules?: string;
-  emulators?: string[];
-  emulatorPorts?: Record<string, number>;
+  emulators?: FirebaseEmulator[];
+  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
   isEmulator?: boolean;
   all?: boolean;
@@ -73,11 +74,11 @@ export type EmulateCliOptions = BaseCliOptions & {
   only?: string;
   firestoreRules?: string;
   storageRules?: string;
-  emulatorPorts?: Record<string, number>;
+  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   watch?: boolean;
   init?: boolean;
   open?: boolean;
-  emulators?: string[];
+  emulators?: FirebaseEmulator[];
   minify?: boolean;
   sourcemap?: boolean;
   functionsDirectory?: string;
@@ -110,11 +111,11 @@ export type EmulateCommandOptions = {
   only?: string;
   firestoreRules?: string;
   storageRules?: string;
-  emulatorPorts?: Record<string, number>;
+  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   watch?: boolean;
   init?: boolean;
   open?: boolean;
-  emulators?: string[];
+  emulators?: FirebaseEmulator[];
   keepNames?: boolean;
 };
 
@@ -133,8 +134,8 @@ export type LogsCliOptions = BaseCliOptions & {
   engine?: string;
   minify?: boolean;
   sourcemap?: boolean;
-  emulators?: string[];
-  emulatorPorts?: Record<string, number>;
+  emulators?: FirebaseEmulator[];
+  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
 };
 
@@ -161,8 +162,8 @@ export type LogsCommandOptions = {
   open?: boolean;
   firestoreRules?: string;
   storageRules?: string;
-  emulators?: string[];
-  emulatorPorts?: Record<string, number>;
+  emulators?: FirebaseEmulator[];
+  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
 };
 
@@ -177,8 +178,8 @@ export type ScriptsCliOptions = BaseCliOptions & {
   region?: string;
   minify?: boolean;
   sourcemap?: boolean;
-  emulators?: string[];
-  emulatorPorts?: Record<string, number>;
+  emulators?: FirebaseEmulator[];
+  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
 };
 
@@ -201,8 +202,8 @@ export type ScriptsCommandOptions = {
   debug?: boolean;
   firestoreRules?: string;
   storageRules?: string;
-  emulators?: string[];
-  emulatorPorts?: Record<string, number>;
+  emulators?: FirebaseEmulator[];
+  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
 };
 
@@ -219,8 +220,8 @@ export type DeleteCliOptions = BaseCliOptions & {
   engine?: string;
   minify?: boolean;
   sourcemap?: boolean;
-  emulators?: string[];
-  emulatorPorts?: Record<string, number>;
+  emulators?: FirebaseEmulator[];
+  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
 };
 
@@ -245,8 +246,8 @@ export type DeleteCommandOptions = {
   storageRules?: string;
   scriptsDirectory?: string;
   initScript?: string;
-  emulators?: string[];
-  emulatorPorts?: Record<string, number>;
+  emulators?: FirebaseEmulator[];
+  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
 };
 
@@ -263,8 +264,8 @@ export type RulesCliOptions = BaseCliOptions & {
   engine?: string;
   minify?: boolean;
   sourcemap?: boolean;
-  emulators?: string[];
-  emulatorPorts?: Record<string, number>;
+  emulators?: FirebaseEmulator[];
+  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
 };
 
@@ -289,8 +290,8 @@ export type RulesCommandOptions = {
   storageRules?: string;
   scriptsDirectory?: string;
   initScript?: string;
-  emulators?: string[];
-  emulatorPorts?: Record<string, number>;
+  emulators?: FirebaseEmulator[];
+  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
 };
 
