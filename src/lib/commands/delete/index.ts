@@ -1,16 +1,20 @@
 import { exit } from 'node:process';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { type DeployOptions, getDeployOptions } from '$commands/deploy/utils/options.ts';
 import { logger } from '$logger';
+import type { PackageManager } from '$types';
+import { getDeleteOptions } from '$utils/options.ts';
 import { deleteFunctions } from './utils/delete_functions.ts';
 import { getOnlineFunctionNames, getUnusedFunctionNames } from './utils/read_functions.ts';
 
-/**
- * Options for the delete command.
- */
-type DeleteOptions = DeployOptions & {
+type DeleteOptions = {
+  flavor?: string;
+  projectId?: string;
+  packageManager?: PackageManager;
+  external?: string[];
+  verbose?: boolean;
   all?: boolean;
+  dryRun?: boolean;
 };
 
 /**
@@ -28,14 +32,7 @@ export const deleteCommand = new Command('delete')
     'The package manager to use (npm, yarn, pnpm, bun, global).'
   )
   .action(async (cliOptions: DeleteOptions) => {
-    const deployOptions = await getDeployOptions(cliOptions);
-
-    if (!deployOptions.projectId) {
-      logger.error(
-        chalk.red('❌ Project ID not found. Provide it with --projectId or in firestack.json.')
-      );
-      exit(1);
-    }
+    const deployOptions = await getDeleteOptions(cliOptions);
 
     logger.info(chalk.bold.green('🗑️  Starting deletion process...'));
 
@@ -62,7 +59,10 @@ export const deleteCommand = new Command('delete')
     }
 
     try {
-      await deleteFunctions({ deployOptions, functionNames: functionsToDelete });
+      await deleteFunctions({
+        deployOptions,
+        functionNames: functionsToDelete,
+      });
       logger.info(chalk.bold.green('\n✅ Deletion complete!'));
     } catch (error) {
       logger.error(chalk.red(`\n❌ Failed to delete functions: ${(error as Error).message}`));

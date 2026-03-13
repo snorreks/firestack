@@ -4,12 +4,13 @@ import chalk from 'chalk';
 import { Command } from 'commander';
 import { rulesAction } from '$commands/rules/index.ts';
 import { logger } from '$logger';
+import type { DeployCommandOptions } from '$types';
 import { loadChecksums } from '$utils/checksum.ts';
+import { getDeployOptions } from '$utils/options.ts';
 import { runFunctions } from '$utils/run-functions.ts';
+import { findFunctions } from '../../utils/find_functions.ts';
+import { getCacheContext, updateRemoteCache } from '../../utils/functions_cache.ts';
 import { getEnvironment } from './utils/environment.ts';
-import { findFunctions } from './utils/find_functions.ts';
-import { getCacheContext, updateRemoteCache } from './utils/functions_cache.ts';
-import { type DeployOptions, getDeployOptions } from './utils/options.ts';
 import {
   type FunctionMetadata,
   filterFunctionsByOnly,
@@ -23,7 +24,7 @@ import {
 } from './utils/process_function.ts';
 import { retryFailedFunctions } from './utils/retry_failed_functions.ts';
 
-export type ExtendedDeployOptions = DeployOptions & {
+export type ExtendedDeployOptions = DeployCommandOptions & {
   all?: boolean;
 };
 
@@ -44,8 +45,8 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
   logger.info(chalk.bold.green('🚀 Starting deployment...'));
 
   const [cacheContext, environment] = await Promise.all([
-    getCacheContext(deployOptions.flavor),
-    getEnvironment(deployOptions.flavor),
+    getCacheContext(deployOptions.flavor || 'default'),
+    getEnvironment(deployOptions.flavor || 'default'),
   ]);
 
   const { remoteUtils, mergedCache: previousCache } = cacheContext;
@@ -195,13 +196,13 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
   if (remoteUtils.updateCacheCallable) {
     const latestLocalCache = await loadChecksums({
       outputDirectory: join(cwd(), 'dist'),
-      flavor: deployOptions.flavor,
+      flavor: deployOptions.flavor || 'default',
     });
 
     const newRemoteCacheData = { ...previousCache, ...latestLocalCache };
     const success = await updateRemoteCache({
       updateCacheCallable: remoteUtils.updateCacheCallable,
-      flavor: deployOptions.flavor,
+      flavor: deployOptions.flavor || 'default',
       newCache: newRemoteCacheData,
     });
     if (success) {
@@ -219,10 +220,10 @@ export const deployCommand = new Command('deploy')
   .option('--verbose', 'Whether to run the command with verbose logging.')
   .option('--only <only>', 'Only deploy the given function names separated by comma.')
   .option('--region <region>', 'The default region to deploy the functions to.')
-  .option('--concurrency <concurrency>', 'The number of functions to deploy in parallel.', '5')
-  .option('--retryAmount <retryAmount>', 'The amount of times to retry a failed deployment.', '0')
-  .option('--minify', 'Will minify the functions.', true)
-  .option('--sourcemap', 'Whether to generate sourcemaps.', true)
+  .option('--concurrency <concurrency>', 'The number of functions to deploy in parallel.')
+  .option('--retryAmount <retryAmount>', 'The amount of times to retry a failed deployment.')
+  .option('--minify', 'Will minify the functions.')
+  .option('--sourcemap', 'Whether to generate sourcemaps.')
   .option(
     '--functionsDirectory <functionsDirectory>',
     'The directory where the functions are located.'

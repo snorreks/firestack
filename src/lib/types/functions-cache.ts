@@ -30,3 +30,12 @@ export type FunctionsCacheUpdate = (options: {
   newFunctionsCache: FunctionsCache;
   flavor: string;
 }) => Promise<void>;
+
+export type CacheContext = {
+  remoteUtils: {
+    getCacheCallable: FunctionsCacheGet | undefined;
+    updateCacheCallable: FunctionsCacheUpdate | undefined;
+  };
+  localCache: Record<string, string>;
+  mergedCache: Record<string, string>;
+};

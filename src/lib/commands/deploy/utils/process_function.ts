@@ -5,6 +5,7 @@ import chalk from 'chalk';
 import { logger } from '$logger';
 import type {
   ChecksumData,
+  DeployCommandOptions,
   DeployFunction,
   FirestackOptions,
   FunctionOptions,
@@ -22,7 +23,6 @@ import {
 import { deriveFunctionName } from '$utils/function_naming.ts';
 import { getEnvironmentNeeded } from '$utils/read-compiled-file.ts';
 import { createTemporaryIndexFunctionFile } from './create_deploy_index.ts';
-import type { DeployOptions } from './options.ts';
 import type { FunctionMetadata } from './parse_function_metadata.ts';
 
 export type ProcessResult = {
@@ -45,7 +45,7 @@ export type PrepareResult = {
  */
 export const prepareFunction = async (options: {
   functionPath: string;
-  deployOptions: DeployOptions;
+  deployOptions: DeployCommandOptions;
   environment: Record<string, string>;
   functionsDirectoryPath: string;
   metadata?: FunctionMetadata;
@@ -115,7 +115,7 @@ export const prepareFunction = async (options: {
     const deployFunctionData = await checkForChanges({
       functionName,
       outputRoot: outputDirectory,
-      flavor: deployOptions.flavor,
+      flavor: deployOptions.flavor || 'default',
       force: deployOptions.force,
       outputDirectory: join(cwd(), 'dist'),
       environment: envNeeded,
@@ -160,7 +160,7 @@ export const prepareFunction = async (options: {
  */
 export const executeFunctionDeployment = async (options: {
   prepareResult: PrepareResult;
-  deployOptions: DeployOptions;
+  deployOptions: DeployCommandOptions;
 }): Promise<ProcessResult> => {
   const { prepareResult, deployOptions } = options;
   const { functionName, outputDirectory, temporaryDirectory, deployFunctionData, metadata } =
@@ -201,7 +201,7 @@ const setupDirectories = async (options: {
   temporaryDirectory: string;
   nodeVersion: NodeVersion;
   functionName: string;
-  deployOptions: DeployOptions;
+  deployOptions: DeployCommandOptions;
   firestackOptions?: FirestackOptions;
 }) => {
   const {
@@ -259,7 +259,7 @@ const performBuild = async (options: {
   outputDirectory: string;
   temporaryDirectory: string;
   functionsDirectoryPath: string;
-  deployOptions: DeployOptions;
+  deployOptions: DeployCommandOptions;
   functionOptions: FunctionOptions;
   firestackOptions?: FirestackOptions;
   nodeVersion: NodeVersion;
@@ -323,7 +323,7 @@ const setupEnvironment = async (options: {
 
 const installDependencies = async (options: {
   outputDirectory: string;
-  deployOptions: DeployOptions;
+  deployOptions: DeployCommandOptions;
   firestackOptions?: FirestackOptions;
 }): Promise<boolean> => {
   const { outputDirectory, deployOptions, firestackOptions } = options;
@@ -349,7 +349,7 @@ const installDependencies = async (options: {
 const deployAction = async (options: {
   functionName: string;
   outputDirectory: string;
-  deployOptions: DeployOptions;
+  deployOptions: DeployCommandOptions;
 }): Promise<boolean> => {
   const { functionName, outputDirectory, deployOptions } = options;
   if (!deployOptions.projectId) throw new Error('Project ID is required.');

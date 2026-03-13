@@ -1,11 +1,11 @@
 import { exit } from 'node:process';
 import chalk from 'chalk';
-import type { DeployOptions } from '$commands/deploy/utils/options.ts';
 import { logger } from '$logger';
+import type { DeleteCommandOptions } from '$types';
 import { executeCommand } from '$utils/command.ts';
 
 export type DeleteFunctionsOptions = {
-  deployOptions: DeployOptions;
+  deployOptions: DeleteCommandOptions;
   functionNames: string[];
 };
 

@@ -1,11 +1,13 @@
 import { join } from 'node:path';
 import client from 'firebase-tools';
-import { findFunctions } from '$commands/deploy/utils/find_functions.ts';
-import type { DeployOptions } from '$commands/deploy/utils/options.ts';
 import { logger } from '$logger';
+import type { DeleteCommandOptions } from '$types';
+import { findFunctions } from '$utils/find_functions';
 import { deriveFunctionName } from '$utils/function_naming.ts';
 
-export const getLocalFunctionNames = async (deployOptions: DeployOptions): Promise<string[]> => {
+export const getLocalFunctionNames = async (
+  deployOptions: DeleteCommandOptions
+): Promise<string[]> => {
   try {
     if (!deployOptions.functionsDirectory) {
       throw new Error('Functions directory is required for getLocalFunctionNames.');
@@ -23,7 +25,9 @@ export const getLocalFunctionNames = async (deployOptions: DeployOptions): Promi
   }
 };
 
-export const getOnlineFunctionNames = async (deployOptions: DeployOptions): Promise<string[]> => {
+export const getOnlineFunctionNames = async (
+  deployOptions: DeleteCommandOptions
+): Promise<string[]> => {
   try {
     if (!deployOptions.projectId) {
       throw new Error('Project ID is required for getOnlineFunctionNames.');
@@ -42,7 +46,9 @@ export const getOnlineFunctionNames = async (deployOptions: DeployOptions): Prom
   }
 };
 
-export const getUnusedFunctionNames = async (deployOptions: DeployOptions): Promise<string[]> => {
+export const getUnusedFunctionNames = async (
+  deployOptions: DeleteCommandOptions
+): Promise<string[]> => {
   try {
     const [localFunctionNames, onlineFunctionNames] = await Promise.all([
       getLocalFunctionNames(deployOptions),

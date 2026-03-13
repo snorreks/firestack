@@ -4,12 +4,12 @@ import { cwd, exit } from 'node:process';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { DEFAULT_NODE_VERSION } from '$constants';
-import { getFirestackConfig } from '$lib/utils/options';
 import { logger } from '$logger';
 import type { NodeVersion } from '$types';
 import { buildFunction } from '$utils/build_utils.ts';
 import { exists } from '$utils/common.ts';
 import { createPackageJson } from '$utils/firebase_utils.ts';
+import { getFirestackConfig } from '$utils/options';
 
 /**
  * Options for the build command.

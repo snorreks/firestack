@@ -1,22 +1,22 @@
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { type DeployOptions, getDeployOptions } from '$commands/deploy/utils/options.ts';
 import { logger } from '$logger';
+import type { PackageManager } from '$types';
 import { executeCommand } from '$utils/command.ts';
+import { getLogsOptions } from '$utils/options.ts';
 
-/**
- * Options specifically for the logs command.
- */
-type LogsOptions = DeployOptions & {
+type LogsOptions = {
+  flavor?: string;
+  projectId?: string;
   only?: string;
   lines?: string;
   since?: string;
   open?: boolean;
+  verbose?: boolean;
+  packageManager?: PackageManager;
+  external?: string[];
 };
 
-/**
- * Command definition to view Firebase Cloud Functions logs.
- */
 export const logsCommand = new Command('logs')
   .description('View logs from Firebase Cloud Functions.')
   .option('--flavor <flavor>', 'The flavor to use for logs.')
@@ -34,7 +34,7 @@ export const logsCommand = new Command('logs')
     val.split(',')
   )
   .action(async (cliOptions: LogsOptions) => {
-    const options = await getDeployOptions(cliOptions);
+    const options = await getLogsOptions(cliOptions);
 
     if (!options.projectId) {
       logger.error(

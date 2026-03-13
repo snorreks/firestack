@@ -1,6 +1,7 @@
 import type { NodeVersion } from '$types';
 
 export const DEFAULT_NODE_VERSION: NodeVersion = '24';
+export const DEFAULT_REGION = 'us-central1';
 
 // Valid configuration keys for Firebase v2 functions
 export const VALID_FIREBASE_OPTIONS = [

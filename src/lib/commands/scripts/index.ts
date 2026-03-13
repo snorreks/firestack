@@ -1,23 +1,17 @@
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { cwd, exit } from 'node:process';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { execa } from 'execa';
 import prompts from 'prompts';
-import type { PackageManager } from '$commands/deploy/utils/options.ts';
 import { logger } from '$logger';
+import type { ScriptsCliOptions, ScriptsCommandOptions } from '$types';
 import { exists } from '$utils/common.ts';
 import { getScriptEnvironment } from '$utils/env.ts';
+import { getScriptsOptions } from '$utils/options.ts';
 
-type ScriptsOptions = {
-  flavor: string;
-  scriptsDirectory?: string;
-  verbose?: boolean;
-  silent?: boolean;
-  engine?: string;
-  packageManager?: PackageManager;
-};
+type ScriptsOptions = ScriptsCliOptions;
 
 type ScriptConfig = {
   config?: Record<string, unknown>;
@@ -43,33 +37,8 @@ const getScriptConfig = async (flavor: string): Promise<Record<string, unknown>>
 /**
  * Merges CLI options with firestack.json configuration.
  */
-const getOptions = async (cliOptions: ScriptsOptions): Promise<ScriptsOptions> => {
-  const configPath = join(cwd(), 'firestack.json');
-  let config: Record<string, unknown> = {};
-
-  if (await exists(configPath)) {
-    try {
-      const configContent = await readFile(configPath, 'utf-8');
-      config = JSON.parse(configContent) as Record<string, unknown>;
-      logger.debug(chalk.dim(`Using configuration from ${configPath}`));
-    } catch (e) {
-      logger.error(chalk.red(`❌ Failed to parse firestack.json: ${(e as Error).message}`));
-      exit(1);
-    }
-  }
-
-  const options: ScriptsOptions = {
-    ...cliOptions,
-    scriptsDirectory:
-      cliOptions.scriptsDirectory || (config.scriptsDirectory as string | undefined) || 'scripts',
-    engine: cliOptions.engine || (config.engine as string | undefined) || 'bun',
-    packageManager:
-      cliOptions.packageManager ||
-      (config.packageManager as PackageManager | undefined) ||
-      'global',
-  };
-
-  logger.setLogSeverity(cliOptions);
+const getOptions = async (cliOptions: ScriptsCliOptions): Promise<ScriptsCommandOptions> => {
+  const options = await getScriptsOptions(cliOptions);
   return options;
 };
 
@@ -100,9 +69,10 @@ const runScript = async (scriptName: string, options: ScriptsOptions) => {
   const scriptPath = join(scriptsPath, `${scriptName}.ts`);
 
   // Parallel fetch of environment and config
+  const resolvedOptions = options as ScriptsCommandOptions;
   const [env, scriptConfig] = await Promise.all([
-    getScriptEnvironment({ flavor: options.flavor }),
-    getScriptConfig(options.flavor),
+    getScriptEnvironment({ flavor: resolvedOptions.flavor }),
+    getScriptConfig(resolvedOptions.flavor),
   ]);
 
   if (Object.keys(scriptConfig).length > 0) {

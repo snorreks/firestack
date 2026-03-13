@@ -1,22 +1,13 @@
 import { join } from 'node:path';
 import { cwd } from 'node:process';
 import { logger } from '$logger';
-import type { FunctionsCache, FunctionsCacheGet, FunctionsCacheUpdate } from '$types';
+import type { CacheContext, FunctionsCache, FunctionsCacheGet, FunctionsCacheUpdate } from '$types';
 import { loadChecksums } from '$utils/checksum.ts';
 import { exists } from '$utils/common.ts';
 
 type RemoteCacheModule = {
   get: FunctionsCacheGet;
   update: FunctionsCacheUpdate;
-};
-
-export type CacheContext = {
-  remoteUtils: {
-    getCacheCallable: FunctionsCacheGet | undefined;
-    updateCacheCallable: FunctionsCacheUpdate | undefined;
-  };
-  localCache: Record<string, string>;
-  mergedCache: Record<string, string>;
 };
 
 /**

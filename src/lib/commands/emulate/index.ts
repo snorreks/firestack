@@ -4,27 +4,19 @@ import { basename, join, relative } from 'node:path';
 import { exit } from 'node:process';
 import chalk from 'chalk';
 import { Command } from 'commander';
+import { createTemporaryIndexFunctionFile } from '$commands/deploy/utils/create_deploy_index.ts';
+import { getEnvironment } from '$commands/deploy/utils/environment.ts';
+import { parseFunctionMetadata } from '$commands/deploy/utils/parse_function_metadata.ts';
 import { logger } from '$logger';
+import type { EmulateCommandOptions } from '$types';
 import { buildFunction } from '$utils/build_utils.ts';
 import { executeCommand } from '$utils/command.ts';
 import { exists, findProjectRoot, openUrl } from '$utils/common.ts';
+import { findFunctions } from '$utils/find_functions.ts';
 import { createPackageJson, toDotEnvironmentCode } from '$utils/firebase_utils.ts';
-import { createTemporaryIndexFunctionFile } from './deploy/utils/create_deploy_index.ts';
-import { getEnvironment } from './deploy/utils/environment.ts';
-import { findFunctions } from './deploy/utils/find_functions.ts';
-import { type DeployOptions, getDeployOptions } from './deploy/utils/options.ts';
-import { parseFunctionMetadata } from './deploy/utils/parse_function_metadata.ts';
+import { getEmulateOptions } from '$utils/options.ts';
 
-type EmulateOptions = DeployOptions & {
-  only?: string;
-  firestoreRules?: string;
-  storageRules?: string;
-  watch?: boolean;
-  init?: boolean;
-  open?: boolean;
-  emulators?: string[];
-  dryRun?: boolean;
-};
+type EmulateOptions = EmulateCommandOptions;
 
 /**
  * Runs the initialization script for the emulator.
@@ -39,26 +31,45 @@ const runOnEmulate = async (options: EmulateOptions) => {
     return;
   }
 
-  // Pass emulator environment variables
-  const emulatorEnv = {
+  // Pass emulator environment variables - start with fresh object to avoid inheriting any creds
+  // Use the actual project ID for the emulator - it's fine as long as FIRESTORE_EMULATOR_HOST is set
+  const emulatorEnv: Record<string, string> = {
+    PATH: process.env.PATH || '',
+    HOME: process.env.HOME || '',
+    USER: process.env.USER || '',
+    SHELL: process.env.SHELL || '',
     FIREBASE_PROJECT_ID: options.projectId || 'demo-project',
     GCLOUD_PROJECT: options.projectId || 'demo-project',
+    GCP_PROJECT: options.projectId || 'demo-project',
     FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080',
     FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099',
     FIREBASE_STORAGE_EMULATOR_HOST: '127.0.0.1:9199',
     FIREBASE_DATABASE_EMULATOR_HOST: '127.0.0.1:9000',
+    // Suppress Java warnings in emulators
+    JAVA_OPTS:
+      '-XX:+IgnoreUnrecognizedVMOptions --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
   };
 
   logger.info(chalk.cyan(`🏃 Running init script: ${chalk.bold(initScript)}`));
 
-  try {
-    await executeCommand('bun', {
-      args: [initScriptPath],
-      env: { ...process.env, ...emulatorEnv },
-    });
+  const projectRoot = process.cwd();
+  const tsconfigPath = join(projectRoot, 'tsconfig.json');
+
+  const result = await executeCommand('bun', {
+    args: [
+      '--tsconfig-override',
+      tsconfigPath,
+      initScriptPath,
+      options.projectId || 'demo-project',
+    ],
+    cwd: projectRoot,
+    env: emulatorEnv as Record<string, string>,
+  });
+
+  if (result.success) {
     logger.info(chalk.green('✅ Init script completed.'));
-  } catch (error) {
-    logger.error(chalk.red(`❌ Init script failed: ${(error as Error).message}`));
+  } else {
+    logger.info(chalk.red(`❌ Init script failed: ${result.stderr || 'Unknown error'}`));
   }
 };
 
@@ -197,19 +208,32 @@ const generateFirebaseJson = async (options: {
     ],
     emulators: {
       singleProjectMode: true,
-      ui: { enabled: true, port: 4000 },
+      ui: { enabled: true, port: emulateOptions.emulatorPorts?.ui || 4000 },
     },
   };
 
   const emulators = firebaseConfig.emulators as Record<string, unknown>;
 
-  if (emulatorsToEnable.has('auth')) emulators.auth = { port: 9099 };
-  if (emulatorsToEnable.has('functions')) emulators.functions = { port: 5001 };
-  if (emulatorsToEnable.has('firestore')) emulators.firestore = { port: 8080 };
-  if (emulatorsToEnable.has('pubsub')) emulators.pubsub = { port: 8085 };
-  if (emulatorsToEnable.has('storage')) emulators.storage = { port: 9199 };
-  if (emulatorsToEnable.has('database')) emulators.database = { port: 9000 };
-  if (emulatorsToEnable.has('hosting')) emulators.hosting = { port: 5000 };
+  const defaultPorts: Record<string, number> = {
+    ui: 4000,
+    auth: 9099,
+    functions: 5001,
+    firestore: 8080,
+    pubsub: 8085,
+    storage: 9199,
+    database: 9000,
+    hosting: 5000,
+  };
+
+  const ports = { ...defaultPorts, ...emulateOptions.emulatorPorts };
+
+  if (emulatorsToEnable.has('auth')) emulators.auth = { port: ports.auth };
+  if (emulatorsToEnable.has('functions')) emulators.functions = { port: ports.functions };
+  if (emulatorsToEnable.has('firestore')) emulators.firestore = { port: ports.firestore };
+  if (emulatorsToEnable.has('pubsub')) emulators.pubsub = { port: ports.pubsub };
+  if (emulatorsToEnable.has('storage')) emulators.storage = { port: ports.storage };
+  if (emulatorsToEnable.has('database')) emulators.database = { port: ports.database };
+  if (emulatorsToEnable.has('hosting')) emulators.hosting = { port: ports.hosting };
 
   // 2. Rules and Indexes Handling
   await copyRulesAndIndexes({ outputDir, emulateOptions, firebaseConfig });
@@ -375,7 +399,7 @@ export const emulateCommand = new Command('emulate')
     'Only start the emulator for specified services (e.g., "functions,firestore").'
   )
   .action(async (cliOptions: EmulateOptions) => {
-    const emulateOptions = await getDeployOptions(cliOptions);
+    const emulateOptions = await getEmulateOptions(cliOptions);
 
     if (!emulateOptions.projectId) {
       logger.error(
@@ -431,6 +455,11 @@ export const emulateCommand = new Command('emulate')
       args: commandArgs,
       cwd: outputDir,
       packageManager: emulateOptions.packageManager,
+      env: {
+        ...process.env,
+        JAVA_OPTS:
+          '-XX:+IgnoreUnrecognizedVMOptions --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
+      },
       onStdout: (data) => {
         if (!uiLogged && data.includes('Emulator UI at')) {
           const match = data.match(/http:\/\/[^\s/]+/);

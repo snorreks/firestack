@@ -1,5 +1,7 @@
 export * from './build.ts';
 export * from './checksum.ts';
+export * from './commands.ts';
+export * from './config.ts';
 export * from './core.ts';
 export * from './deploy.ts';
 export * from './firebase-auth-v2.ts';

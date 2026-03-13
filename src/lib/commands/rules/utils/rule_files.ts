@@ -1,8 +1,8 @@
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { cwd } from 'node:process';
-import type { DeployOptions } from '$commands/deploy/utils/options.ts';
 import { logger } from '$logger';
+import type { RulesCommandOptions } from '$types';
 
 export type RuleFile = {
   name: string;
@@ -66,7 +66,7 @@ export const findRuleFiles = async (rulesDirectory: string): Promise<RuleFile[]>
  * @param options The deployment options.
  * @returns A list of rule files to deploy.
  */
-export const getRulesToDeploy = async (options: DeployOptions): Promise<RuleFile[]> => {
+export const getRulesToDeploy = async (options: RulesCommandOptions): Promise<RuleFile[]> => {
   const rules = await findRuleFiles(options.rulesDirectory || 'src/rules');
 
   if (rules.length === 0) {

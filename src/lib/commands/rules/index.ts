@@ -4,32 +4,24 @@ import { join } from 'node:path';
 import { cwd, exit } from 'node:process';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import {
-  type CacheContext,
-  getCacheContext,
-  updateRemoteCache,
-} from '$commands/deploy/utils/functions_cache.ts';
-import { type DeployOptions, getDeployOptions } from '$commands/deploy/utils/options.ts';
 import { logger } from '$logger';
+import type { CacheContext, RulesCliOptions, RulesCommandOptions } from '$types';
 import { loadChecksums } from '$utils/checksum.ts';
 import { executeCommand } from '$utils/command.ts';
 import { exists } from '$utils/common.ts';
+import { getCacheContext, updateRemoteCache } from '$utils/functions_cache.ts';
+import { getRulesOptions } from '$utils/options.ts';
 import { findRuleFiles, type RuleFile } from './utils/rule_files.ts';
 
-/**
- * Options for the rules command.
- */
-type RulesOptions = DeployOptions & {
-  only?: string;
-  force?: boolean;
-  cacheContext?: CacheContext;
-};
+type RulesOptions = RulesCliOptions;
 
 /**
  * Main action for the rules command.
  */
-export const rulesAction = async (cliOptions: RulesOptions) => {
-  const rulesOptions = await getDeployOptions(cliOptions);
+export const rulesAction = async (
+  cliOptions: RulesCliOptions & { cacheContext?: CacheContext }
+) => {
+  const rulesOptions = await getRulesOptions(cliOptions);
 
   if (!rulesOptions.projectId) {
     logger.error(
@@ -262,7 +254,7 @@ const executeDeployment = async (options: {
  * Updates local and remote caches.
  */
 const updateCaches = async (options: {
-  rulesOptions: RulesOptions;
+  rulesOptions: RulesCommandOptions;
   newChecksums: Record<string, string>;
   previousCache: Record<string, string>;
   remoteUtils: CacheContext['remoteUtils'];

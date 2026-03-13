@@ -1,7 +1,7 @@
 import { logger } from '$logger';
+import type { DeployCommandOptions } from '$types';
 import { deriveFunctionName } from '$utils/function_naming.ts';
 import { runFunctions } from '$utils/run-functions.ts';
-import type { DeployOptions } from './options.ts';
 import {
   executeFunctionDeployment,
   type ProcessResult,
@@ -14,7 +14,7 @@ import {
 export const retryFailedFunctions = async (options: {
   failedFunctions: ProcessResult[];
   functionPaths: string[];
-  deployOptions: DeployOptions;
+  deployOptions: DeployCommandOptions;
   environment: Record<string, string>;
   functionsDirectoryPath: string;
 }): Promise<ProcessResult[]> => {

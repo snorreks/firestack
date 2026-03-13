@@ -43,6 +43,7 @@ export async function run(context: FirestackScriptContext): Promise<void> {
 if (import.meta.main) {
   run({
     projectId: process.env.FIREBASE_PROJECT_ID || 'demo-project',
+    flavor: process.env.FIREBASE_FLAVOR || '',
   }).catch((error) => {
     console.error('Failed to run init script:', error);
     process.exit(1);
