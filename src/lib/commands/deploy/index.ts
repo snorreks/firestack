@@ -223,7 +223,9 @@ export const deployCommand = new Command('deploy')
   .option('--concurrency <concurrency>', 'The number of functions to deploy in parallel.')
   .option('--retryAmount <retryAmount>', 'The amount of times to retry a failed deployment.')
   .option('--minify', 'Will minify the functions.')
+  .option('--no-minify', 'Do not minify the functions.')
   .option('--sourcemap', 'Whether to generate sourcemaps.')
+  .option('--no-sourcemap', 'Do not generate sourcemaps.')
   .option(
     '--functionsDirectory <functionsDirectory>',
     'The directory where the functions are located.'

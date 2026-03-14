@@ -27,6 +27,10 @@ export const deleteCommand = new Command('delete')
   .option('--verbose', 'Whether to run the command with verbose logging.')
   .option('--projectId <projectId>', 'The Firebase project ID to delete from.')
   .option('--all', 'Delete all functions in the project.')
+  .option('--minify', 'Will minify the functions.')
+  .option('--no-minify', 'Do not minify the functions.')
+  .option('--sourcemap', 'Whether to generate sourcemaps.')
+  .option('--no-sourcemap', 'Do not generate sourcemaps.')
   .option(
     '--packageManager <packageManager>',
     'The package manager to use (npm, yarn, pnpm, bun, global).'

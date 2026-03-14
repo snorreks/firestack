@@ -1,12 +1,13 @@
 import { existsSync, watch } from 'node:fs';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { basename, join, relative } from 'node:path';
+import { basename, join } from 'node:path';
 import { exit } from 'node:process';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { createTemporaryIndexFunctionFile } from '$commands/deploy/utils/create_deploy_index.ts';
+import { toDeployIndexCode } from '$commands/deploy/utils/create_deploy_index.ts';
 import { getEnvironment } from '$commands/deploy/utils/environment.ts';
 import { parseFunctionMetadata } from '$commands/deploy/utils/parse_function_metadata.ts';
+import { DEFAULT_EMULATOR_PROJECT_ID } from '$constants';
 import { logger } from '$logger';
 import type { EmulateCommandOptions } from '$types';
 import { buildFunction } from '$utils/build_utils.ts';
@@ -31,6 +32,15 @@ const runOnEmulate = async (options: EmulateOptions) => {
     return;
   }
 
+  const ports = {
+    auth: options.emulatorPorts?.auth || 9099,
+    firestore: options.emulatorPorts?.firestore || 8080,
+    storage: options.emulatorPorts?.storage || 9199,
+    database: options.emulatorPorts?.database || 9000,
+  };
+
+  const projectId = options.projectId || DEFAULT_EMULATOR_PROJECT_ID;
+
   // Pass emulator environment variables - start with fresh object to avoid inheriting any creds
   // Use the actual project ID for the emulator - it's fine as long as FIRESTORE_EMULATOR_HOST is set
   const emulatorEnv: Record<string, string> = {
@@ -38,13 +48,14 @@ const runOnEmulate = async (options: EmulateOptions) => {
     HOME: process.env.HOME || '',
     USER: process.env.USER || '',
     SHELL: process.env.SHELL || '',
-    FIREBASE_PROJECT_ID: options.projectId || 'demo-project',
-    GCLOUD_PROJECT: options.projectId || 'demo-project',
-    GCP_PROJECT: options.projectId || 'demo-project',
-    FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080',
-    FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099',
-    FIREBASE_STORAGE_EMULATOR_HOST: '127.0.0.1:9199',
-    FIREBASE_DATABASE_EMULATOR_HOST: '127.0.0.1:9000',
+    FIREBASE_PROJECT_ID: projectId,
+    GCLOUD_PROJECT: projectId,
+    GCP_PROJECT: projectId,
+    FIRESTORE_EMULATOR_HOST: `127.0.0.1:${ports.firestore}`,
+    FIREBASE_AUTH_EMULATOR_HOST: `127.0.0.1:${ports.auth}`,
+    FIREBASE_STORAGE_EMULATOR_HOST: `127.0.0.1:${ports.storage}`,
+    FIREBASE_DATABASE_EMULATOR_HOST: `127.0.0.1:${ports.database}`,
+    FIREBASE_FLAVOR: options.flavor || '',
     // Suppress Java warnings in emulators
     JAVA_OPTS:
       '-XX:+IgnoreUnrecognizedVMOptions --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
@@ -56,12 +67,7 @@ const runOnEmulate = async (options: EmulateOptions) => {
   const tsconfigPath = join(projectRoot, 'tsconfig.json');
 
   const result = await executeCommand('bun', {
-    args: [
-      '--tsconfig-override',
-      tsconfigPath,
-      initScriptPath,
-      options.projectId || 'demo-project',
-    ],
+    args: ['--tsconfig-override', tsconfigPath, initScriptPath, projectId],
     cwd: projectRoot,
     env: emulatorEnv as Record<string, string>,
   });
@@ -91,8 +97,6 @@ const buildEmulatorFunctions = async (options: {
     mkdir(join(outputDir, 'src'), { recursive: true }),
   ]);
 
-  const exports: string[] = [];
-
   // Parse metadata for all functions
   const functionMetadataList = await Promise.all(
     functionFiles.map((functionPath) =>
@@ -105,29 +109,42 @@ const buildEmulatorFunctions = async (options: {
     )
   );
 
-  for (const metadata of functionMetadataList) {
-    if (!metadata) continue;
+  const imports: string[] = [];
+  const exports: string[] = [];
+
+  for (let i = 0; i < functionMetadataList.length; i++) {
+    const metadata = functionMetadataList[i];
+    if (!metadata) {
+      continue;
+    }
 
     const { functionPath, firestackOptions, functionOptions, deployFunction } = metadata;
     const functionName = firestackOptions.functionName || 'function';
 
-    const generatedFile = await createTemporaryIndexFunctionFile({
-      functionPath,
+    const code = await toDeployIndexCode({
       functionName,
+      functionPath,
       temporaryDirectory: tempDir,
       functionsDirectoryPath: controllersPath,
       deployFunction,
       functionOptions,
     });
 
-    if (generatedFile) {
-      const relativePath = relative(tempDir, generatedFile).replace(/\\/g, '/');
-      const importPath = relativePath.startsWith('.') ? relativePath : `./${relativePath}`;
-      exports.push(`export { ${functionName} } from '${importPath.replace(/\.ts$/, '')}';`);
+    const lines = code.split('\n').filter((line: string) => line.trim() !== '');
+    const importLines = lines.filter((line: string) => line.startsWith('import'));
+    const otherLines = lines.filter((line: string) => !line.startsWith('import'));
+
+    // Re-map imports to use unique names or just keep them if they are common
+    for (const line of importLines) {
+      if (!imports.includes(line)) {
+        imports.push(line);
+      }
     }
+
+    exports.push(...otherLines);
   }
 
-  const combinedIndexContent = `${exports.join('\n')}\n`;
+  const combinedIndexContent = `${imports.join('\n')}\n\n${exports.join('\n')}\n`;
   const tempIndexPath = join(tempDir, 'index.ts');
   await writeFile(tempIndexPath, combinedIndexContent);
 
@@ -383,11 +400,16 @@ export const emulateCommand = new Command('emulate')
   .description('Starts the Firebase emulator with live reload.')
   .option('--flavor <flavor>', 'The flavor to use.')
   .option('--verbose', 'Enable verbose logging.')
+  .option('--debug', 'Enable debug mode (keeps temporary files).')
   .option('--silent', 'Disable logging.')
+  .option('--minify', 'Will minify the functions.')
+  .option('--no-minify', 'Do not minify the functions.')
+  .option('--sourcemap', 'Whether to generate sourcemaps.')
+  .option('--no-sourcemap', 'Do not generate sourcemaps.')
   .option('--open', 'Automatically open the Emulator UI in the browser.')
-  .option('--watch', 'Enable file watching for live reload.', true)
+  .option('--watch', 'Enable file watching for live reload.')
   .option('--no-watch', 'Disable file watching.')
-  .option('--init', 'Run init script before starting emulators.', true)
+  .option('--init', 'Run init script before starting emulators.')
   .option('--no-init', 'Skip running init script.')
   .option('--dry-run', 'Build functions and rules for emulator but do not start it.')
   .option('--emulators <emulators>', 'Comma-separated list of emulators to enable.', (val) =>

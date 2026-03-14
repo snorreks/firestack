@@ -305,6 +305,10 @@ export const rulesCommand = new Command('rules')
   .option('--projectId <projectId>', 'The Firebase project ID to deploy to.')
   .option('--only <only>', 'Only deploy the specified components (e.g., "firestore,storage").')
   .option('--force', 'Force deploy all rules, even if no files changed.')
+  .option('--minify', 'Will minify the functions.')
+  .option('--no-minify', 'Do not minify the functions.')
+  .option('--sourcemap', 'Whether to generate sourcemaps.')
+  .option('--no-sourcemap', 'Do not generate sourcemaps.')
   .option(
     '--packageManager <packageManager>',
     'The package manager to use (npm, yarn, pnpm, bun, global).'

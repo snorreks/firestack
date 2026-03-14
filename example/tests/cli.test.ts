@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
-import { exists, rm } from 'node:fs/promises';
+import { exists, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const PROJECT_ROOT = join(import.meta.dir, '..');
@@ -35,13 +35,15 @@ describe('Firestack CLI', () => {
 
       expect(result.success).toBe(true);
 
-      const [hasIndex, hasPackage] = await Promise.all([
+      const [hasIndex, hasPackage, indexContent] = await Promise.all([
         exists(join(FUNCTIONS_DIR, 'dist', 'api', 'src', 'index.js')),
         exists(join(FUNCTIONS_DIR, 'dist', 'api', 'src', 'package.json')),
+        readFile(join(FUNCTIONS_DIR, 'dist', 'api', 'src', 'index.js'), 'utf-8'),
       ]);
 
       expect(hasIndex).toBe(true);
       expect(hasPackage).toBe(true);
+      expect(indexContent).toContain('test_api');
     },
     { timeout: 60000 }
   );

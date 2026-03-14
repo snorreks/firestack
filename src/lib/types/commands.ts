@@ -13,27 +13,33 @@ export type BaseCliOptions = {
   external?: string[];
   nodeVersion?: NodeVersion;
   debug?: boolean;
-};
-
-export type DeployCliOptions = BaseCliOptions & {
-  dryRun?: boolean;
-  force?: boolean;
-  only?: string;
-  region?: string;
-  concurrency?: number;
-  retryAmount?: number;
   minify?: boolean;
+  noMinify?: boolean;
   sourcemap?: boolean;
+  noSourcemap?: boolean;
   functionsDirectory?: string;
   rulesDirectory?: string;
   firestoreRules?: string;
   storageRules?: string;
   scriptsDirectory?: string;
   initScript?: string;
+  region?: string;
   engine?: string;
   emulators?: FirebaseEmulator[];
   emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
+  watch?: boolean;
+  noWatch?: boolean;
+  init?: boolean;
+  noInit?: boolean;
+};
+
+export type DeployCliOptions = BaseCliOptions & {
+  dryRun?: boolean;
+  force?: boolean;
+  only?: string;
+  concurrency?: number;
+  retryAmount?: number;
   isEmulator?: boolean;
   all?: boolean;
 };
@@ -67,27 +73,16 @@ export type DeployCommandOptions = {
   keepNames?: boolean;
   isEmulator?: boolean;
   all?: boolean;
+  watch?: boolean;
+  init?: boolean;
 };
 
 export type EmulateCliOptions = BaseCliOptions & {
   dryRun?: boolean;
   only?: string;
-  firestoreRules?: string;
-  storageRules?: string;
-  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   watch?: boolean;
   init?: boolean;
   open?: boolean;
-  emulators?: FirebaseEmulator[];
-  minify?: boolean;
-  sourcemap?: boolean;
-  functionsDirectory?: string;
-  rulesDirectory?: string;
-  initScript?: string;
-  scriptsDirectory?: string;
-  region?: string;
-  engine?: string;
-  keepNames?: boolean;
 };
 
 export type EmulateCommandOptions = {
@@ -124,19 +119,6 @@ export type LogsCliOptions = BaseCliOptions & {
   lines?: string;
   since?: string;
   open?: boolean;
-  functionsDirectory?: string;
-  rulesDirectory?: string;
-  firestoreRules?: string;
-  storageRules?: string;
-  scriptsDirectory?: string;
-  initScript?: string;
-  region?: string;
-  engine?: string;
-  minify?: boolean;
-  sourcemap?: boolean;
-  emulators?: FirebaseEmulator[];
-  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
-  keepNames?: boolean;
 };
 
 export type LogsCommandOptions = {
@@ -165,23 +147,13 @@ export type LogsCommandOptions = {
   emulators?: FirebaseEmulator[];
   emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
+  watch?: boolean;
+  noWatch?: boolean;
+  init?: boolean;
+  noInit?: boolean;
 };
 
-export type ScriptsCliOptions = BaseCliOptions & {
-  scriptsDirectory?: string;
-  engine?: string;
-  functionsDirectory?: string;
-  rulesDirectory?: string;
-  firestoreRules?: string;
-  storageRules?: string;
-  initScript?: string;
-  region?: string;
-  minify?: boolean;
-  sourcemap?: boolean;
-  emulators?: FirebaseEmulator[];
-  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
-  keepNames?: boolean;
-};
+export type ScriptsCliOptions = BaseCliOptions;
 
 export type ScriptsCommandOptions = {
   flavor: string;
@@ -205,24 +177,15 @@ export type ScriptsCommandOptions = {
   emulators?: FirebaseEmulator[];
   emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
+  watch?: boolean;
+  noWatch?: boolean;
+  init?: boolean;
+  noInit?: boolean;
 };
 
 export type DeleteCliOptions = BaseCliOptions & {
   dryRun?: boolean;
   all?: boolean;
-  functionsDirectory?: string;
-  rulesDirectory?: string;
-  firestoreRules?: string;
-  storageRules?: string;
-  scriptsDirectory?: string;
-  initScript?: string;
-  region?: string;
-  engine?: string;
-  minify?: boolean;
-  sourcemap?: boolean;
-  emulators?: FirebaseEmulator[];
-  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
-  keepNames?: boolean;
 };
 
 export type DeleteCommandOptions = {
@@ -249,24 +212,15 @@ export type DeleteCommandOptions = {
   emulators?: FirebaseEmulator[];
   emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
+  watch?: boolean;
+  noWatch?: boolean;
+  init?: boolean;
+  noInit?: boolean;
 };
 
 export type RulesCliOptions = BaseCliOptions & {
   only?: string;
   force?: boolean;
-  functionsDirectory?: string;
-  rulesDirectory?: string;
-  firestoreRules?: string;
-  storageRules?: string;
-  scriptsDirectory?: string;
-  initScript?: string;
-  region?: string;
-  engine?: string;
-  minify?: boolean;
-  sourcemap?: boolean;
-  emulators?: FirebaseEmulator[];
-  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
-  keepNames?: boolean;
 };
 
 export type RulesCommandOptions = {
@@ -293,6 +247,10 @@ export type RulesCommandOptions = {
   emulators?: FirebaseEmulator[];
   emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
+  watch?: boolean;
+  noWatch?: boolean;
+  init?: boolean;
+  noInit?: boolean;
 };
 
 export type BuildCommandOptions = {

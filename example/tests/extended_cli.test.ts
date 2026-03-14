@@ -189,7 +189,16 @@ describe('Firestack CLI Extended Tests', () => {
     '8. emulate --dry-run',
     async () => {
       const result = Bun.spawnSync(
-        ['node', FIRESTACK_BIN, 'emulate', '--dry-run', '--flavor', 'example'],
+        [
+          'node',
+          FIRESTACK_BIN,
+          'emulate',
+          '--dry-run',
+          '--minify',
+          '--sourcemap',
+          '--flavor',
+          'example',
+        ],
         { cwd: FUNCTIONS_DIR }
       );
 
@@ -217,6 +226,27 @@ describe('Firestack CLI Extended Tests', () => {
       expect(firebaseJson.firestore).toHaveProperty('indexes', 'firestore.indexes.json');
       expect(firebaseJson).toHaveProperty('storage');
       expect(firebaseJson.storage).toHaveProperty('rules', 'storage.rules');
+
+      // Check index.js for exports
+      const indexContent = await readFile(join(emulatorDist, 'src', 'index.js'), 'utf-8');
+      const expectedExports = [
+        'assets_test_api',
+        'test_api',
+        'auth_created_renamed',
+        'test_callable',
+        'users_created',
+        'users_deleted',
+        'users_updated',
+        'daily',
+        'archived',
+        'deleted',
+        'finalized',
+        'updated',
+      ];
+
+      for (const exportName of expectedExports) {
+        expect(indexContent).toContain(exportName);
+      }
     },
     { timeout: 60000 }
   );

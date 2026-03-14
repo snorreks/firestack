@@ -242,7 +242,9 @@ import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 
 // Firestack runs this script automatically when the emulator starts
-const db = getFirestore(initializeApp({ projectId: "demo-project" }));
+const db = getFirestore(
+  initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID }),
+);
 await db.collection("users").doc("dev-user").set({ name: "Dev User" });
 console.log("✅ Emulator seeded!");
 ```

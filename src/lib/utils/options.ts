@@ -4,6 +4,7 @@ import { cwd } from 'node:process';
 import { DEFAULT_NODE_VERSION } from '$constants';
 import { logger } from '$logger';
 import type {
+  BaseCliOptions,
   DeleteCliOptions,
   DeleteCommandOptions,
   DeployCliOptions,
@@ -44,11 +45,10 @@ const getFirstFlavor = (config: FirestackConfig): string | undefined => {
   return Object.keys(flavors)[0];
 };
 
-// TODO: create a get base options method, and move all specific options into the commands
-
-export const getDeployOptions = async (
-  cliOptions: DeployCliOptions
-): Promise<DeployCommandOptions> => {
+/**
+ * Gets base options by merging CLI options with firestack.json configuration.
+ */
+export const getBaseOptions = async (cliOptions: BaseCliOptions) => {
   const config = await getFirestackConfig();
   const firstFlavor = getFirstFlavor(config);
   const flavor = cliOptions.flavor ?? firstFlavor;
@@ -59,8 +59,18 @@ export const getDeployOptions = async (
     );
   }
 
-  const options: DeployCommandOptions = {
-    ...cliOptions,
+  // Handle boolean flags with no- prefix correctly
+  // Priority: CLI flag (true) -> CLI no-flag (false) -> Config -> Default
+  const minify = cliOptions.noMinify ? false : (cliOptions.minify ?? config.minify ?? true);
+  const sourcemap = cliOptions.noSourcemap
+    ? false
+    : (cliOptions.sourcemap ?? config.sourcemap ?? true);
+
+  const watch = cliOptions.noWatch ? false : (cliOptions.watch ?? config.watch ?? true);
+  const init = cliOptions.noInit ? false : (cliOptions.init ?? config.init ?? true);
+
+  return {
+    config,
     flavor,
     functionsDirectory:
       cliOptions.functionsDirectory || config.functionsDirectory || 'src/controllers',
@@ -73,13 +83,31 @@ export const getDeployOptions = async (
     nodeVersion: cliOptions.nodeVersion || config.nodeVersion || DEFAULT_NODE_VERSION,
     projectId: cliOptions.projectId || config.flavors?.[flavor],
     engine: cliOptions.engine || config.engine || 'bun',
-    minify: cliOptions.minify ?? config.minify ?? true,
-    sourcemap: cliOptions.sourcemap ?? config.sourcemap ?? true,
+    minify,
+    sourcemap,
+    watch,
+    init,
     external: cliOptions.external || config.external || [],
     packageManager: cliOptions.packageManager || config.packageManager || 'global',
     emulators: cliOptions.emulators || config.emulators,
     emulatorPorts: cliOptions.emulatorPorts || config.emulatorPorts,
     keepNames: cliOptions.keepNames ?? config.keepNames,
+  };
+};
+
+export const getDeployOptions = async (
+  cliOptions: DeployCliOptions
+): Promise<DeployCommandOptions> => {
+  const base = await getBaseOptions(cliOptions);
+
+  const options: DeployCommandOptions = {
+    ...base,
+    ...cliOptions,
+    minify: base.minify,
+    sourcemap: base.sourcemap,
+    watch: base.watch,
+    init: base.init,
+    flavor: base.flavor,
   };
 
   logger.setLogSeverity(options);
@@ -92,37 +120,16 @@ export const getDeployOptions = async (
 export const getEmulateOptions = async (
   cliOptions: EmulateCliOptions
 ): Promise<EmulateCommandOptions> => {
-  const config = await getFirestackConfig();
-  const firstFlavor = getFirstFlavor(config);
-  const flavor = cliOptions.flavor ?? firstFlavor;
-
-  if (!flavor) {
-    throw new Error(
-      'Flavor is required. Please provide a flavor via CLI or configure in firestack.json'
-    );
-  }
+  const base = await getBaseOptions(cliOptions);
 
   const options: EmulateCommandOptions = {
+    ...base,
     ...cliOptions,
-    flavor,
-    functionsDirectory:
-      cliOptions.functionsDirectory || config.functionsDirectory || 'src/controllers',
-    rulesDirectory: cliOptions.rulesDirectory || config.rulesDirectory || 'src/rules',
-    firestoreRules: cliOptions.firestoreRules || config.firestoreRules,
-    storageRules: cliOptions.storageRules || config.storageRules,
-    scriptsDirectory: cliOptions.scriptsDirectory || config.scriptsDirectory || 'scripts',
-    initScript: cliOptions.initScript || config.initScript || 'on_emulate.ts',
-    region: cliOptions.region || config.region || 'us-central1',
-    nodeVersion: cliOptions.nodeVersion || config.nodeVersion || DEFAULT_NODE_VERSION,
-    projectId: cliOptions.projectId || config.flavors?.[flavor],
-    engine: cliOptions.engine || config.engine || 'bun',
-    minify: cliOptions.minify ?? config.minify ?? true,
-    sourcemap: cliOptions.sourcemap ?? config.sourcemap ?? true,
-    external: cliOptions.external || config.external || [],
-    packageManager: cliOptions.packageManager || config.packageManager || 'global',
-    emulators: cliOptions.emulators || config.emulators,
-    emulatorPorts: cliOptions.emulatorPorts || config.emulatorPorts,
-    keepNames: cliOptions.keepNames ?? config.keepNames,
+    minify: base.minify,
+    sourcemap: base.sourcemap,
+    watch: base.watch,
+    init: base.init,
+    flavor: base.flavor,
   };
 
   logger.setLogSeverity(options);
@@ -133,36 +140,16 @@ export const getEmulateOptions = async (
 };
 
 export const getLogsOptions = async (cliOptions: LogsCliOptions): Promise<LogsCommandOptions> => {
-  const config = await getFirestackConfig();
-  const firstFlavor = getFirstFlavor(config);
-  const flavor = cliOptions.flavor ?? firstFlavor;
-
-  if (!flavor) {
-    throw new Error(
-      'Flavor is required. Please provide a flavor via CLI or configure in firestack.json'
-    );
-  }
+  const base = await getBaseOptions(cliOptions);
 
   const options: LogsCommandOptions = {
+    ...base,
     ...cliOptions,
-    flavor,
-    functionsDirectory: cliOptions.functionsDirectory || config.functionsDirectory,
-    rulesDirectory: cliOptions.rulesDirectory || config.rulesDirectory,
-    firestoreRules: cliOptions.firestoreRules || config.firestoreRules,
-    storageRules: cliOptions.storageRules || config.storageRules,
-    scriptsDirectory: cliOptions.scriptsDirectory || config.scriptsDirectory,
-    initScript: cliOptions.initScript || config.initScript,
-    region: cliOptions.region || config.region,
-    nodeVersion: cliOptions.nodeVersion || config.nodeVersion,
-    projectId: cliOptions.projectId || (flavor ? config.flavors?.[flavor] : undefined),
-    engine: cliOptions.engine || config.engine,
-    minify: cliOptions.minify ?? config.minify,
-    sourcemap: cliOptions.sourcemap ?? config.sourcemap,
-    external: cliOptions.external || config.external,
-    packageManager: cliOptions.packageManager || config.packageManager,
-    emulators: cliOptions.emulators || config.emulators,
-    emulatorPorts: cliOptions.emulatorPorts || config.emulatorPorts,
-    keepNames: cliOptions.keepNames ?? config.keepNames,
+    minify: base.minify,
+    sourcemap: base.sourcemap,
+    watch: base.watch,
+    init: base.init,
+    flavor: base.flavor,
   };
 
   logger.setLogSeverity(options);
@@ -175,36 +162,13 @@ export const getLogsOptions = async (cliOptions: LogsCliOptions): Promise<LogsCo
 export const getScriptsOptions = async (
   cliOptions: ScriptsCliOptions
 ): Promise<ScriptsCommandOptions> => {
-  const config = await getFirestackConfig();
-  const firstFlavor = getFirstFlavor(config);
-  const flavor = cliOptions.flavor ?? firstFlavor;
-
-  if (!flavor) {
-    throw new Error(
-      'Flavor is required. Please provide a flavor via CLI or configure in firestack.json'
-    );
-  }
+  const base = await getBaseOptions(cliOptions);
 
   const options: ScriptsCommandOptions = {
+    ...base,
     ...cliOptions,
-    flavor,
-    functionsDirectory: cliOptions.functionsDirectory || config.functionsDirectory,
-    rulesDirectory: cliOptions.rulesDirectory || config.rulesDirectory,
-    firestoreRules: cliOptions.firestoreRules || config.firestoreRules,
-    storageRules: cliOptions.storageRules || config.storageRules,
-    scriptsDirectory: cliOptions.scriptsDirectory || config.scriptsDirectory || 'scripts',
-    initScript: cliOptions.initScript || config.initScript,
-    region: cliOptions.region || config.region,
-    nodeVersion: cliOptions.nodeVersion || config.nodeVersion,
-    projectId: cliOptions.projectId || (flavor ? config.flavors?.[flavor] : undefined),
-    engine: cliOptions.engine || config.engine || 'bun',
-    minify: cliOptions.minify ?? config.minify,
-    sourcemap: cliOptions.sourcemap ?? config.sourcemap,
-    external: cliOptions.external || config.external,
-    packageManager: cliOptions.packageManager || config.packageManager,
-    emulators: cliOptions.emulators || config.emulators,
-    emulatorPorts: cliOptions.emulatorPorts || config.emulatorPorts,
-    keepNames: cliOptions.keepNames ?? config.keepNames,
+    // Script should not have minify/sourcemap as it just runs a file
+    flavor: base.flavor,
   };
 
   logger.setLogSeverity(options);
@@ -217,45 +181,23 @@ export const getScriptsOptions = async (
 export const getDeleteOptions = async (
   cliOptions: DeleteCliOptions
 ): Promise<DeleteCommandOptions> => {
-  const config = await getFirestackConfig();
-  const firstFlavor = getFirstFlavor(config);
-  const flavor = cliOptions.flavor ?? firstFlavor;
+  const base = await getBaseOptions(cliOptions);
 
-  if (!flavor) {
-    throw new Error(
-      'Flavor is required. Please provide a flavor via CLI or configure in firestack.json'
-    );
-  }
-
-  const projectId = cliOptions.projectId || config.flavors?.[flavor];
-
-  if (!projectId) {
+  if (!base.projectId) {
     throw new Error(
       'Project ID is required. Please provide it via CLI or configure in firestack.json'
     );
   }
 
   const options: DeleteCommandOptions = {
+    ...base,
     ...cliOptions,
-    flavor,
-    projectId,
-    functionsDirectory:
-      cliOptions.functionsDirectory || config.functionsDirectory || 'src/controllers',
-    rulesDirectory: cliOptions.rulesDirectory || config.rulesDirectory || 'src/rules',
-    firestoreRules: cliOptions.firestoreRules || config.firestoreRules,
-    storageRules: cliOptions.storageRules || config.storageRules,
-    scriptsDirectory: cliOptions.scriptsDirectory || config.scriptsDirectory,
-    initScript: cliOptions.initScript || config.initScript,
-    region: cliOptions.region || config.region || 'us-central1',
-    nodeVersion: cliOptions.nodeVersion || config.nodeVersion || DEFAULT_NODE_VERSION,
-    engine: cliOptions.engine || config.engine || 'bun',
-    minify: cliOptions.minify ?? config.minify ?? true,
-    sourcemap: cliOptions.sourcemap ?? config.sourcemap ?? true,
-    external: cliOptions.external || config.external || [],
-    packageManager: cliOptions.packageManager || config.packageManager || 'global',
-    emulators: cliOptions.emulators || config.emulators,
-    emulatorPorts: cliOptions.emulatorPorts || config.emulatorPorts,
-    keepNames: cliOptions.keepNames ?? config.keepNames,
+    projectId: base.projectId,
+    minify: base.minify,
+    sourcemap: base.sourcemap,
+    watch: base.watch,
+    init: base.init,
+    flavor: base.flavor,
   };
 
   logger.setLogSeverity(options);
@@ -268,45 +210,23 @@ export const getDeleteOptions = async (
 export const getRulesOptions = async (
   cliOptions: RulesCliOptions
 ): Promise<RulesCommandOptions> => {
-  const config = await getFirestackConfig();
-  const firstFlavor = getFirstFlavor(config);
-  const flavor = cliOptions.flavor ?? firstFlavor;
+  const base = await getBaseOptions(cliOptions);
 
-  if (!flavor) {
-    throw new Error(
-      'Flavor is required. Please provide a flavor via CLI or configure in firestack.json'
-    );
-  }
-
-  const projectId = cliOptions.projectId || config.flavors?.[flavor];
-
-  if (!projectId) {
+  if (!base.projectId) {
     throw new Error(
       'Project ID is required. Please provide it via CLI or configure in firestack.json'
     );
   }
 
   const options: RulesCommandOptions = {
+    ...base,
     ...cliOptions,
-    flavor,
-    projectId,
-    functionsDirectory:
-      cliOptions.functionsDirectory || config.functionsDirectory || 'src/controllers',
-    rulesDirectory: cliOptions.rulesDirectory || config.rulesDirectory || 'src/rules',
-    firestoreRules: cliOptions.firestoreRules || config.firestoreRules,
-    storageRules: cliOptions.storageRules || config.storageRules,
-    scriptsDirectory: cliOptions.scriptsDirectory || config.scriptsDirectory,
-    initScript: cliOptions.initScript || config.initScript,
-    region: cliOptions.region || config.region || 'us-central1',
-    nodeVersion: cliOptions.nodeVersion || config.nodeVersion || DEFAULT_NODE_VERSION,
-    engine: cliOptions.engine || config.engine || 'bun',
-    minify: cliOptions.minify ?? config.minify ?? true,
-    sourcemap: cliOptions.sourcemap ?? config.sourcemap ?? true,
-    external: cliOptions.external || config.external || [],
-    packageManager: cliOptions.packageManager || config.packageManager || 'global',
-    emulators: cliOptions.emulators || config.emulators,
-    emulatorPorts: cliOptions.emulatorPorts || config.emulatorPorts,
-    keepNames: cliOptions.keepNames ?? config.keepNames,
+    projectId: base.projectId,
+    minify: base.minify,
+    sourcemap: base.sourcemap,
+    watch: base.watch,
+    init: base.init,
+    flavor: base.flavor,
   };
 
   logger.setLogSeverity(options);

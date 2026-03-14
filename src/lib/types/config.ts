@@ -20,4 +20,6 @@ export type FirestackConfig = {
   emulators?: FirebaseEmulator[];
   emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
+  watch?: boolean;
+  init?: boolean;
 };

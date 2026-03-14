@@ -57,9 +57,9 @@ export const buildFunction = async (options: {
     sourceRoot,
     keepNames,
     footer,
-    sourcemap = true,
+    sourcemap,
     tsconfig,
-    minify = true,
+    minify,
   } = options;
 
   const outDir = dirname(outputFile);

@@ -27,7 +27,7 @@ export const createTemporaryIndexFunctionFile = async (
   return temporaryFilePath;
 };
 
-const toDeployIndexCode = async (options: CreateIndexFileOptions): Promise<string> => {
+export const toDeployIndexCode = async (options: CreateIndexFileOptions): Promise<string> => {
   const { deployFunction, functionPath, temporaryDirectory } = options;
 
   const rootFunctionBuilder = toRootFunction(deployFunction);

@@ -9,4 +9,3 @@ export * from './function-types.ts';
 export * from './functions-cache.ts';
 export * from './helper-generics.ts';
 export * from './helper-options.ts';
-export * from './script.ts';
