@@ -48,6 +48,7 @@ const runOnEmulate = async (options: EmulateOptions) => {
     HOME: process.env.HOME || '',
     USER: process.env.USER || '',
     SHELL: process.env.SHELL || '',
+    GCP_PROJECT_ID: projectId,
     FIREBASE_PROJECT_ID: projectId,
     GCLOUD_PROJECT: projectId,
     GCP_PROJECT: projectId,

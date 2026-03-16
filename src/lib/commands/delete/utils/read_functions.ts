@@ -1,7 +1,7 @@
 import { join } from 'node:path';
-import client from 'firebase-tools';
 import { logger } from '$logger';
 import type { DeleteCommandOptions } from '$types';
+import { executeCommand } from '$utils/command.ts';
 import { findFunctions } from '$utils/find_functions';
 import { deriveFunctionName } from '$utils/function_naming.ts';
 
@@ -32,12 +32,28 @@ export const getOnlineFunctionNames = async (
     if (!deployOptions.projectId) {
       throw new Error('Project ID is required for getOnlineFunctionNames.');
     }
-    const onlineFunctions = await client.functions.list({
-      project: deployOptions.projectId,
+
+    const commandArgs = ['functions:list', '--project', deployOptions.projectId, '--json'];
+
+    logger.debug(`> firebase ${commandArgs.join(' ')}`);
+
+    const { stdout, success } = await executeCommand('firebase', {
+      args: commandArgs,
+      packageManager: deployOptions.packageManager,
     });
-    const onlineFunctionNames = onlineFunctions.map(
-      (functionData: { id: string }) => functionData.id
-    );
+
+    if (!success) {
+      throw new Error('Failed to fetch online functions from Firebase.');
+    }
+
+    const onlineFunctions = JSON.parse(stdout);
+    // Firebase CLI returns an array of functions for functions:list --json
+    // Sometimes it might be wrapped in { result: [...] } depending on the version/command
+    const functionList = Array.isArray(onlineFunctions)
+      ? onlineFunctions
+      : (onlineFunctions as { result: { id: string }[] }).result || [];
+
+    const onlineFunctionNames = functionList.map((functionData: { id: string }) => functionData.id);
     logger.debug('onlineFunctionNames', onlineFunctionNames);
     return onlineFunctionNames;
   } catch (error) {
