@@ -22,5 +22,5 @@ export type FirestackConfig = {
   keepNames?: boolean;
   watch?: boolean;
   init?: boolean;
-  kill?: boolean;
+  force?: boolean;
 };

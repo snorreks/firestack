@@ -422,8 +422,8 @@ export const emulateCommand = new Command('emulate')
   .option('--init', 'Run init script before starting emulators.')
   .option('--no-init', 'Skip running init script.')
   .option('--dry-run', 'Build functions and rules for emulator but do not start it.')
-  .option('--kill', 'Kill any existing servers running on the emulator ports.')
-  .option('--no-kill', 'Do not kill existing servers on the emulator ports.')
+  .option('--force', 'Kill any existing servers running on the emulator ports.')
+  .option('--no-force', 'Do not kill existing servers on the emulator ports.')
   .option('--emulators <emulators>', 'Comma-separated list of emulators to enable.', (val) =>
     val.split(',')
   )
@@ -474,7 +474,7 @@ export const emulateCommand = new Command('emulate')
 
     await generateFirebaseJson({ outputDir, emulateOptions, functionFiles });
 
-    if (emulateOptions.kill) {
+    if (emulateOptions.force) {
       const portsToKill = [
         emulateOptions.emulatorPorts?.ui ?? 4000,
         emulateOptions.emulatorPorts?.functions ?? 5001,
@@ -483,6 +483,10 @@ export const emulateCommand = new Command('emulate')
         emulateOptions.emulatorPorts?.auth ?? 9099,
         emulateOptions.emulatorPorts?.storage ?? 9199,
         emulateOptions.emulatorPorts?.database ?? 9000,
+        4400,
+        4401,
+        4500,
+        4501,
       ];
       const killed = await killProcessesOnPorts(portsToKill);
       if (killed.length > 0) {

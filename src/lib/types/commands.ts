@@ -32,8 +32,8 @@ export type BaseCliOptions = {
   noWatch?: boolean;
   init?: boolean;
   noInit?: boolean;
-  kill?: boolean;
-  noKill?: boolean;
+  force?: boolean;
+  noForce?: boolean;
 };
 
 export type DeployCliOptions = BaseCliOptions & {
@@ -85,8 +85,8 @@ export type EmulateCliOptions = BaseCliOptions & {
   watch?: boolean;
   init?: boolean;
   open?: boolean;
-  kill?: boolean;
-  noKill?: boolean;
+  force?: boolean;
+  noForce?: boolean;
 };
 
 export type EmulateCommandOptions = {
@@ -116,7 +116,7 @@ export type EmulateCommandOptions = {
   open?: boolean;
   emulators?: FirebaseEmulator[];
   keepNames?: boolean;
-  kill?: boolean;
+  force?: boolean;
 };
 
 export type LogsCliOptions = BaseCliOptions & {

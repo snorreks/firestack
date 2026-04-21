@@ -182,6 +182,7 @@ Starts the Firebase emulator with live reload and real-time UI detection.
 - `--open`: Automatically opens the Emulator UI in your browser once it's ready.
 - `--watch` / `--no-watch`: Enable/disable file watching for live reload (default: `true`).
 - `--init` / `--no-init`: Run/skip the initialization script (default: `true`).
+- `--force` / `--no-force`: Kill any existing servers running on emulator ports before starting (default: `false`).
 - `--projectId <id>`: Override the Firebase project ID for emulation.
 - `--only <services>`: Only start specified services (e.g., `functions,firestore`).
 - `--flavor <flavor>`: The flavor context for emulation.
