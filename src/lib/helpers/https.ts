@@ -1,7 +1,9 @@
 import type { Buffer } from 'node:buffer';
 import type { Response } from 'express';
 import type { CallableRequest, Request } from 'firebase-functions/v2/https';
-import type { CallableFunctions, HttpsOptions, RequestFunctions } from '$types';
+import type { z } from 'zod';
+import type { CallableFunctions, HttpsOptions, RequestFunctions, ZodOptions } from '$types';
+import { handleZodError } from '$utils/zod.ts';
 import { FirestackError, HttpStatusCode, HttpsError } from './errors.ts';
 
 export type FirebaseRequest<
@@ -25,6 +27,37 @@ export type RequestHandler<
 ) => Promise<void> | void;
 
 /**
+ * Handles errors for HTTPS requests.
+ */
+const handleHttpsError = <
+  AllFunctions extends RequestFunctions,
+  FunctionName extends keyof AllFunctions,
+>(
+  error: unknown,
+  response: Response<AllFunctions[FunctionName][1]>
+) => {
+  if (error instanceof HttpsError || error instanceof FirestackError) {
+    const statusCode = HttpStatusCode[error.code] || 500;
+    response.status(statusCode).send({
+      error: {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+      },
+    } as unknown as AllFunctions[FunctionName][1]);
+    return;
+  }
+
+  console.error('Unhandled error in onRequest:', error);
+  response.status(500).send({
+    error: {
+      message: error instanceof Error ? error.message : 'Internal Server Error',
+      code: 'internal',
+    },
+  } as unknown as AllFunctions[FunctionName][1]);
+};
+
+/**
  * Handles HTTPS requests.
  * @param handler - The request handler function.
  * @param _options - Optional configuration for the HTTPS request.
@@ -42,25 +75,54 @@ export const onRequest = <
     try {
       await handler(request, response);
     } catch (error) {
-      if (error instanceof HttpsError || error instanceof FirestackError) {
-        const statusCode = HttpStatusCode[error.code] || 500;
-        response.status(statusCode).send({
-          error: {
-            message: error.message,
-            code: error.code,
-            details: error.details,
-          },
+      handleHttpsError<AllFunctions, FunctionName>(error, response);
+    }
+  };
+};
+
+/**
+ * Handles HTTPS requests with Zod validation.
+ * @param schema - The Zod schema for the request body.
+ * @param handler - The request handler function.
+ * @param options - Configuration for the HTTPS request and Zod validation.
+ */
+export const onRequestZod = <
+  AllFunctions extends RequestFunctions,
+  FunctionName extends keyof AllFunctions,
+  Params extends Record<string, string> = Record<string, string>,
+>(
+  schema: z.ZodSchema<AllFunctions[FunctionName][0]>,
+  handler: RequestHandler<AllFunctions, FunctionName, Params>,
+  options?: HttpsOptions<FunctionName> & ZodOptions
+): RequestHandler<AllFunctions, FunctionName, Params> => {
+  return async (request, response) => {
+    try {
+      const result = schema.safeParse(request.body);
+
+      if (!result.success) {
+        handleZodError({
+          error: result.error,
+          ...options,
         });
+
+        if (options?.validationStrategy === 'ignore') {
+          return handler(request, response);
+        }
+
+        response.status(400).send({
+          error: {
+            message: 'Invalid request body',
+            code: 'invalid-argument',
+            details: result.error.issues,
+          },
+        } as unknown as AllFunctions[FunctionName][1]);
         return;
       }
 
-      console.error('Unhandled error in onRequest:', error);
-      response.status(500).send({
-        error: {
-          message: error instanceof Error ? error.message : 'Internal Server Error',
-          code: 'internal',
-        },
-      });
+      request.body = result.data;
+      return handler(request, response);
+    } catch (error) {
+      handleHttpsError<AllFunctions, FunctionName>(error, response);
     }
   };
 };
@@ -94,6 +156,53 @@ export const onCall = <
       }
 
       console.error('Unhandled error in onCall:', error);
+      throw new HttpsError(
+        'internal',
+        error instanceof Error ? error.message : 'Internal Server Error'
+      );
+    }
+  };
+};
+
+/**
+ * Declares a callable method with Zod validation.
+ * @param schema - The Zod schema for the request data.
+ * @param handler - The call handler function.
+ * @param options - Configuration for the callable function and Zod validation.
+ */
+export const onCallZod = <
+  AllFunctions extends CallableFunctions,
+  FunctionName extends keyof AllFunctions,
+>(
+  schema: z.ZodSchema<AllFunctions[FunctionName][0]>,
+  handler: CallHandler<AllFunctions, FunctionName>,
+  options?: HttpsOptions<FunctionName> & ZodOptions
+): CallHandler<AllFunctions, FunctionName> => {
+  return async (request) => {
+    try {
+      const result = schema.safeParse(request.data);
+
+      if (!result.success) {
+        handleZodError({
+          error: result.error,
+          ...options,
+        });
+
+        if (options?.validationStrategy === 'ignore') {
+          return handler(request);
+        }
+
+        throw new HttpsError('invalid-argument', 'Invalid request data', result.error.issues);
+      }
+
+      request.data = result.data;
+      return handler(request);
+    } catch (error) {
+      if (error instanceof HttpsError || error instanceof FirestackError) {
+        throw error;
+      }
+
+      console.error('Unhandled error in onCallZod:', error);
       throw new HttpsError(
         'internal',
         error instanceof Error ? error.message : 'Internal Server Error'

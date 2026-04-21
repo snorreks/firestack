@@ -6,11 +6,11 @@ import { rulesAction } from '$commands/rules/index.ts';
 import { logger } from '$logger';
 import type { DeployCommandOptions } from '$types';
 import { loadChecksums } from '$utils/checksum.ts';
+import { getEnvironment } from '$utils/environment.ts';
+import { findFunctions } from '$utils/find_functions.ts';
+import { getCacheContext, updateRemoteCache } from '$utils/functions_cache.ts';
 import { getDeployOptions } from '$utils/options.ts';
 import { runFunctions } from '$utils/run-functions.ts';
-import { findFunctions } from '../../utils/find_functions.ts';
-import { getCacheContext, updateRemoteCache } from '../../utils/functions_cache.ts';
-import { getEnvironment } from './utils/environment.ts';
 import {
   type FunctionMetadata,
   filterFunctionsByOnly,

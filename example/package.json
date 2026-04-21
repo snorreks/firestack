@@ -21,8 +21,11 @@
     "sync": "cd .. && bun run build && cd example/apps/functions && bun install && cd ../../packages/types && bun install"
   },
   "devDependencies": {
-    "typescript": "^5.9.3",
-    "@moonrepo/cli": "^2.0.4",
-    "@biomejs/biome": "^2.4.7"
+    "typescript": "^6.0.3",
+    "@moonrepo/cli": "^2.2.1",
+    "@biomejs/biome": "^2.4.12"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
   }
 }

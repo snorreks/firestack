@@ -144,6 +144,10 @@ const toRootFunction = (deployFunction: DeployFunction): FunctionBuilder => {
     case 'onDocumentUpdated':
     case 'onDocumentDeleted':
     case 'onDocumentWritten':
+    case 'onCreatedZod':
+    case 'onUpdatedZod':
+    case 'onDeletedZod':
+    case 'onWrittenZod':
       return 'firestore';
     case 'onValueCreated':
     case 'onValueUpdated':
@@ -152,6 +156,8 @@ const toRootFunction = (deployFunction: DeployFunction): FunctionBuilder => {
       return 'database';
     case 'onCall':
     case 'onRequest':
+    case 'onCallZod':
+    case 'onRequestZod':
       return 'https';
     case 'onSchedule':
       return 'scheduler';
@@ -173,19 +179,25 @@ const toRootFunction = (deployFunction: DeployFunction): FunctionBuilder => {
 const toFunctionCodeType = (deployFunction: DeployFunction): string => {
   switch (deployFunction) {
     case 'onCall':
+    case 'onCallZod':
       return 'onCall';
     case 'onRequest':
+    case 'onRequestZod':
       return 'onRequest';
     case 'onCreated':
+    case 'onCreatedZod':
     case 'onDocumentCreated':
       return 'onDocumentCreated';
     case 'onDeleted':
+    case 'onDeletedZod':
     case 'onDocumentDeleted':
       return 'onDocumentDeleted';
     case 'onUpdated':
+    case 'onUpdatedZod':
     case 'onDocumentUpdated':
       return 'onDocumentUpdated';
     case 'onWritten':
+    case 'onWrittenZod':
     case 'onDocumentWritten':
       return 'onDocumentWritten';
     case 'onSchedule':

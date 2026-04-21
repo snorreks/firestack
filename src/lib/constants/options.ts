@@ -63,4 +63,5 @@ export const VALID_FIRESTACK_OPTIONS = [
   'nodeVersion',
   'assets',
   'external',
+  'validationStrategy',
 ] as const;

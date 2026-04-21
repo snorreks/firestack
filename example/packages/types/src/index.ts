@@ -1,8 +1,12 @@
 import type { CoreData } from '@snorreks/firestack';
+import { z } from 'zod';
 
-export type UserData = CoreData & {
-  email: string;
-};
+export const UserSchema = z.object({
+  id: z.string(),
+  email: z.string().email(),
+});
+
+export type UserData = z.infer<typeof UserSchema>;
 
 export type CallableFunctions = {
   test_callable: [

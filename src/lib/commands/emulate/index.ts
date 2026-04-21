@@ -5,7 +5,6 @@ import { exit } from 'node:process';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { toDeployIndexCode } from '$commands/deploy/utils/create_deploy_index.ts';
-import { getEnvironment } from '$commands/deploy/utils/environment.ts';
 import { parseFunctionMetadata } from '$commands/deploy/utils/parse_function_metadata.ts';
 import { DEFAULT_EMULATOR_PROJECT_ID } from '$constants';
 import { logger } from '$logger';
@@ -13,6 +12,7 @@ import type { EmulateCommandOptions } from '$types';
 import { buildFunction } from '$utils/build_utils.ts';
 import { executeCommand } from '$utils/command.ts';
 import { exists, findProjectRoot, openUrl } from '$utils/common.ts';
+import { getEnvironment } from '$utils/environment';
 import { findFunctions } from '$utils/find_functions.ts';
 import { createPackageJson, toDotEnvironmentCode } from '$utils/firebase_utils.ts';
 import { getEmulateOptions } from '$utils/options.ts';
@@ -22,7 +22,8 @@ type EmulateOptions = EmulateCommandOptions;
 /**
  * Runs the initialization script for the emulator.
  */
-const runOnEmulate = async (options: EmulateOptions) => {
+const runOnEmulate = async (options: EmulateOptions & { env: Record<string, string> }) => {
+  const { env } = options;
   const scriptsDir = options.scriptsDirectory || 'scripts';
   const initScript = options.initScript || 'on_emulate.ts';
   const initScriptPath = join(process.cwd(), scriptsDir, initScript);
@@ -60,6 +61,7 @@ const runOnEmulate = async (options: EmulateOptions) => {
     // Suppress Java warnings in emulators
     JAVA_OPTS:
       '-XX:+IgnoreUnrecognizedVMOptions --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
+    ...env,
   };
 
   logger.info(chalk.cyan(`🏃 Running init script: ${chalk.bold(initScript)}`));
@@ -88,8 +90,9 @@ const buildEmulatorFunctions = async (options: {
   outputDir: string;
   emulateOptions: EmulateOptions;
   controllersPath: string;
+  env: Record<string, string>;
 }): Promise<void> => {
-  const { functionFiles, outputDir, emulateOptions, controllersPath } = options;
+  const { functionFiles, outputDir, emulateOptions, controllersPath, env } = options;
   const projectRoot = await findProjectRoot();
   const tempDir = join(process.cwd(), 'tmp', 'emulator');
 
@@ -168,8 +171,6 @@ const buildEmulatorFunctions = async (options: {
 
   await writeFile(join(outputDir, 'src', 'package.json'), packageJson);
 
-  // Generate .env for emulator containing all flavor envs (minus service account)
-  const env = await getEnvironment(emulateOptions.flavor);
   const emulatorEnv: Record<string, string> = {};
   for (const [key, value] of Object.entries(env)) {
     if (key !== 'FIREBASE_SERVICE_ACCOUNT') {
@@ -342,8 +343,9 @@ const watchAndRebuild = (options: {
   outputDir: string;
   emulateOptions: EmulateOptions;
   controllersPath: string;
+  env: Record<string, string>;
 }): void => {
-  const { functionsPath, functionFiles, outputDir, emulateOptions, controllersPath } = options;
+  const { functionsPath, functionFiles, outputDir, emulateOptions, controllersPath, env } = options;
   const projectRoot = process.cwd();
   logger.info(chalk.dim('Watching for file changes...'));
 
@@ -357,7 +359,13 @@ const watchAndRebuild = (options: {
     ) {
       logger.info(chalk.dim(`File changed: ${basename(filename)}, rebuilding...`));
       try {
-        await buildEmulatorFunctions({ functionFiles, outputDir, emulateOptions, controllersPath });
+        await buildEmulatorFunctions({
+          functionFiles,
+          outputDir,
+          emulateOptions,
+          controllersPath,
+          env,
+        });
         logger.info(chalk.green('Rebuild complete.'));
       } catch (error) {
         logger.error(`Rebuild failed: ${(error as Error).message}`);
@@ -435,6 +443,9 @@ export const emulateCommand = new Command('emulate')
       throw new Error('Functions directory is required for emulation.');
     }
 
+    // Generate .env for emulator containing all flavor envs (minus service account)
+    const env = await getEnvironment(emulateOptions.flavor);
+
     const functionsPath = join(process.cwd(), emulateOptions.functionsDirectory);
     const functionFiles = await findFunctions(functionsPath);
 
@@ -454,6 +465,7 @@ export const emulateCommand = new Command('emulate')
       outputDir,
       emulateOptions,
       controllersPath: functionsPath,
+      env,
     });
     logger.info(chalk.green('✅ Build complete.'));
 
@@ -500,7 +512,14 @@ export const emulateCommand = new Command('emulate')
 
             if (cliOptions.init !== false) {
               // Give it a tiny bit more time for the services to be fully bound
-              setTimeout(() => runOnEmulate(emulateOptions), 1000);
+              setTimeout(
+                () =>
+                  runOnEmulate({
+                    ...emulateOptions,
+                    env,
+                  }),
+                1000
+              );
             }
           }
         }
@@ -522,6 +541,7 @@ export const emulateCommand = new Command('emulate')
         outputDir,
         emulateOptions,
         controllersPath: functionsPath,
+        env,
       });
     }
 

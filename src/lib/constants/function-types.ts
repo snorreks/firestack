@@ -7,6 +7,10 @@ export const firestoreFunctions = [
   'onDocumentUpdated',
   'onDocumentDeleted',
   'onDocumentWritten',
+  'onCreatedZod',
+  'onUpdatedZod',
+  'onDeletedZod',
+  'onWrittenZod',
 ] as const;
 
 export const databaseFunctions = [
@@ -32,7 +36,7 @@ export const authFunctions = [
 
 export const schedulerFunctions = ['onSchedule'] as const;
 
-export const httpsFunctions = ['onCall', 'onRequest'] as const;
+export const httpsFunctions = ['onCall', 'onRequest', 'onCallZod', 'onRequestZod'] as const;
 
 export const functions = [
   ...authFunctions,

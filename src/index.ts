@@ -1,3 +1,4 @@
+export { CoreSchema } from '$constants';
 export * from '$helpers/auth.ts';
 export * from '$helpers/database.ts';
 export * from '$helpers/errors.ts';

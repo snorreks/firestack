@@ -1,6 +1,6 @@
-import type { UserData } from '@shared/types';
-import { onCreated } from '@snorreks/firestack';
+import { UserSchema } from '@shared/types';
+import { onCreatedZod } from '@snorreks/firestack';
 
-export default onCreated<UserData>(({ data }) => {
+export default onCreatedZod(UserSchema, ({ data }) => {
   console.log(`User ${data.email} created`);
 });

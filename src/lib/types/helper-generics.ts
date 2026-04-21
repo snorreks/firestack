@@ -1,3 +1,6 @@
+import type z from 'zod';
+import type { CoreSchema } from '$constants';
+
 export type CallableFunctions = {
   [key: string]: [unknown, unknown];
 };
@@ -11,11 +14,4 @@ export type RequestFunctions = {
   ];
 };
 
-export type CoreData = {
-  /**
-   * The document's ID
-   *
-   * @see https://firebase.google.com/docs/reference/node/firebase.firestore.DocumentSnapshot#id
-   */
-  id: string;
-};
+export type CoreData = z.infer<typeof CoreSchema>;
