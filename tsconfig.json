@@ -12,14 +12,14 @@
     "esModuleInterop": true,
     "isolatedModules": true,
     "lib": ["ESNext"],
-    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
-      "$constants": ["src/lib/constants/index.ts"],
-      "$commands/*": ["src/lib/commands/*"],
-      "$helpers/*": ["src/lib/helpers/*"],
-      "$types": ["src/lib/types/index.ts"],
-      "$utils/*": ["src/lib/utils/*"],
-      "$logger": ["src/lib/utils/logger.js"]
+      "$constants": ["./src/lib/constants/index.ts"],
+      "$commands/*": ["./src/lib/commands/*"],
+      "$helpers/*": ["./src/lib/helpers/*"],
+      "$types": ["./src/lib/types/index.ts"],
+      "$utils/*": ["./src/lib/utils/*"],
+      "$logger": ["./src/lib/utils/logger.js"]
     }
   },
   "include": ["src", "build.ts"]

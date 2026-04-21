@@ -1,9 +1,8 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
-      "$configs/*": ["src/configs/*"]
+      "$configs/*": ["./src/configs/*"]
     }
   },
   "include": ["src/**/*", "scripts/**/*", "functions-cache.ts"],

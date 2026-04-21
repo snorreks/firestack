@@ -68,6 +68,7 @@ export const getBaseOptions = async (cliOptions: BaseCliOptions) => {
 
   const watch = cliOptions.noWatch ? false : (cliOptions.watch ?? config.watch ?? true);
   const init = cliOptions.noInit ? false : (cliOptions.init ?? config.init ?? true);
+  const kill = cliOptions.noKill ? false : (cliOptions.kill ?? config.kill ?? false);
 
   return {
     config,
@@ -87,6 +88,7 @@ export const getBaseOptions = async (cliOptions: BaseCliOptions) => {
     sourcemap,
     watch,
     init,
+    kill,
     external: cliOptions.external || config.external || [],
     packageManager: cliOptions.packageManager || config.packageManager || 'global',
     emulators: cliOptions.emulators || config.emulators,

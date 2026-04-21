@@ -226,7 +226,6 @@ When running scripts via `firestack scripts` or during emulation, Firestack can 
 // script-config.development.ts
 export const config = {
   apiKey: "dev-key",
-  baseUrl: "http://localhost:3000",
 };
 ```
 

@@ -16,6 +16,7 @@ import { getEnvironment } from '$utils/environment';
 import { findFunctions } from '$utils/find_functions.ts';
 import { createPackageJson, toDotEnvironmentCode } from '$utils/firebase_utils.ts';
 import { getEmulateOptions } from '$utils/options.ts';
+import { killProcessesOnPorts } from '$utils/ports.ts';
 
 type EmulateOptions = EmulateCommandOptions;
 
@@ -421,6 +422,8 @@ export const emulateCommand = new Command('emulate')
   .option('--init', 'Run init script before starting emulators.')
   .option('--no-init', 'Skip running init script.')
   .option('--dry-run', 'Build functions and rules for emulator but do not start it.')
+  .option('--kill', 'Kill any existing servers running on the emulator ports.')
+  .option('--no-kill', 'Do not kill existing servers on the emulator ports.')
   .option('--emulators <emulators>', 'Comma-separated list of emulators to enable.', (val) =>
     val.split(',')
   )
@@ -470,6 +473,24 @@ export const emulateCommand = new Command('emulate')
     logger.info(chalk.green('✅ Build complete.'));
 
     await generateFirebaseJson({ outputDir, emulateOptions, functionFiles });
+
+    if (emulateOptions.kill) {
+      const portsToKill = [
+        emulateOptions.emulatorPorts?.ui ?? 4000,
+        emulateOptions.emulatorPorts?.functions ?? 5001,
+        emulateOptions.emulatorPorts?.firestore ?? 8080,
+        emulateOptions.emulatorPorts?.pubsub ?? 8085,
+        emulateOptions.emulatorPorts?.auth ?? 9099,
+        emulateOptions.emulatorPorts?.storage ?? 9199,
+        emulateOptions.emulatorPorts?.database ?? 9000,
+      ];
+      const killed = await killProcessesOnPorts(portsToKill);
+      if (killed.length > 0) {
+        logger.info(chalk.cyan(`Killed existing processes on ports: ${killed.join(', ')}`));
+      } else {
+        logger.debug('No processes found on emulator ports');
+      }
+    }
 
     if (cliOptions.dryRun) {
       console.log('Emulator dry run complete');

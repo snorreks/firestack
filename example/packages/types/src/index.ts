@@ -1,4 +1,3 @@
-import type { CoreData } from '@snorreks/firestack';
 import { z } from 'zod';
 
 export const UserSchema = z.object({
