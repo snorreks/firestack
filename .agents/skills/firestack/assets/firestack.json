@@ -11,5 +11,8 @@
   "initScript": "on_emulate.ts",
   "nodeVersion": "22",
   "engine": "bun",
-  "packageManager": "global"
+  "packageManager": "global",
+  "minify": true,
+  "sourcemap": true,
+  "emulators": ["auth", "firestore", "functions", "pubsub", "storage"]
 }

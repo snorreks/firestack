@@ -6,15 +6,19 @@ import { getFirestore } from 'firebase-admin/firestore';
  * Use it to seed data into your local emulators.
  */
 const projectId = process.env.FIREBASE_PROJECT_ID;
-console.log(`Initializing emulators for project: ${projectId}`);
+if (!projectId) {
+  throw new Error('FIREBASE_PROJECT_ID environment variable not set');
+}
+
+console.log(`Initializing emulator for project: ${projectId}`);
 
 const app = initializeApp({ projectId });
 const db = getFirestore(app);
 
-// Seed example
+// Seed example data
 await db.collection('system').doc('status').set({
   ready: true,
   seededAt: new Date().toISOString(),
 });
 
-console.log('✅ Emulator seeded successfully!');
+console.log('Emulator seeded successfully.');
