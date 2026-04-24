@@ -6,6 +6,7 @@ import { emulateCommand } from '$commands/emulate/index.ts';
 import { logsCommand } from '$commands/logs/index.ts';
 import { rulesCommand } from '$commands/rules/index.ts';
 import { scriptsCommand } from '$commands/scripts/index.ts';
+import { testRulesCommand } from '$commands/test-rules/index.ts';
 
 const program = new Command();
 
@@ -21,5 +22,6 @@ program.addCommand(deleteCommand);
 program.addCommand(emulateCommand);
 program.addCommand(rulesCommand);
 program.addCommand(logsCommand);
+program.addCommand(testRulesCommand);
 
 program.parse(process.argv);

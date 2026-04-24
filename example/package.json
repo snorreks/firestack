@@ -26,6 +26,7 @@
     "@biomejs/biome": "^2.4.12"
   },
   "dependencies": {
+    "latest": "^0.2.0",
     "zod": "^4.3.6"
   }
 }

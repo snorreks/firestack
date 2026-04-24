@@ -266,3 +266,34 @@ export type BuildCommandOptions = {
   minify?: boolean;
   sourcemap?: boolean;
 };
+
+export type TestRulesCliOptions = BaseCliOptions & {
+  watch?: boolean;
+  coverage?: boolean;
+  ci?: boolean;
+  only?: string;
+};
+
+export type TestRulesCommandOptions = {
+  flavor: string;
+  projectId?: string;
+  functionsDirectory: string;
+  rulesDirectory: string;
+  nodeVersion: NodeVersion;
+  region: string;
+  engine: string;
+  packageManager: PackageManager;
+  minify: boolean;
+  sourcemap: boolean;
+  external: string[];
+  verbose?: boolean;
+  silent?: boolean;
+  debug?: boolean;
+  watch?: boolean;
+  coverage?: boolean;
+  ci?: boolean;
+  only?: string;
+  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
+  keepNames?: boolean;
+  init: boolean;
+};

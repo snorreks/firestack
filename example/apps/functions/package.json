@@ -11,6 +11,7 @@
     "logs": "firestack logs",
     "delete": "firestack delete",
     "rules": "firestack rules",
+    "test:rules": "firestack test:rules --flavor example",
     "build": "firestack build src/controllers/api/test_api.ts dist/api/src/index.js --external firebase-admin,firebase-functions"
   },
   "dependencies": {
@@ -23,6 +24,7 @@
     "is-thirteen": "^2.0.0"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.0",
     "@google-cloud/storage": "^7.19.0"
   }
 }

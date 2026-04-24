@@ -1,6 +1,6 @@
 ---
 name: firestack
-description: CLI for Firebase Cloud Functions (v2). Manages builds, deployments, emulators, and security rules with esbuild and standard TypeScript.
+description: CLI for Firebase Cloud Functions (v2). Manages builds, deployments, emulators, security rules testing, and security rules with esbuild and standard TypeScript.
 ---
 
 # Firestack Skill
@@ -11,6 +11,7 @@ description: CLI for Firebase Cloud Functions (v2). Manages builds, deployments,
 - **Emulation**: `firestack emulate --flavor <name>`. Use `--open` for UI. Seeds data via `scripts/on_emulate.ts`. Supports `--dry-run` to validate emulator build without starting it.
 - **Deployment**: `firestack deploy --flavor <name>`. Supports `--dry-run`, `--force`, and `--only <names>`.
 - **Rules**: `firestack rules` deploys Firestore/Storage rules and indexes from `rulesDirectory`.
+- **Rules Testing**: `firestack test:rules` starts ephemeral emulators, runs test files, and shuts down cleanly. Configure via `rulesTests` in `firestack.json`.
 - **Scripts**: `firestack scripts [name]` runs scripts from `scriptsDirectory` with flavor envs.
 
 ## Writing Functions (V2)

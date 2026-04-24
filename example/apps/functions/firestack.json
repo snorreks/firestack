@@ -4,5 +4,12 @@
     "example": "aikami-dev"
   },
   "region": "us-east1",
-  "minify": false
+  "minify": false,
+  "rulesTests": {
+    "firestore": {
+      "rulesFile": "src/rules/firestore.rules",
+      "testPattern": "tests/rules/**/*.rules.test.ts",
+      "projectId": "firestack-rules-test"
+    }
+  }
 }

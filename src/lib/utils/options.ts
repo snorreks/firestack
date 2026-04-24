@@ -18,6 +18,8 @@ import type {
   RulesCommandOptions,
   ScriptsCliOptions,
   ScriptsCommandOptions,
+  TestRulesCliOptions,
+  TestRulesCommandOptions,
 } from '$types';
 
 export const getFirestackConfig = async (): Promise<FirestackConfig> => {
@@ -233,6 +235,31 @@ export const getRulesOptions = async (
 
   logger.setLogSeverity(options);
   logger.debug('Deploying rules...');
+  logger.debug('Options:', options);
+
+  return options;
+};
+
+export const getTestRulesOptions = async (
+  cliOptions: TestRulesCliOptions
+): Promise<TestRulesCommandOptions> => {
+  const base = await getBaseOptions(cliOptions);
+
+  // Watch should default to false for rules tests unless explicitly enabled
+  const watch = cliOptions.watch ?? false;
+
+  const options: TestRulesCommandOptions = {
+    ...base,
+    ...cliOptions,
+    minify: base.minify,
+    sourcemap: base.sourcemap,
+    watch,
+    init: base.init,
+    flavor: base.flavor,
+  };
+
+  logger.setLogSeverity(options);
+  logger.debug('Starting rules tests...');
   logger.debug('Options:', options);
 
   return options;

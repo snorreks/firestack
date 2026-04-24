@@ -19,7 +19,19 @@ Always add the `$schema` property for autocompletion:
   "nodeVersion": "24",
   "engine": "bun",
   "packageManager": "global",
-  "emulators": ["auth", "firestore", "functions", "pubsub", "storage"]
+  "emulators": ["auth", "firestore", "functions", "pubsub", "storage"],
+  "rulesTests": {
+    "firestore": {
+      "rulesFile": "src/rules/firestore.rules",
+      "testPattern": "tests/rules/**/*.rules.test.ts",
+      "projectId": "demo-rules-test"
+    },
+    "storage": {
+      "rulesFile": "src/rules/storage.rules",
+      "testPattern": "tests/storage-rules/**/*.rules.test.ts",
+      "projectId": "demo-rules-test"
+    }
+  }
 }
 ```
 
@@ -36,3 +48,31 @@ Always add the `$schema` property for autocompletion:
 | `nodeVersion` | `22` | Node.js version (`18`, `20`, `22`, `24`). |
 | `emulators` | `[]` | Explicit list of emulators to enable. |
 | `packageManager` | `global` | Manager for `firebase` commands (`npm`, `yarn`, `pnpm`, `bun`, `global`). |
+| `rulesTests` | `undefined` | Configuration for `test:rules` (see below). |
+
+## Rules Testing Configuration
+
+The `rulesTests` object configures the `firestack test:rules` command:
+
+```json
+{
+  "rulesTests": {
+    "firestore": {
+      "rulesFile": "src/rules/firestore.rules",
+      "testPattern": "tests/rules/**/*.rules.test.ts",
+      "projectId": "demo-rules-test"
+    },
+    "storage": {
+      "rulesFile": "src/rules/storage.rules",
+      "testPattern": "tests/storage-rules/**/*.rules.test.ts",
+      "projectId": "demo-rules-test"
+    }
+  }
+}
+```
+
+| Property | Required | Description |
+| --- | --- | --- |
+| `rulesFile` | Yes | Path to the `.rules` file (relative to project root or `rulesDirectory`). |
+| `testPattern` | Yes | Glob pattern for test files (e.g., `tests/rules/**/*.rules.test.ts`). |
+| `projectId` | No | Project ID for the emulator (default: `firestack-rules-test`). |

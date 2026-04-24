@@ -47,6 +47,15 @@ await Promise.all([
     outdir: 'dist',
     packages: 'external',
   }),
+  // Testing helper entry point
+  esbuild.build({
+    entryPoints: ['src/lib/testing/index.ts'],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    outdir: 'dist/testing',
+    packages: 'external',
+  }),
   // Generate types using tsup (dts-only)
   new Promise((resolve, reject) => {
     const proc = spawn(
@@ -61,6 +70,31 @@ await Promise.all([
         'esm',
         '--outDir',
         'dist',
+      ],
+      {
+        cwd: __dirname,
+        stdio: 'inherit',
+      }
+    );
+    proc.on('close', (code) => {
+      if (code === 0) resolve(0);
+      else reject(new Error(`tsup failed with code ${code}`));
+    });
+  }),
+  // Generate types for testing helper
+  new Promise((resolve, reject) => {
+    const proc = spawn(
+      'bun',
+      [
+        'x',
+        'tsup',
+        'src/lib/testing/index.ts',
+        '--dts-only',
+        '--no-clean',
+        '--format',
+        'esm',
+        '--outDir',
+        'dist/testing',
       ],
       {
         cwd: __dirname,

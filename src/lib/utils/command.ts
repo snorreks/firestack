@@ -1,6 +1,7 @@
 import { type ExecaError, execa } from 'execa';
 import { logger } from '$logger';
 import type { PackageManager } from '$types';
+import { resolveFirebaseCommand } from '$utils/firebase_tools.ts';
 
 export type CommandOptions = {
   args?: string[];
@@ -12,6 +13,7 @@ export type CommandOptions = {
   stderr?: 'pipe' | 'inherit' | ['inherit', 'pipe'];
   stdio?: 'pipe' | 'inherit' | ['inherit', 'pipe'];
   env?: Record<string, string>;
+  preferIsolatedFirebase?: boolean;
 };
 
 /**
@@ -42,24 +44,32 @@ export const executeCommand = async (
   let finalCmd = cmd;
   let finalArgs = [...args];
 
-  if (cmd === 'firebase' && packageManager !== 'global') {
-    switch (packageManager) {
-      case 'bun':
-        finalCmd = 'bun';
-        finalArgs = ['x', 'firebase', ...args];
-        break;
-      case 'pnpm':
-        finalCmd = 'pnpm';
-        finalArgs = ['dlx', 'firebase', ...args];
-        break;
-      case 'yarn':
-        finalCmd = 'yarn';
-        finalArgs = ['dlx', 'firebase', ...args];
-        break;
-      default:
-        finalCmd = 'npx';
-        finalArgs = ['firebase', ...args];
-        break;
+  if (cmd === 'firebase') {
+    if (packageManager === 'global') {
+      const resolved = await resolveFirebaseCommand({
+        preferIsolated: options?.preferIsolatedFirebase,
+      });
+      finalCmd = resolved.cmd;
+      finalArgs = [...resolved.args, ...args];
+    } else {
+      switch (packageManager) {
+        case 'bun':
+          finalCmd = 'bun';
+          finalArgs = ['x', 'firebase', ...args];
+          break;
+        case 'pnpm':
+          finalCmd = 'pnpm';
+          finalArgs = ['dlx', 'firebase', ...args];
+          break;
+        case 'yarn':
+          finalCmd = 'yarn';
+          finalArgs = ['dlx', 'firebase', ...args];
+          break;
+        default:
+          finalCmd = 'npx';
+          finalArgs = ['firebase', ...args];
+          break;
+      }
     }
   }
 

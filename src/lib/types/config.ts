@@ -2,6 +2,12 @@ import type { PackageManager } from './deploy.ts';
 import type { FirebaseEmulator } from './emulators.ts';
 import type { NodeVersion } from './helper-options.ts';
 
+export type RulesTestConfig = {
+  rulesFile: string;
+  testPattern: string;
+  projectId?: string;
+};
+
 export type FirestackConfig = {
   functionsDirectory?: string;
   rulesDirectory?: string;
@@ -23,4 +29,8 @@ export type FirestackConfig = {
   watch?: boolean;
   init?: boolean;
   force?: boolean;
+  rulesTests?: {
+    firestore?: RulesTestConfig;
+    storage?: RulesTestConfig;
+  };
 };

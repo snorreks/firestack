@@ -11,6 +11,7 @@ Firestack is a CLI tool for building, testing, and deploying Firebase Cloud Func
 - **Parallel Execution**: Uses a worker-pool pattern for concurrent deployments.
 - **Multi-Environment (Flavors)**: Support for development, staging, and production environments.
 - **Emulator Support**: Run Firebase emulators with live reload, auto-open UI, and initialization scripts.
+- **Native Rules Testing**: Test Firestore and Storage security rules against ephemeral emulators with zero config.
 - **Intelligent Caching**: Differential deployments with local and remote cache support.
 - **Rules & Indexes**: Manage and deploy Firestore and Storage rules alongside your functions.
 
@@ -159,6 +160,7 @@ firestack deploy --flavor development
 | `minify`             | boolean  | `true`            | Whether to minify the bundled function code.                                          |
 | `sourcemap`          | boolean  | `true`            | Whether to generate sourcemaps.                                                       |
 | `external`           | string[] | `[]`              | Dependencies to treat as external (installed in the function env).                    |
+| `rulesTests`         | object   | `undefined`       | Configuration for `test:rules` (see Rules Testing below).                              |
 
 ## Commands & Options
 
@@ -187,6 +189,50 @@ Starts the Firebase emulator with live reload and real-time UI detection.
 - `--only <services>`: Only start specified services (e.g., `functions,firestore`).
 - `--flavor <flavor>`: The flavor context for emulation.
 - `--verbose`: Stream full emulator logs to the console.
+
+### `firestack test:rules`
+
+Tests Firestore and Storage security rules using ephemeral Firebase emulators.
+
+- `--flavor <flavor>`: The flavor to use.
+- `--watch`: Watch test files for changes and re-run.
+- `--only <targets>`: Only test specific targets (e.g., `firestore,storage`).
+- `--verbose`: Show detailed emulator output.
+
+Configure targets in `firestack.json`:
+
+```json
+{
+  "rulesTests": {
+    "firestore": {
+      "rulesFile": "src/rules/firestore.rules",
+      "testPattern": "tests/rules/**/*.rules.test.ts",
+      "projectId": "demo-rules-test"
+    }
+  }
+}
+```
+
+Write tests using the `@snorreks/firestack/testing` helper:
+
+```typescript
+import { describe, test } from 'bun:test';
+import { assertFails, assertSucceeds, rulesTest } from '@snorreks/firestack/testing';
+
+describe('firestore.rules', () => {
+  test('unauthenticated user cannot read secrets', async () => {
+    const { withoutAuth } = await rulesTest.firestore();
+    const db = withoutAuth().firestore();
+    await assertFails(db.collection('secrets').doc('x').get());
+  });
+
+  test('authenticated user can read own profile', async () => {
+    const { withAuth } = await rulesTest.firestore();
+    const db = withAuth('user-123').firestore();
+    await assertSucceeds(db.collection('users').doc('user-123').get());
+  });
+});
+```
 
 ### `firestack rules`
 
