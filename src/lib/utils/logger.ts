@@ -78,10 +78,19 @@ export type LoggerInterface = {
   error(...args: unknown[]): void;
 };
 
+/**
+ * Converts a log severity string to its numeric priority.
+ * @param severity - The log severity level.
+ * @returns The numeric priority for comparison.
+ */
 const toLogSeverityPriority = (severity: LogSeverity): LogSeverityPriority => {
   return LogSeverityPriority[severity];
 };
 
+/**
+ * Creates a singleton logger service with severity-based filtering.
+ * @returns A LoggerInterface instance.
+ */
 const createLoggerService = (): LoggerInterface => {
   let currentLogSeverity: LogSeverity = 'info';
 

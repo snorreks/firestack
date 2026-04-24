@@ -23,6 +23,13 @@ export const createFirebaseConfig = (options: {
   return JSON.stringify(config, null, 2);
 };
 
+/**
+ * Resolves dependencies for a function's package.json.
+ * For emulators, includes firebase-admin and firebase-functions.
+ * For external deps, marks them with wildcard version.
+ * @param options - The dependency resolution options.
+ * @returns The resolved dependencies, or undefined if none.
+ */
 const getDependencies = async (options: {
   isEmulator?: boolean;
   external?: string[];

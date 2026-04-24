@@ -307,6 +307,12 @@ const copyRulesAndIndexes = async (options: {
   ]);
 };
 
+/**
+ * Checks if any of the function files use scheduled triggers.
+ * Only checks the first 20 files for performance.
+ * @param functionFiles - Array of function file paths.
+ * @returns True if any file contains onSchedule or scheduler keywords.
+ */
 const checkHasScheduler = async (functionFiles: string[]): Promise<boolean> => {
   // Check first 20 files for performance
   const filesToCheck = functionFiles.slice(0, 20);
@@ -323,6 +329,13 @@ const checkHasScheduler = async (functionFiles: string[]): Promise<boolean> => {
   return results.some((r) => r);
 };
 
+/**
+ * Checks if a rules file exists for the given emulator type.
+ * Searches in the project root and the configured rules directory.
+ * @param emulateOptions - The emulation options.
+ * @param type - The type of rules to check for.
+ * @returns True if the rules file exists.
+ */
 const hasRuleFile = async (
   emulateOptions: EmulateOptions,
   type: 'firestore' | 'storage'

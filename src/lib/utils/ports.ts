@@ -10,6 +10,9 @@ const isMacos = platform() === 'darwin';
 
 /**
  * Kills any process using the specified port.
+ * Uses platform-specific commands: fuser on Linux, lsof/kill on macOS, netstat/taskkill on Windows.
+ * @param port - The port number to free.
+ * @returns True if a process was killed, false otherwise.
  */
 const killOnPort = async (port: number): Promise<boolean> => {
   try {
