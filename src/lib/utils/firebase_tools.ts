@@ -1,90 +1,108 @@
-import { createRequire } from 'node:module';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { logger } from '$logger';
 import { executeCommand } from '$utils/command.ts';
 import { exists } from '$utils/common.ts';
 
-const FIREBASE_TOOLS_CACHE_DIR = join(homedir(), '.cache', 'firestack', 'firebase-tools');
-const ISOLATED_FIREBASE_BINARY = join(FIREBASE_TOOLS_CACHE_DIR, 'node_modules', '.bin', 'firebase');
+const PROJECT_FIREBASE_PATHS = [
+  'node_modules/firebase-tools/lib/bin/firebase.js',
+  'node_modules/.bin/firebase',
+];
 
 /**
- * Resolves firebase-tools from firestack's own node_modules.
- * @returns The path to the firebase binary, or undefined if not found.
+ * Searches upward from cwd for firebase-tools installed in the user's project.
+ * @returns The path and version of firebase-tools, or undefined.
  */
-const resolveBundledFirebaseTools = (): string | undefined => {
-  try {
-    const require = createRequire(import.meta.url);
-    const packageJsonPath = require.resolve('firebase-tools/package.json');
-    return join(packageJsonPath, '..', 'lib', 'bin', 'firebase.js');
-  } catch {
-    return undefined;
+const resolveProjectFirebaseTools = async (): Promise<
+  { path: string; version: string } | undefined
+> => {
+  let current = process.cwd();
+  while (true) {
+    for (const relativePath of PROJECT_FIREBASE_PATHS) {
+      const fullPath = join(current, relativePath);
+      if (await exists(fullPath)) {
+        const pkgPath = join(current, 'node_modules', 'firebase-tools', 'package.json');
+        let version = 'unknown';
+        if (await exists(pkgPath)) {
+          try {
+            const { readFile } = await import('node:fs/promises');
+            const pkg = JSON.parse(await readFile(pkgPath, 'utf-8'));
+            version = pkg.version || 'unknown';
+          } catch {
+            // Ignore parse errors
+          }
+        }
+        return { path: fullPath, version };
+      }
+    }
+    const parent = dirname(current);
+    if (parent === current) {
+      break;
+    }
+    current = parent;
   }
+  return undefined;
 };
 
 /**
- * Installs firebase-tools in an isolated cache directory.
- * @returns The path to the installed firebase binary.
+ * Checks for a globally installed firebase command.
+ * @returns The version string if found, otherwise undefined.
  */
-const installIsolatedFirebaseTools = async (): Promise<string> => {
-  logger.info('Installing isolated firebase-tools (this may take a moment)...');
-
-  await executeCommand('npm', {
-    args: ['init', '-y'],
-    cwd: FIREBASE_TOOLS_CACHE_DIR,
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-
-  const result = await executeCommand('npm', {
-    args: ['install', 'firebase-tools'],
-    cwd: FIREBASE_TOOLS_CACHE_DIR,
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-
-  if (!result.success) {
-    throw new Error(`Failed to install isolated firebase-tools: ${result.stderr}`);
+const resolveGlobalFirebaseVersion = async (): Promise<string | undefined> => {
+  try {
+    const result = await executeCommand('firebase', {
+      args: ['--version'],
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    if (result.success) {
+      const version = result.stdout.trim();
+      if (version) {
+        return version;
+      }
+    }
+  } catch {
+    // Ignore errors
   }
-
-  logger.info('Isolated firebase-tools installed successfully.');
-  return ISOLATED_FIREBASE_BINARY;
+  return undefined;
 };
 
 type ResolveFirebaseOptions = {
-  preferIsolated?: boolean;
+  cwd?: string;
 };
 
 /**
- * Resolves the path to the firebase binary.
+ * Resolves the user's firebase-tools installation.
  * Tries, in order:
- * 1. Firestack's bundled firebase-tools
- * 2. Isolated cache installation
- * 3. System PATH
+ * 1. Project-local firebase-tools (searched upward from cwd)
+ * 2. Globally installed firebase command
  * @param options - Resolution options
- * @returns The command and args to run firebase
+ * @returns The command, args, and version to run firebase
  */
 export const resolveFirebaseCommand = async (
   options: ResolveFirebaseOptions = {}
-): Promise<{ cmd: string; args: string[] }> => {
-  const { preferIsolated = false } = options;
-
-  if (!preferIsolated) {
-    const bundledPath = resolveBundledFirebaseTools();
-    if (bundledPath && (await exists(bundledPath))) {
-      logger.debug('Using bundled firebase-tools');
-      return { cmd: 'node', args: [bundledPath] };
-    }
+): Promise<{ cmd: string; args: string[]; version: string }> => {
+  if (options.cwd) {
+    process.chdir(options.cwd);
   }
 
-  if ((await exists(ISOLATED_FIREBASE_BINARY)) || preferIsolated) {
-    if (!(await exists(ISOLATED_FIREBASE_BINARY))) {
-      await installIsolatedFirebaseTools();
-    }
-    logger.debug('Using isolated firebase-tools');
-    return { cmd: 'node', args: [ISOLATED_FIREBASE_BINARY] };
+  const projectTools = await resolveProjectFirebaseTools();
+  if (projectTools) {
+    logger.debug(`Using project firebase-tools v${projectTools.version}`);
+    const isJsFile = projectTools.path.endsWith('.js');
+    return {
+      cmd: isJsFile ? 'node' : projectTools.path,
+      args: isJsFile ? [projectTools.path] : [],
+      version: projectTools.version,
+    };
   }
 
-  logger.debug('Using system firebase from PATH');
-  return { cmd: 'firebase', args: [] };
+  const globalVersion = await resolveGlobalFirebaseVersion();
+  if (globalVersion) {
+    logger.debug(`Using global firebase-tools v${globalVersion}`);
+    return { cmd: 'firebase', args: [], version: globalVersion };
+  }
+
+  throw new Error(
+    'firebase-tools not found. Please install it in your project (e.g. bun add -d firebase-tools) or globally (npm install -g firebase-tools).'
+  );
 };

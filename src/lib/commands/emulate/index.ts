@@ -4,6 +4,7 @@ import { basename, join } from 'node:path';
 import { exit } from 'node:process';
 import chalk from 'chalk';
 import { Command } from 'commander';
+import type { Subprocess } from 'execa';
 import { toDeployIndexCode } from '$commands/deploy/utils/create_deploy_index.ts';
 import { parseFunctionMetadata } from '$commands/deploy/utils/parse_function_metadata.ts';
 import { DEFAULT_EMULATOR_PROJECT_ID } from '$constants';
@@ -510,6 +511,17 @@ export const emulateCommand = new Command('emulate')
     logger.info(chalk.bold.green('🔥 Starting Firebase emulator...'));
 
     let uiLogged = false;
+    let emulatorSubprocess: Subprocess | undefined;
+
+    const cleanupOnExit = () => {
+      if (emulatorSubprocess && !emulatorSubprocess.killed) {
+        emulatorSubprocess.kill('SIGTERM');
+      }
+      exit(0);
+    };
+
+    process.on('SIGINT', cleanupOnExit);
+    process.on('SIGTERM', cleanupOnExit);
 
     const emulatorProcess = executeCommand('firebase', {
       args: commandArgs,
@@ -519,6 +531,9 @@ export const emulateCommand = new Command('emulate')
         ...process.env,
         JAVA_OPTS:
           '-XX:+IgnoreUnrecognizedVMOptions --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
+      },
+      onSubprocess: (subprocess) => {
+        emulatorSubprocess = subprocess;
       },
       onStdout: (data) => {
         if (!uiLogged && data.includes('Emulator UI at')) {

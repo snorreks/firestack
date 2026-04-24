@@ -1,4 +1,4 @@
-import { type ExecaError, execa } from 'execa';
+import { type ExecaError, execa, type Subprocess } from 'execa';
 import { logger } from '$logger';
 import type { PackageManager } from '$types';
 import { resolveFirebaseCommand } from '$utils/firebase_tools.ts';
@@ -8,12 +8,12 @@ export type CommandOptions = {
   packageManager?: PackageManager;
   onStdout?: (data: string) => void;
   onStderr?: (data: string) => void;
+  onSubprocess?: (subprocess: Subprocess) => void;
   cwd?: string;
   stdout?: 'pipe' | 'inherit' | ['inherit', 'pipe'];
   stderr?: 'pipe' | 'inherit' | ['inherit', 'pipe'];
   stdio?: 'pipe' | 'inherit' | ['inherit', 'pipe'];
   env?: Record<string, string>;
-  preferIsolatedFirebase?: boolean;
 };
 
 /**
@@ -35,6 +35,7 @@ export const executeCommand = async (
     packageManager = 'global',
     onStdout,
     onStderr,
+    onSubprocess,
     cwd,
     stdout,
     stderr,
@@ -46,9 +47,7 @@ export const executeCommand = async (
 
   if (cmd === 'firebase') {
     if (packageManager === 'global') {
-      const resolved = await resolveFirebaseCommand({
-        preferIsolated: options?.preferIsolatedFirebase,
-      });
+      const resolved = await resolveFirebaseCommand();
       finalCmd = resolved.cmd;
       finalArgs = [...resolved.args, ...args];
     } else {
@@ -87,6 +86,10 @@ export const executeCommand = async (
       stdout: stdout ?? (isVerbose ? ['inherit', 'pipe'] : 'pipe'),
       stderr: stderr ?? (isVerbose ? ['inherit', 'pipe'] : 'pipe'),
     });
+
+    if (onSubprocess) {
+      onSubprocess(subprocess);
+    }
 
     if (subprocess.stdout) {
       subprocess.stdout.on('data', (chunk) => {

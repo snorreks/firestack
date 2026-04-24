@@ -254,7 +254,6 @@ export const getTestRulesOptions = async (
     minify: base.minify,
     sourcemap: base.sourcemap,
     watch,
-    init: base.init,
     flavor: base.flavor,
   };
 

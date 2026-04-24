@@ -1,4 +1,5 @@
 /// <reference types="node" />
+import { env as processEnv } from 'node:process';
 import {
   assertFails,
   assertSucceeds,
@@ -6,7 +7,6 @@ import {
   type RulesTestContext,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { env as processEnv } from 'node:process';
 
 type CreateRulesTestOptions = {
   projectId?: string;
@@ -105,6 +105,12 @@ export const rulesTest = {
    * @param options - Configuration options
    */
   firestore: createRulesTest,
+
+  /**
+   * Creates a Storage rules test helper.
+   * @param options - Configuration options
+   */
+  storage: createRulesTest,
 };
 
 export type { RulesTestContext, RulesTestEnvironment };

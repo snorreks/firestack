@@ -113,4 +113,31 @@ describe('Firestack CLI', () => {
     },
     { timeout: 60000 }
   );
+
+  test(
+    'test:rules command runs and discovers tests',
+    () => {
+      const result = Bun.spawnSync(
+        [
+          'node',
+          FIRESTACK_BIN,
+          'test:rules',
+          '--flavor',
+          'example',
+          '--only',
+          'firestore',
+          '--timeout',
+          '120',
+        ],
+        {
+          cwd: FUNCTIONS_DIR,
+        }
+      );
+
+      const output = result.stdout.toString();
+      expect(output).toContain('Testing firestore rules');
+      expect(output).toContain('All rules tests passed');
+    },
+    { timeout: 300000 }
+  );
 });

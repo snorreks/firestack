@@ -88,23 +88,31 @@ const prepareEmulatorDirectory = async (options: {
 
 /**
  * Waits for the emulator to be ready by monitoring stdout.
+ * Captures output in a buffer for error reporting.
  * @param subprocess - The execa subprocess.
- * @param type - The emulator type.
- * @param port - The emulator port.
+ * @param port - The expected emulator port.
+ * @param timeoutMs - Timeout in milliseconds.
  */
 const waitForEmulatorReady = async (
   subprocess: ReturnType<typeof execa>,
-  _type: RulesTestTarget,
-  port: number
+  port: number,
+  timeoutMs: number
 ): Promise<void> => {
+  const outputBuffer: string[] = [];
+
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
-      reject(new Error(`Emulator did not start within 60 seconds`));
-    }, 60000);
+      const recentOutput = outputBuffer.slice(-20).join('\n');
+      reject(
+        new Error(`Emulator did not start within ${timeoutMs}ms. Recent output:\n${recentOutput}`)
+      );
+    }, timeoutMs);
 
     const onData = (data: string) => {
       const text = data.toString();
-      if (text.includes('Emulator Hub running') || text.includes(`127.0.0.1:${port}`)) {
+      outputBuffer.push(text);
+
+      if (text.includes('All emulators ready') || text.includes(`127.0.0.1:${port}`)) {
         clearTimeout(timeout);
         subprocess.stdout?.off('data', onData);
         subprocess.stderr?.off('data', onData);
@@ -123,7 +131,8 @@ const waitForEmulatorReady = async (
     subprocess.on('exit', (code) => {
       if (code !== 0 && code !== undefined) {
         clearTimeout(timeout);
-        reject(new Error(`Emulator exited with code ${code}`));
+        const recentOutput = outputBuffer.slice(-20).join('\n');
+        reject(new Error(`Emulator exited with code ${code}. Output:\n${recentOutput}`));
       }
     });
   });
@@ -139,16 +148,19 @@ const startRulesEmulator = async (options: {
   type: RulesTestTarget;
   port: number;
   projectId: string;
+  timeoutMs: number;
 }): Promise<{
   subprocess: ReturnType<typeof execa>;
   env: Record<string, string>;
 }> => {
-  const { tempDir, type, port, projectId } = options;
+  const { tempDir, type, port, projectId, timeoutMs } = options;
 
   const commandArgs = ['emulators:start', '--only', type, '--project', projectId];
 
   const { resolveFirebaseCommand } = await import('$utils/firebase_tools.ts');
   const resolvedCmd = await resolveFirebaseCommand();
+
+  logger.info(`Starting ${type} emulator (firebase-tools v${resolvedCmd.version})...`);
 
   const emulatorEnv: Record<string, string> = {
     ...process.env,
@@ -162,8 +174,6 @@ const startRulesEmulator = async (options: {
     emulatorEnv.FIREBASE_STORAGE_EMULATOR_HOST = `127.0.0.1:${port}`;
   }
 
-  logger.debug(`Starting ${type} emulator on port ${port}...`);
-
   const subprocess = execa(resolvedCmd.cmd, [...resolvedCmd.args, ...commandArgs], {
     cwd: tempDir,
     env: emulatorEnv,
@@ -171,7 +181,9 @@ const startRulesEmulator = async (options: {
     stderr: 'pipe',
   });
 
-  await waitForEmulatorReady(subprocess, type, port);
+  await waitForEmulatorReady(subprocess, port, timeoutMs);
+
+  logger.debug(`${type} emulator ready on port ${port}`);
 
   return { subprocess, env: emulatorEnv };
 };
@@ -231,6 +243,26 @@ const runTests = async (options: {
 };
 
 /**
+ * Kills the emulator subprocess gracefully, then forcefully if needed.
+ * @param subprocess - The execa subprocess to kill.
+ * @param type - The emulator type (for logging).
+ */
+const killEmulator = async (
+  subprocess: ReturnType<typeof execa>,
+  type: RulesTestTarget
+): Promise<void> => {
+  if (subprocess.killed) {
+    return;
+  }
+  logger.debug(`Shutting down ${type} emulator...`);
+  subprocess.kill('SIGTERM');
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  if (!subprocess.killed) {
+    subprocess.kill('SIGKILL');
+  }
+};
+
+/**
  * Runs rules tests for a single target.
  * @param options - The test configuration.
  * @returns Whether the tests passed.
@@ -239,8 +271,9 @@ const runTargetTests = async (options: {
   targetConfig: TestTargetConfig;
   rulesDirectory: string;
   watch?: boolean;
+  timeoutMs: number;
 }): Promise<boolean> => {
-  const { targetConfig, rulesDirectory, watch } = options;
+  const { targetConfig, rulesDirectory, watch, timeoutMs } = options;
   const { type, rulesFile, testPattern, projectId } = targetConfig;
 
   logger.info(chalk.bold.cyan(`\n🔥 Testing ${type} rules...`));
@@ -268,6 +301,7 @@ const runTargetTests = async (options: {
       type,
       port,
       projectId,
+      timeoutMs,
     });
     emulatorSubprocess = subprocess;
 
@@ -277,12 +311,7 @@ const runTargetTests = async (options: {
     success = false;
   } finally {
     if (emulatorSubprocess) {
-      logger.debug(`Shutting down ${type} emulator...`);
-      emulatorSubprocess.kill('SIGTERM');
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      if (!emulatorSubprocess.killed) {
-        emulatorSubprocess.kill('SIGKILL');
-      }
+      await killEmulator(emulatorSubprocess, type);
     }
   }
 
@@ -341,14 +370,23 @@ export const testRulesAction = async (cliOptions: TestRulesCliOptions) => {
     exit(1);
   }
 
+  const timeoutMs = (testRulesOptions.timeout ?? 60) * 1000;
+
   let allPassed = true;
 
-  for (const target of targets) {
-    const passed = await runTargetTests({
-      targetConfig: target,
-      rulesDirectory: testRulesOptions.rulesDirectory,
-      watch: testRulesOptions.watch,
-    });
+  // Run targets in parallel since each uses its own ephemeral emulator
+  const results = await Promise.all(
+    targets.map((target) =>
+      runTargetTests({
+        targetConfig: target,
+        rulesDirectory: testRulesOptions.rulesDirectory,
+        watch: testRulesOptions.watch,
+        timeoutMs,
+      })
+    )
+  );
+
+  for (const passed of results) {
     if (!passed) {
       allPassed = false;
     }
@@ -374,4 +412,7 @@ export const testRulesCommand = new Command('test:rules')
   .option('--coverage', 'Show rule coverage (not yet implemented).')
   .option('--ci', 'Fail if any collection lacks tests (not yet implemented).')
   .option('--only <only>', 'Only test specific targets (e.g., "firestore,storage").')
+  .option('--timeout <seconds>', 'Emulator startup timeout in seconds.', (val) =>
+    Number.parseInt(val, 10)
+  )
   .action(testRulesAction);

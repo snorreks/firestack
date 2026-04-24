@@ -12,7 +12,7 @@ const program = new Command();
 
 program
   .name('firestack')
-  .version('0.0.33')
+  .version('0.0.34')
   .description('CLI for building and deploying Firebase Cloud Functions.');
 
 program.addCommand(buildCommand);

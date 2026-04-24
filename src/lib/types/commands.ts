@@ -272,6 +272,7 @@ export type TestRulesCliOptions = BaseCliOptions & {
   coverage?: boolean;
   ci?: boolean;
   only?: string;
+  timeout?: number;
 };
 
 export type TestRulesCommandOptions = {
@@ -293,7 +294,7 @@ export type TestRulesCommandOptions = {
   coverage?: boolean;
   ci?: boolean;
   only?: string;
+  timeout?: number;
   emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
-  init: boolean;
 };
