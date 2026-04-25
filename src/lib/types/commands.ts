@@ -34,6 +34,7 @@ export type BaseCliOptions = {
   noInit?: boolean;
   force?: boolean;
   noForce?: boolean;
+  tsconfig?: string;
 };
 
 export type DeployCliOptions = BaseCliOptions & {
@@ -77,6 +78,7 @@ export type DeployCommandOptions = {
   all?: boolean;
   watch?: boolean;
   init?: boolean;
+  tsconfig?: string;
 };
 
 export type EmulateCliOptions = BaseCliOptions & {
@@ -117,6 +119,7 @@ export type EmulateCommandOptions = {
   emulators?: FirebaseEmulator[];
   keepNames?: boolean;
   force?: boolean;
+  tsconfig?: string;
 };
 
 export type LogsCliOptions = BaseCliOptions & {
@@ -265,6 +268,7 @@ export type BuildCommandOptions = {
   nodeVersion?: NodeVersion;
   minify?: boolean;
   sourcemap?: boolean;
+  tsconfig?: string;
 };
 
 export type TestRulesCliOptions = BaseCliOptions & {

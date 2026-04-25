@@ -34,6 +34,7 @@ export const buildCommand = new Command('build')
   .option('--no-minify', 'Do not minify the output.')
   .option('--sourcemap', 'Whether to generate sourcemaps.')
   .option('--no-sourcemap', 'Do not generate sourcemaps.')
+  .option('--tsconfig <tsconfig>', 'Path to the tsconfig file to use for the build.')
   .action(async (input: string, output: string, cliOptions: BuildOptions) => {
     const inputPath = join(cwd(), input);
     const outputPath = join(cwd(), output);
@@ -62,6 +63,7 @@ export const buildCommand = new Command('build')
         nodeVersion,
         minify: options.minify,
         sourcemap: options.sourcemap,
+        tsconfig: options.tsconfig,
       });
 
       // 4. Post-build tasks: Generate package.json in the output directory

@@ -299,6 +299,7 @@ const performBuild = async (options: {
       external: firestackOptions?.external ?? deployOptions.external,
       nodeVersion,
       keepNames: deployOptions.keepNames,
+      tsconfig: deployOptions.tsconfig,
     });
     return true;
   } catch (buildError) {

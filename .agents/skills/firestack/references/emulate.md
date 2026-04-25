@@ -80,4 +80,5 @@ The emulator runs in the foreground. To stop it:
 | `--force` / `--no-force` | Kill existing port processes (default: `false`). |
 | `--projectId <id>` | Override Firebase project ID. |
 | `--only <services>` | Limited services (e.g., `functions,firestore`). |
+| `--tsconfig <path>` | Path to a custom `tsconfig.json` (e.g., `tsconfig.app.json`). |
 | `--verbose` | Stream full emulator logs. |

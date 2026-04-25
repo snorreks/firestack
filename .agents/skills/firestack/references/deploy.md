@@ -82,4 +82,5 @@ After deployment succeeds:
 | `--all` | Deploy both functions AND rules. |
 | `--concurrency <num>` | Parallel deployments (default: `5`). |
 | `--retryAmount <num>` | Auto-retry failed deployments. |
+| `--tsconfig <path>` | Path to a custom `tsconfig.json` (e.g., `tsconfig.app.json`). |
 | `--verbose` | Show full Firebase CLI output. |

@@ -163,6 +163,7 @@ const buildEmulatorFunctions = async (options: {
     minify: emulateOptions.minify,
     sourcemap: emulateOptions.sourcemap,
     nodeVersion: emulateOptions.nodeVersion,
+    tsconfig: emulateOptions.tsconfig,
   });
 
   const packageJson = await createPackageJson({
@@ -446,6 +447,7 @@ export const emulateCommand = new Command('emulate')
     '--only <only>',
     'Only start the emulator for specified services (e.g., "functions,firestore").'
   )
+  .option('--tsconfig <tsconfig>', 'Path to the tsconfig file to use for the build.')
   .action(async (cliOptions: EmulateOptions) => {
     const emulateOptions = await getEmulateOptions(cliOptions);
 

@@ -175,6 +175,7 @@ Builds and deploys functions to Firebase.
 - `--all`: Deploy both functions AND rules in one command.
 - `--concurrency <num>`: Parallel deployments (default: `5`).
 - `--retryAmount <num>`: Auto-retry failed deployments.
+- `--tsconfig <path>`: Path to a custom `tsconfig.json` (e.g., `tsconfig.app.json`).
 - `--verbose`: Show detailed Firebase output.
 
 ### `firestack emulate`
@@ -188,6 +189,7 @@ Starts the Firebase emulator with live reload and real-time UI detection.
 - `--projectId <id>`: Override the Firebase project ID for emulation.
 - `--only <services>`: Only start specified services (e.g., `functions,firestore`).
 - `--flavor <flavor>`: The flavor context for emulation.
+- `--tsconfig <path>`: Path to a custom `tsconfig.json` (e.g., `tsconfig.app.json`).
 - `--verbose`: Stream full emulator logs to the console.
 
 ### `firestack test:rules`

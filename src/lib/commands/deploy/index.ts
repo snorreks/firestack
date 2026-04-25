@@ -241,4 +241,5 @@ export const deployCommand = new Command('deploy')
     '--packageManager <packageManager>',
     'The package manager to use (npm, yarn, pnpm, bun, global).'
   )
+  .option('--tsconfig <tsconfig>', 'Path to the tsconfig file to use for the build.')
   .action(deployAction);
