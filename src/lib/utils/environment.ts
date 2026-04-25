@@ -5,7 +5,27 @@ import { logger } from '$logger';
 
 const invalidKeys = ['FIREBASE_SERVICE_ACCOUNT', 'GCLOUD_PROJECT', 'GOOGLE_CLOUD_PROJECT'] as const;
 
-const isValidKey = (key: string) => !invalidKeys.includes(key as (typeof invalidKeys)[number]);
+// Prefixes we NEVER want to pull from process.env into our app deployments
+const dangerousSystemPrefixes = ['GITHUB_', 'RUNNER_', 'NPM_', 'BUN_', 'AWS_'];
+
+const isValidKey = (key: string): boolean => {
+  // 1. Reject explicitly invalid keys
+  if (invalidKeys.includes(key as (typeof invalidKeys)[number])) {
+    return false;
+  }
+
+  // 2. Reject keys that don't match the strict UPPERCASE_SNAKE_CASE format
+  if (!/^[A-Z_][A-Z0-9_]*$/.test(key)) {
+    return false;
+  }
+
+  const isDangerous = dangerousSystemPrefixes.some((prefix) => key.startsWith(prefix));
+  if (isDangerous || key === 'PATH' || key === 'HOME') {
+    return false;
+  }
+
+  return true;
+};
 
 /**
  * Gets the environment variables for the given flavor.
@@ -24,11 +44,27 @@ export const getEnvironment = async (flavor: string): Promise<Record<string, str
     const envContent = await readFile(envPath, 'utf-8');
     envVars = envContent.split('\n').reduce(
       (acc, line) => {
-        const [key, ...rest] = line.split('=');
-        const value = rest.join('=');
+        const trimmedLine = line.trim(); // Removes \r and accidental whitespace
+
+        // Silently skip empty lines and comments
+        if (!trimmedLine || trimmedLine.startsWith('#')) {
+          return acc;
+        }
+
+        const [rawKey, ...rest] = trimmedLine.split('=');
+        const key = rawKey.trim();
+        let value = rest.join('=').trim();
+
+        // Strip surrounding quotes if present (e.g., VAR="foo" -> foo)
+        value = value.replace(/^["']|["']$/g, '');
+
         if (key && value && isValidKey(key)) {
           acc[key] = value;
+        } else if (key) {
+          // Only warn if we are actually rejecting a real key attempt
+          logger.warn(`⚠️ Skipping invalid Firebase env key from file: ${key}`);
         }
+
         return acc;
       },
       {} as Record<string, string>
