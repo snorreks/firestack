@@ -33,8 +33,9 @@ export const createFirebaseConfig = (options: {
 const getDependencies = async (options: {
   isEmulator?: boolean;
   external?: string[];
+  engine?: string;
 }): Promise<Record<string, string> | undefined> => {
-  const { external = [], isEmulator } = options;
+  const { external = [], isEmulator, engine } = options;
   if (!isEmulator && external.length === 0) {
     return undefined;
   }
@@ -56,6 +57,11 @@ const getDependencies = async (options: {
     dependencies[ext] = '*';
   }
 
+  // Firebase requires the Functions Framework when using Bun
+  if (engine === 'bun' && !isEmulator && external.length > 0) {
+    dependencies['@google-cloud/functions-framework'] = '^3.0.0';
+  }
+
   return dependencies;
 };
 
@@ -70,6 +76,7 @@ export const createPackageJson = async (options: {
   functionName?: string;
   isEmulator?: boolean;
   main?: string;
+  engine?: string;
 }): Promise<string> => {
   const { nodeVersion, functionName = 'functions', main = 'index.js' } = options;
   const dependencies = await getDependencies(options);

@@ -231,6 +231,7 @@ const setupDirectories = async (options: {
       functionName,
       isEmulator: deployOptions.isEmulator,
       main: 'src/index.js',
+      engine: deployOptions.engine,
     }),
   ]);
 
@@ -332,7 +333,8 @@ const installDependencies = async (options: {
   const external = firestackOptions?.external ?? deployOptions.external;
   if (!external || external.length === 0) return true;
 
-  const result = await executeCommand('npm', {
+  const isBun = deployOptions.engine === 'bun';
+  const result = await executeCommand(isBun ? 'bun' : 'npm', {
     args: ['install'],
     cwd: outputDirectory,
     packageManager: 'global',

@@ -4,8 +4,43 @@ import { cwd, env as processEnv } from 'node:process';
 import { logger } from '$logger';
 
 // --- Fallback Configuration (Used if .env.example is missing) ---
-const invalidKeys = ['FIREBASE_SERVICE_ACCOUNT', 'GCLOUD_PROJECT', 'GOOGLE_CLOUD_PROJECT'];
-const dangerousSystemPrefixes = ['GITHUB_', 'RUNNER_'];
+const invalidKeys = [
+  'FIREBASE_SERVICE_ACCOUNT',
+  'GCLOUD_PROJECT',
+  'GOOGLE_CLOUD_PROJECT',
+  'GOOGLE_APPLICATION_CREDENTIALS',
+  'PWD',
+  'OLDPWD',
+  'CI',
+  '_',
+  'SHLVL',
+  'PS1',
+  'PS2',
+  'SHELL',
+  'TERM',
+  'TMPDIR',
+  'LOGNAME',
+  'USER',
+  'USERNAME',
+  'MAIL',
+  'HOSTNAME',
+  'DISPLAY',
+  'FIREBASE_TOKEN',
+];
+const dangerousSystemPrefixes = [
+  'GITHUB_',
+  'RUNNER_',
+  'BASH_',
+  'ZSH_',
+  'LC_',
+  'XDG_',
+  'SSH_',
+  'npm_',
+  'NODE_',
+  'BUN_',
+  'GOCLOUD_',
+  'GCLOUD_',
+];
 
 const isSafeFallbackKey = (key: string): boolean => {
   if (invalidKeys.includes(key)) return false;
