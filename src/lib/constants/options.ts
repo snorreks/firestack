@@ -59,6 +59,7 @@ export const VALID_FIREBASE_OPTIONS = [
 ] as const;
 
 export const VALID_FIRESTACK_OPTIONS = [
+  'keepNames',
   'functionName',
   'nodeVersion',
   'assets',

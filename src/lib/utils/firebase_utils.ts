@@ -16,7 +16,7 @@ export const createFirebaseConfig = (options: {
   const config = {
     functions: {
       runtime: `nodejs${nodeVersion}`,
-      source: 'src',
+      source: '.',
     },
   };
 
@@ -69,15 +69,16 @@ export const createPackageJson = async (options: {
   external?: string[];
   functionName?: string;
   isEmulator?: boolean;
+  main?: string;
 }): Promise<string> => {
-  const { nodeVersion, functionName = 'functions' } = options;
+  const { nodeVersion, functionName = 'functions', main = 'index.js' } = options;
   const dependencies = await getDependencies(options);
 
   const pkg: Record<string, unknown> = {
     name: `firestack-function-${functionName.replace(/_/g, '-')}`,
     private: true,
     type: 'module',
-    main: 'index.js',
+    main,
     engines: {
       node: nodeVersion,
     },

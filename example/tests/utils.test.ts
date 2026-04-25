@@ -101,7 +101,7 @@ describe('firebase_utils', () => {
     const json = createFirebaseConfig({ nodeVersion: '22' });
     const config = JSON.parse(json);
     expect(config.functions.runtime).toBe('nodejs22');
-    expect(config.functions.source).toBe('src');
+    expect(config.functions.source).toBe('.');
   });
 
   test('toDotEnvironmentCode formats env vars correctly', () => {

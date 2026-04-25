@@ -230,12 +230,13 @@ const setupDirectories = async (options: {
       external: firestackOptions?.external ?? deployOptions.external,
       functionName,
       isEmulator: deployOptions.isEmulator,
+      main: 'src/index.js',
     }),
   ]);
 
   await Promise.all([
     writeFile(join(outputDirectory, 'firebase.json'), firebaseConfig, 'utf-8'),
-    writeFile(join(outputDirectory, 'src', 'package.json'), packageJson, 'utf-8'),
+    writeFile(join(outputDirectory, 'package.json'), packageJson, 'utf-8'),
   ]);
 
   // Handle assets
@@ -333,7 +334,7 @@ const installDependencies = async (options: {
 
   const result = await executeCommand('npm', {
     args: ['install'],
-    cwd: join(outputDirectory, 'src'),
+    cwd: outputDirectory,
     packageManager: 'global',
     stdout: 'pipe',
     stderr: 'pipe',

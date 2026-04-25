@@ -170,9 +170,10 @@ const buildEmulatorFunctions = async (options: {
     nodeVersion: emulateOptions.nodeVersion,
     functionName: 'emulator',
     isEmulator: true,
+    main: 'src/index.js',
   });
 
-  await writeFile(join(outputDir, 'src', 'package.json'), packageJson);
+  await writeFile(join(outputDir, 'package.json'), packageJson);
 
   const emulatorEnv: Record<string, string> = {};
   for (const [key, value] of Object.entries(env)) {
@@ -223,7 +224,7 @@ const generateFirebaseJson = async (options: {
   const firebaseConfig: Record<string, unknown> = {
     functions: [
       {
-        source: 'src', // Relative to firebase.json in dist/emulator
+        source: '.', // Relative to firebase.json in dist/emulator
         codebase: 'default',
         runtime: `nodejs${emulateOptions.nodeVersion}`,
       },

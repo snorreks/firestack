@@ -63,7 +63,7 @@ describe('Firestack CLI Extended Tests', () => {
       const distDir = join(FUNCTIONS_DIR, 'dist', 'auth_created_renamed');
       expect(await exists(distDir)).toBe(true);
 
-      const pkgJsonPath = join(distDir, 'src', 'package.json');
+      const pkgJsonPath = join(distDir, 'package.json');
       expect(await exists(pkgJsonPath)).toBe(true);
 
       const pkgJson = JSON.parse(await readFile(pkgJsonPath, 'utf-8'));
@@ -153,7 +153,6 @@ describe('Firestack CLI Extended Tests', () => {
         FUNCTIONS_DIR,
         'dist',
         'auth_created_renamed',
-        'src',
         'package.json'
       );
       const pkgJson = JSON.parse(await readFile(pkgJsonPath, 'utf-8'));
