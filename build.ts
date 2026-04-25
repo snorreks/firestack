@@ -78,17 +78,10 @@ print(f"Created {skill_file}")`,
 
   const compileWithZip = (): Promise<void> => {
     return new Promise((resolve, reject) => {
-      const proc = spawn(
-        'sh',
-        [
-          '-c',
-          `cd "${skillDir}" && zip -r "${skillFile}" .`,
-        ],
-        {
-          cwd: __dirname,
-          stdio: 'inherit',
-        }
-      );
+      const proc = spawn('sh', ['-c', `cd "${skillDir}" && zip -r "${skillFile}" .`], {
+        cwd: __dirname,
+        stdio: 'inherit',
+      });
       proc.on('close', (code) => {
         if (code === 0) resolve();
         else reject(new Error(`zip failed with code ${code}`));
@@ -117,7 +110,7 @@ print(f"Created {skill_file}")`,
 
   console.warn(
     '⚠️  Neither python3 nor zip command found. Skipping firestack.skill compilation.\n' +
-    '   Install python3 or zip to enable automatic skill compilation on build.'
+      '   Install python3 or zip to enable automatic skill compilation on build.'
   );
 };
 

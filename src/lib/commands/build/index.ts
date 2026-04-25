@@ -8,7 +8,7 @@ import type { BaseCliOptions } from '$types';
 import { buildFunction } from '$utils/build_utils.ts';
 import { exists } from '$utils/common.ts';
 import { createPackageJson } from '$utils/firebase_utils.ts';
-import { getBaseOptions } from '$utils/options';
+import { getBuildOptions } from '$utils/options';
 
 /**
  * Options for the build command.
@@ -48,7 +48,7 @@ export const buildCommand = new Command('build')
     const outputDir = dirname(outputPath);
 
     try {
-      const options = await getBaseOptions(cliOptions);
+      const options = await getBuildOptions(cliOptions);
 
       // 2. Prepare Output Directory
       await mkdir(outputDir, { recursive: true });

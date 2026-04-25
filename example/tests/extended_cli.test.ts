@@ -149,12 +149,7 @@ describe('Firestack CLI Extended Tests', () => {
         { cwd: FUNCTIONS_DIR }
       );
 
-      const pkgJsonPath = join(
-        FUNCTIONS_DIR,
-        'dist',
-        'auth_created_renamed',
-        'package.json'
-      );
+      const pkgJsonPath = join(FUNCTIONS_DIR, 'dist', 'auth_created_renamed', 'package.json');
       const pkgJson = JSON.parse(await readFile(pkgJsonPath, 'utf-8'));
       expect(pkgJson.engines.node).toBe('20');
 

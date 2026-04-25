@@ -241,6 +241,27 @@ export const getRulesOptions = async (
   return options;
 };
 
+export const getBuildOptions = async (cliOptions: BaseCliOptions) => {
+  const config = await getFirestackConfig();
+  const firstFlavor = getFirstFlavor(config);
+  const flavor = cliOptions.flavor ?? firstFlavor;
+
+  const minify = cliOptions.noMinify ? false : (cliOptions.minify ?? config.minify ?? true);
+  const sourcemap = cliOptions.noSourcemap
+    ? false
+    : (cliOptions.sourcemap ?? config.sourcemap ?? true);
+
+  return {
+    config,
+    flavor,
+    nodeVersion: cliOptions.nodeVersion || config.nodeVersion || DEFAULT_NODE_VERSION,
+    minify,
+    sourcemap,
+    external: cliOptions.external || config.external || [],
+    tsconfig: cliOptions.tsconfig,
+  };
+};
+
 export const getTestRulesOptions = async (
   cliOptions: TestRulesCliOptions
 ): Promise<TestRulesCommandOptions> => {
