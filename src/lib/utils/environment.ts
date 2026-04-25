@@ -3,86 +3,100 @@ import { join } from 'node:path';
 import { cwd, env as processEnv } from 'node:process';
 import { logger } from '$logger';
 
-const invalidKeys = ['FIREBASE_SERVICE_ACCOUNT', 'GCLOUD_PROJECT', 'GOOGLE_CLOUD_PROJECT'] as const;
+// --- Fallback Configuration (Used if .env.example is missing) ---
+const invalidKeys = ['FIREBASE_SERVICE_ACCOUNT', 'GCLOUD_PROJECT', 'GOOGLE_CLOUD_PROJECT'];
+const dangerousSystemPrefixes = ['GITHUB_', 'RUNNER_'];
 
-// Prefixes we NEVER want to pull from process.env into our app deployments
-const dangerousSystemPrefixes = ['GITHUB_', 'RUNNER_', 'NPM_', 'BUN_', 'AWS_'];
-
-const isValidKey = (key: string): boolean => {
-  // 1. Reject explicitly invalid keys
-  if (invalidKeys.includes(key as (typeof invalidKeys)[number])) {
-    return false;
-  }
-
-  // 2. Reject keys that don't match the strict UPPERCASE_SNAKE_CASE format
-  if (!/^[A-Z_][A-Z0-9_]*$/.test(key)) {
-    return false;
-  }
-
-  const isDangerous = dangerousSystemPrefixes.some((prefix) => key.startsWith(prefix));
-  if (isDangerous || key === 'PATH' || key === 'HOME') {
-    return false;
-  }
-
+const isSafeFallbackKey = (key: string): boolean => {
+  if (invalidKeys.includes(key)) return false;
+  if (!/^[A-Z_][A-Z0-9_]*$/.test(key)) return false;
+  if (dangerousSystemPrefixes.some((prefix) => key.startsWith(prefix))) return false;
+  if (key === 'PATH' || key === 'HOME') return false;
   return true;
 };
+// ----------------------------------------------------------------
 
 /**
  * Gets the environment variables for the given flavor.
- * Loads `.env.{flavor}` as the base, then overrides with `process.env`.
- * This allows CI pipelines to inject secrets without modifying files.
- * @param flavor The flavor to get the environment variables for.
+ * Reads `.env.{flavor}` without key restrictions.
+ * Overrides with `process.env` safely by checking `.env.example` (or falling back to strict regex).
+ * * @param flavor The flavor to get the environment variables for.
  * @returns The merged environment variables.
  */
 export const getEnvironment = async (flavor: string): Promise<Record<string, string>> => {
   const envPath = join(cwd(), `.env.${flavor}`);
+  const examplePath = join(cwd(), '.env.example');
 
-  let envVars: Record<string, string> = {};
+  const envVars: Record<string, string> = {};
 
-  // 1. Load from .env.{flavor} as the base
+  // 1. Load `.env.{flavor}` freely
   try {
     const envContent = await readFile(envPath, 'utf-8');
-    envVars = envContent.split('\n').reduce(
-      (acc, line) => {
-        const trimmedLine = line.trim(); // Removes \r and accidental whitespace
+    for (const line of envContent.split('\n')) {
+      const trimmedLine = line.trim();
+      if (!trimmedLine || trimmedLine.startsWith('#')) continue;
 
-        // Silently skip empty lines and comments
-        if (!trimmedLine || trimmedLine.startsWith('#')) {
-          return acc;
-        }
+      const [rawKey, ...rest] = trimmedLine.split('=');
+      const key = rawKey.trim();
 
-        const [rawKey, ...rest] = trimmedLine.split('=');
-        const key = rawKey.trim();
+      if (key) {
         let value = rest.join('=').trim();
-
-        // Strip surrounding quotes if present (e.g., VAR="foo" -> foo)
-        value = value.replace(/^["']|["']$/g, '');
-
-        if (key && value && isValidKey(key)) {
-          acc[key] = value;
-        } else if (key) {
-          // Only warn if we are actually rejecting a real key attempt
-          logger.warn(`⚠️ Skipping invalid Firebase env key from file: ${key}`);
-        }
-
-        return acc;
-      },
-      {} as Record<string, string>
-    );
+        value = value.replace(/^["']|["']$/g, ''); // Strip surrounding quotes
+        envVars[key] = value;
+      }
+    }
     logger.debug(`Loaded environment variables from .env.${flavor}`);
   } catch (e) {
     const error = e as Error & { code?: string };
     if (error.code === 'ENOENT') {
-      logger.debug(`No .env.${flavor} file found, using process.env only.`);
+      logger.debug(`No .env.${flavor} file found.`);
     } else {
       throw e;
     }
   }
 
-  // 2. Merge process.env on top (CI-friendly override)
+  // 2. Determine Allowlist for process.env
+  let allowedKeys: Set<string> | null = null;
+  try {
+    const exampleContent = await readFile(examplePath, 'utf-8');
+    allowedKeys = new Set<string>();
+
+    // Grab keys from .env.example
+    for (const line of exampleContent.split('\n')) {
+      const trimmedLine = line.trim();
+      if (!trimmedLine || trimmedLine.startsWith('#')) continue;
+
+      const key = trimmedLine.split('=')[0].trim();
+      if (key) allowedKeys.add(key);
+    }
+
+    // Also explicitly allow any keys we just parsed from .env.{flavor}
+    for (const key of Object.keys(envVars)) {
+      allowedKeys.add(key);
+    }
+
+    logger.debug(`Loaded allowlist from .env.example for process.env merging.`);
+  } catch (e) {
+    const error = e as Error & { code?: string };
+    if (error.code !== 'ENOENT') throw e;
+    // We intentionally leave allowedKeys as `null` here to trigger the fallback logic below
+    logger.debug(`No .env.example found. Falling back to strict regex filtering for process.env.`);
+  }
+
+  // 3. Merge process.env safely
   for (const [key, value] of Object.entries(processEnv)) {
-    if (value && isValidKey(key)) {
-      envVars[key] = value;
+    if (!value) continue;
+
+    if (allowedKeys) {
+      // ✅ Allowlist approach (Preferred)
+      if (allowedKeys.has(key)) {
+        envVars[key] = value;
+      }
+    } else {
+      // 🛡️ Fallback regex/blocklist approach
+      if (isSafeFallbackKey(key)) {
+        envVars[key] = value;
+      }
     }
   }
 
