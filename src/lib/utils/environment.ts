@@ -3,6 +3,10 @@ import { join } from 'node:path';
 import { cwd, env as processEnv } from 'node:process';
 import { logger } from '$logger';
 
+const invalidKeys = ['FIREBASE_SERVICE_ACCOUNT', 'GCLOUD_PROJECT', 'GOOGLE_CLOUD_PROJECT'] as const;
+
+const isValidKey = (key: string) => !invalidKeys.includes(key as (typeof invalidKeys)[number]);
+
 /**
  * Gets the environment variables for the given flavor.
  * Loads `.env.{flavor}` as the base, then overrides with `process.env`.
@@ -22,7 +26,7 @@ export const getEnvironment = async (flavor: string): Promise<Record<string, str
       (acc, line) => {
         const [key, ...rest] = line.split('=');
         const value = rest.join('=');
-        if (key && value && !key.startsWith('FIREBASE_SERVICE_ACCOUNT')) {
+        if (key && value && isValidKey(key)) {
           acc[key] = value;
         }
         return acc;
@@ -41,7 +45,7 @@ export const getEnvironment = async (flavor: string): Promise<Record<string, str
 
   // 2. Merge process.env on top (CI-friendly override)
   for (const [key, value] of Object.entries(processEnv)) {
-    if (value && !key.startsWith('FIREBASE_SERVICE_ACCOUNT')) {
+    if (value && isValidKey(key)) {
       envVars[key] = value;
     }
   }
