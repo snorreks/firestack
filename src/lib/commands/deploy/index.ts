@@ -186,8 +186,14 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
 
   // 8. Final Status Check
   if (failedFunctions.length > 0) {
+    const failedNames = failedFunctions.map((f) => f.functionName).join(', ');
     logger.error(
-      chalk.bold.red(`\n❌ Deployment failed for ${failedFunctions.length} function(s).`)
+      chalk.bold.red(
+        `\n❌ Deployment failed for ${failedFunctions.length} function(s): ${chalk.red(failedNames)}`
+      )
+    );
+    logger.info(
+      chalk.dim(`💡 To retry failed functions, run: ${chalk.cyan(`deploy --only ${failedNames}`)}`)
     );
     exit(1);
   }

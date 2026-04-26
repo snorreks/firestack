@@ -1,4 +1,5 @@
 import { copyFile, mkdir, rm, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { cwd } from 'node:process';
 import chalk from 'chalk';
@@ -171,7 +172,13 @@ export const executeFunctionDeployment = async (options: {
   }
 
   try {
-    // 1. Dependencies
+    // 1. Clean node_modules to prevent ENOTDIR errors from corrupted nested deps
+    const nodeModulesPath = join(outputDirectory, 'node_modules');
+    if (existsSync(nodeModulesPath)) {
+      await rm(nodeModulesPath, { recursive: true, force: true });
+    }
+
+    // 2. Dependencies
     const installSuccess = await installDependencies({
       outputDirectory,
       deployOptions,
@@ -179,7 +186,7 @@ export const executeFunctionDeployment = async (options: {
     });
     if (!installSuccess) return { functionName, status: 'failed' };
 
-    // 2. Deploy
+    // 3. Deploy
     const deploySuccess = await deployAction({ functionName, outputDirectory, deployOptions });
     if (!deploySuccess) return { functionName, status: 'failed' };
 
@@ -335,7 +342,7 @@ const installDependencies = async (options: {
 
   const isBun = deployOptions.engine === 'bun';
   const result = await executeCommand(isBun ? 'bun' : 'npm', {
-    args: ['install'],
+    args: ['install', '--legacy-peer-deps'],
     cwd: outputDirectory,
     packageManager: 'global',
     stdout: 'pipe',
