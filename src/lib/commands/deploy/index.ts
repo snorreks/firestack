@@ -106,6 +106,7 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
           environment,
           functionsDirectoryPath,
           metadata,
+          cachedChecksums: previousCache,
         })
     ),
     deployOptions.concurrency

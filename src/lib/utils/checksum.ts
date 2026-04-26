@@ -77,7 +77,7 @@ export const checkForChanges = async (options: ChecksumData): Promise<ChecksumDa
           .join('')
       : '';
 
-    const allChecksums = await loadChecksums(options);
+    const allChecksums = options.cachedChecksums ?? (await loadChecksums(options));
     const cachedChecksum = options.checksum ?? allChecksums[options.functionName];
     const newChecksum = generateChecksum(newCode + environmentString);
 

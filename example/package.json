@@ -22,8 +22,8 @@
   },
   "devDependencies": {
     "typescript": "^6.0.3",
-    "@moonrepo/cli": "^2.2.2",
-    "@biomejs/biome": "^2.4.12"
+    "@moonrepo/cli": "^2.2.3",
+    "@biomejs/biome": "^2.4.13"
   },
   "dependencies": {
     "latest": "^0.2.0",

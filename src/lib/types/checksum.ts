@@ -6,4 +6,5 @@ export type ChecksumData = {
   outputDirectory: string;
   checksum?: string;
   environment?: Record<string, string>;
+  cachedChecksums?: Record<string, string>;
 };

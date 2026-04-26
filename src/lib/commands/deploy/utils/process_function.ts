@@ -1,5 +1,5 @@
-import { copyFile, mkdir, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { copyFile, mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
 import { cwd } from 'node:process';
 import chalk from 'chalk';
@@ -50,6 +50,7 @@ export const prepareFunction = async (options: {
   environment: Record<string, string>;
   functionsDirectoryPath: string;
   metadata?: FunctionMetadata;
+  cachedChecksums?: Record<string, string>;
 }): Promise<PrepareResult> => {
   const { deployOptions, functionPath, environment, functionsDirectoryPath, metadata } = options;
 
@@ -120,6 +121,7 @@ export const prepareFunction = async (options: {
       force: deployOptions.force,
       outputDirectory: join(cwd(), 'dist'),
       environment: envNeeded,
+      cachedChecksums: options.cachedChecksums,
     });
 
     if (!deployFunctionData) {
