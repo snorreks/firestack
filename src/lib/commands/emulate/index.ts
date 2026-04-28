@@ -222,18 +222,21 @@ const generateFirebaseJson = async (options: {
   }
 
   const firebaseConfig: Record<string, unknown> = {
-    functions: [
-      {
-        source: '.', // Relative to firebase.json in dist/emulator
-        codebase: 'default',
-        runtime: `nodejs${emulateOptions.nodeVersion}`,
-      },
-    ],
     emulators: {
       singleProjectMode: true,
       ui: { enabled: true, port: emulateOptions.emulatorPorts?.ui || 4000 },
     },
   };
+
+  if (functionFiles.length > 0) {
+    firebaseConfig.functions = [
+      {
+        source: '.', // Relative to firebase.json in dist/emulator
+        codebase: 'default',
+        runtime: `nodejs${emulateOptions.nodeVersion}`,
+      },
+    ];
+  }
 
   const emulators = firebaseConfig.emulators as Record<string, unknown>;
 
@@ -459,35 +462,37 @@ export const emulateCommand = new Command('emulate')
       process.exit(1);
     }
 
-    if (!emulateOptions.functionsDirectory) {
-      throw new Error('Functions directory is required for emulation.');
-    }
-
     // Generate .env for emulator containing all flavor envs (minus service account)
     const env = await getEnvironment(emulateOptions.flavor);
 
-    const functionsPath = join(process.cwd(), emulateOptions.functionsDirectory);
-    const functionFiles = await findFunctions(functionsPath);
+    let functionsPath: string | undefined;
+    let functionFiles: string[] = [];
 
-    if (functionFiles.length === 0) {
-      logger.warn(chalk.yellow('⚠️  No functions found to emulate.'));
-      return;
+    if (emulateOptions.functionsDirectory) {
+      functionsPath = join(process.cwd(), emulateOptions.functionsDirectory);
+      functionFiles = await findFunctions(functionsPath);
+
+      if (functionFiles.length === 0) {
+        logger.info(chalk.yellow('⚠️  No functions found to emulate.'));
+      } else {
+        logger.info(chalk.dim(`Found ${functionFiles.length} functions to build.`));
+      }
     }
-
-    logger.info(chalk.dim(`Found ${functionFiles.length} functions to build.`));
 
     const outputDir = join(process.cwd(), 'dist', 'emulator');
     await mkdir(outputDir, { recursive: true });
 
-    logger.info(chalk.cyan('🛠️  Building functions for emulator...'));
-    await buildEmulatorFunctions({
-      functionFiles,
-      outputDir,
-      emulateOptions,
-      controllersPath: functionsPath,
-      env,
-    });
-    logger.info(chalk.green('✅ Build complete.'));
+    if (functionFiles.length > 0 && functionsPath) {
+      logger.info(chalk.cyan('🛠️  Building functions for emulator...'));
+      await buildEmulatorFunctions({
+        functionFiles,
+        outputDir,
+        emulateOptions,
+        controllersPath: functionsPath,
+        env,
+      });
+      logger.info(chalk.green('✅ Build complete.'));
+    }
 
     await generateFirebaseJson({ outputDir, emulateOptions, functionFiles });
 
@@ -590,7 +595,7 @@ export const emulateCommand = new Command('emulate')
       logger.info(chalk.green('👋 Emulator stopped.'));
     });
 
-    if (cliOptions.watch !== false) {
+    if (cliOptions.watch !== false && functionFiles.length > 0 && functionsPath) {
       watchAndRebuild({
         functionsPath,
         functionFiles,
