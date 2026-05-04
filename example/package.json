@@ -23,10 +23,10 @@
   "devDependencies": {
     "typescript": "^6.0.3",
     "@moonrepo/cli": "^2.2.3",
-    "@biomejs/biome": "^2.4.13"
+    "@biomejs/biome": "^2.4.14"
   },
   "dependencies": {
     "latest": "^0.2.0",
-    "zod": "^4.3.6"
+    "zod": "^4.4.3"
   }
 }

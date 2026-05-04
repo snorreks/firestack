@@ -2,7 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "paths": {
-      "$configs/*": ["./src/configs/*"]
+      "$configs/*": ["./src/configs/*"],
+      "@shared/utils": ["../../packages/utils/src"],
+      "@shared/utils/*": ["../../packages/utils/src/lib/*"]
     }
   },
   "include": ["src/**/*", "scripts/**/*", "functions-cache.ts"],
