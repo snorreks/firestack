@@ -172,7 +172,10 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
     );
   }
 
-  // 7. Retry Logic for Failed Functions
+  // 7. Cleanup Warning Summary
+  const cleanupWarnings = finalResults.filter((r) => r.cleanupWarning);
+
+  // 8. Retry Logic for Failed Functions
   let failedFunctions = finalResults.filter((r) => r.status === 'failed');
 
   if (failedFunctions.length > 0) {
@@ -185,7 +188,7 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
     });
   }
 
-  // 8. Final Status Check
+  // 9. Final Status Check
   if (failedFunctions.length > 0) {
     const failedNames = failedFunctions.map((f) => f.functionName).join(', ');
     logger.error(
@@ -199,7 +202,21 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
     exit(1);
   }
 
-  // 9. Synchronize Remote Cache
+  if (cleanupWarnings.length > 0) {
+    const warningNames = cleanupWarnings.map((w) => w.functionName).join(', ');
+    logger.warn(
+      chalk.yellow(
+        `\n⚠️  Cleanup policy could not be set up for ${cleanupWarnings.length} function(s): ${chalk.bold(warningNames)}`
+      )
+    );
+    logger.info(
+      chalk.dim(
+        `💡 To fix this, run: ${chalk.cyan('firebase functions:artifacts:setpolicy')} or pass ${chalk.cyan('--force')} to automatically set up a cleanup policy.`
+      )
+    );
+  }
+
+  // 10. Synchronize Remote Cache
   if (remoteUtils.updateCacheCallable) {
     const latestLocalCache = await loadChecksums({
       outputDirectory: join(cwd(), 'dist'),

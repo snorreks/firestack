@@ -29,6 +29,7 @@ import type { FunctionMetadata } from './parse_function_metadata.ts';
 export type ProcessResult = {
   functionName: string;
   status: 'deployed' | 'skipped' | 'failed' | 'dry-run';
+  cleanupWarning?: string;
 };
 
 export type PrepareResult = {
@@ -189,12 +190,16 @@ export const executeFunctionDeployment = async (options: {
     if (!installSuccess) return { functionName, status: 'failed' };
 
     // 3. Deploy
-    const deploySuccess = await deployAction({ functionName, outputDirectory, deployOptions });
-    if (!deploySuccess) return { functionName, status: 'failed' };
+    const deployResult = await deployAction({ functionName, outputDirectory, deployOptions });
+    if (!deployResult.success) return { functionName, status: 'failed' };
 
     // 3. Cache
     await cacheChecksumLocal(deployFunctionData);
-    return { functionName, status: 'deployed' };
+    return {
+      functionName,
+      status: 'deployed',
+      cleanupWarning: deployResult.cleanupWarning,
+    };
   } catch (error) {
     logger.error(`❌ Failed to deploy ${functionName}: ${(error as Error).message}`);
     return { functionName, status: 'failed' };
@@ -363,7 +368,7 @@ const deployAction = async (options: {
   functionName: string;
   outputDirectory: string;
   deployOptions: DeployCommandOptions;
-}): Promise<boolean> => {
+}): Promise<{ success: boolean; cleanupWarning?: string }> => {
   const { functionName, outputDirectory, deployOptions } = options;
   if (!deployOptions.projectId) throw new Error('Project ID is required.');
 
@@ -389,7 +394,19 @@ const deployAction = async (options: {
 
     if (result.success) {
       logger.info(chalk.dim(`Successfully deployed ${functionName}.`));
-      return true;
+      return { success: true };
+    }
+
+    const combinedOutput = `${result.stdout}\n${result.stderr}`;
+    const isCleanupFailure = combinedOutput.includes('could not set up cleanup policy');
+
+    if (isCleanupFailure) {
+      logger.warn(
+        chalk.yellow(
+          `⚠️  ${functionName} deployed successfully, but cleanup policy could not be set up.`
+        )
+      );
+      return { success: true, cleanupWarning: combinedOutput.trim() };
     }
 
     logger.error(`❌ Failed to deploy ${functionName}.`);
@@ -399,9 +416,9 @@ const deployAction = async (options: {
     if (result.stdout && !deployOptions.verbose) {
       logger.error(chalk.dim(result.stdout));
     }
-    return false;
+    return { success: false };
   } catch (deployError) {
     logger.error(`Failed to deploy ${functionName}: ${(deployError as Error).message}`);
-    return false;
+    return { success: false };
   }
 };
