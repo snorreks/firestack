@@ -3,6 +3,7 @@ import { mkdtemp, rmdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { exists } from '../../src/lib/utils/common.ts';
+import { executeCommand } from '../../src/lib/utils/command.ts';
 import { findFreePort } from '../../src/lib/utils/find_free_port.ts';
 import { createFirebaseConfig, toDotEnvironmentCode } from '../../src/lib/utils/firebase_utils.ts';
 import {
@@ -157,5 +158,26 @@ describe('common', () => {
   test('exists returns false for missing file', async () => {
     const result = await exists('/nonexistent/path/to/file.txt');
     expect(result).toBe(false);
+  });
+});
+
+describe('executeCommand', () => {
+  test('strips node_modules/.bin from PATH when packageManager is global', async () => {
+    const originalPath = process.env.PATH;
+    const separator = process.platform === 'win32' ? ';' : ':';
+    const fakeBin = '/fake/project/node_modules/.bin';
+    process.env.PATH = `${fakeBin}${separator}${originalPath}`;
+
+    const result = await executeCommand('node', {
+      args: ['-e', 'console.log(process.env.PATH)'],
+      packageManager: 'global',
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+
+    process.env.PATH = originalPath;
+
+    expect(result.success).toBe(true);
+    expect(result.stdout).not.toContain(fakeBin);
   });
 });

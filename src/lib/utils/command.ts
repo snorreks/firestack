@@ -44,6 +44,17 @@ export const executeCommand = async (
 
   let finalCmd = cmd;
   let finalArgs = [...args];
+  let finalEnv = env;
+
+  if (packageManager === 'global') {
+    const pathEnv = process.env.PATH ?? '';
+    const separator = process.platform === 'win32' ? ';' : ':';
+    const cleanedPath = pathEnv
+      .split(separator)
+      .filter((segment) => !segment.replace(/\\/g, '/').includes('node_modules/.bin'))
+      .join(separator);
+    finalEnv = { ...env, PATH: cleanedPath };
+  }
 
   if (cmd === 'firebase') {
     if (packageManager === 'global') {
@@ -82,7 +93,7 @@ export const executeCommand = async (
   try {
     const subprocess = execa(finalCmd, finalArgs, {
       cwd,
-      env,
+      env: finalEnv,
       stdout: stdout ?? (isVerbose ? ['inherit', 'pipe'] : 'pipe'),
       stderr: stderr ?? (isVerbose ? ['inherit', 'pipe'] : 'pipe'),
     });
