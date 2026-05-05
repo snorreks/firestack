@@ -95,10 +95,12 @@ export const getEnvironment = async (flavor: string): Promise<Record<string, str
       const [rawKey, ...rest] = trimmedLine.split('=');
       const key = rawKey.trim();
 
-      if (key) {
+      if (key && isSafeFallbackKey(key)) {
         let value = rest.join('=').trim();
         value = value.replace(/^["']|["']$/g, ''); // Strip surrounding quotes
         envVars[key] = value;
+      } else {
+        logger.warn(`Invalid key in .env.${flavor}: ${key}. Skipping.`);
       }
     }
     logger.debug(`Loaded environment variables from .env.${flavor}`);
@@ -146,13 +148,14 @@ export const getEnvironment = async (flavor: string): Promise<Record<string, str
     if (allowedKeys) {
       // ✅ Allowlist approach (Preferred)
       if (allowedKeys.has(key)) {
+        if (!isSafeFallbackKey(key)) {
+          logger.warn(`Invalid key in process.env: ${key}. Skipping.`);
+          continue;
+        }
         envVars[key] = value;
       }
-    } else {
-      // 🛡️ Fallback regex/blocklist approach
-      if (isSafeFallbackKey(key)) {
-        envVars[key] = value;
-      }
+    } else if (isSafeFallbackKey(key)) {
+      envVars[key] = value;
     }
   }
 
