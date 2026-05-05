@@ -34,6 +34,7 @@ export type BaseCliOptions = {
   noInit?: boolean;
   force?: boolean;
   noForce?: boolean;
+  cloudCacheFileName?: string;
   tsconfig?: string;
 };
 
@@ -78,6 +79,7 @@ export type DeployCommandOptions = {
   skipRules?: boolean;
   watch?: boolean;
   init?: boolean;
+  cloudCacheFileName: string;
   tsconfig?: string;
 };
 
@@ -119,6 +121,7 @@ export type EmulateCommandOptions = {
   emulators?: FirebaseEmulator[];
   keepNames?: boolean;
   force?: boolean;
+  cloudCacheFileName: string;
   tsconfig?: string;
 };
 
@@ -159,6 +162,7 @@ export type LogsCommandOptions = {
   noWatch?: boolean;
   init?: boolean;
   noInit?: boolean;
+  cloudCacheFileName: string;
 };
 
 export type ScriptsCliOptions = BaseCliOptions;
@@ -189,6 +193,7 @@ export type ScriptsCommandOptions = {
   noWatch?: boolean;
   init?: boolean;
   noInit?: boolean;
+  cloudCacheFileName: string;
 };
 
 export type DeleteCliOptions = BaseCliOptions & {
@@ -224,6 +229,7 @@ export type DeleteCommandOptions = {
   noWatch?: boolean;
   init?: boolean;
   noInit?: boolean;
+  cloudCacheFileName: string;
 };
 
 export type RulesCliOptions = BaseCliOptions & {
@@ -259,6 +265,7 @@ export type RulesCommandOptions = {
   noWatch?: boolean;
   init?: boolean;
   noInit?: boolean;
+  cloudCacheFileName: string;
 };
 
 export type BuildCommandOptions = {
@@ -301,4 +308,5 @@ export type TestRulesCommandOptions = {
   timeout?: number;
   emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
+  cloudCacheFileName: string;
 };

@@ -29,6 +29,7 @@ export type FirestackConfig = {
   watch?: boolean;
   init?: boolean;
   force?: boolean;
+  cloudCacheFileName?: string;
   rulesTests?: {
     firestore?: RulesTestConfig;
     storage?: RulesTestConfig;

@@ -97,6 +97,8 @@ export const getBaseOptions = async (cliOptions: BaseCliOptions) => {
     emulatorPorts: cliOptions.emulatorPorts || config.emulatorPorts,
     keepNames: cliOptions.keepNames ?? config.keepNames,
     tsconfig: cliOptions.tsconfig,
+    cloudCacheFileName:
+      cliOptions.cloudCacheFileName || config.cloudCacheFileName || 'functions-cache.ts',
   };
 };
 

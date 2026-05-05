@@ -33,7 +33,12 @@ export const rulesAction = async (
   }
 
   // 1. Fetch cache context
-  const cacheContext = cliOptions.cacheContext ?? (await getCacheContext(rulesOptions.flavor));
+  const cacheContext =
+    cliOptions.cacheContext ??
+    (await getCacheContext({
+      flavor: rulesOptions.flavor,
+      cloudCacheFileName: rulesOptions.cloudCacheFileName,
+    }));
   const { remoteUtils, mergedCache: previousCache } = cacheContext;
 
   const rulesDir = join(cwd(), rulesOptions.rulesDirectory || 'src/rules');
@@ -305,6 +310,10 @@ export const rulesCommand = new Command('rules')
   .option('--projectId <projectId>', 'The Firebase project ID to deploy to.')
   .option('--only <only>', 'Only deploy the specified components (e.g., "firestore,storage").')
   .option('--force', 'Force deploy all rules, even if no files changed.')
+  .option(
+    '--cloudCacheFileName <cloudCacheFileName>',
+    'The name of the file used for the cloud cache.'
+  )
   .option('--minify', 'Will minify the functions.')
   .option('--no-minify', 'Do not minify the functions.')
   .option('--sourcemap', 'Whether to generate sourcemaps.')

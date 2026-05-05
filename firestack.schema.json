@@ -13,6 +13,11 @@
       "default": "src/controllers",
       "description": "Directory where your function controllers are located."
     },
+    "cloudCacheFileName": {
+      "type": "string",
+      "default": "functions-cache.ts",
+      "description": "The name of the file in the project root used to fetch and update the cloud cache."
+    },
     "rulesDirectory": {
       "type": "string",
       "default": "src/rules",

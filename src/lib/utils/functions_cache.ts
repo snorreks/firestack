@@ -12,12 +12,16 @@ type RemoteCacheModule = {
 
 /**
  * Fetches the complete cache context (local and remote) in parallel.
- * @param flavor The flavor to fetch the cache for.
+ * @param options - Configuration options
  * @returns The cache context.
  */
-export const getCacheContext = async (flavor: string): Promise<CacheContext> => {
+export const getCacheContext = async (options: {
+  flavor: string;
+  cloudCacheFileName: string;
+}): Promise<CacheContext> => {
+  const { flavor, cloudCacheFileName } = options;
   const [remoteUtils, localCache] = await Promise.all([
-    getRemoteCacheUtils(),
+    getRemoteCacheUtils(cloudCacheFileName),
     loadChecksums({
       outputDirectory: join(cwd(), 'dist'),
       flavor,
@@ -45,20 +49,23 @@ export const getCacheContext = async (flavor: string): Promise<CacheContext> => 
 };
 
 /**
- * Gets the remote cache utilities from functions-cache.ts (user provided script).
+ * Gets the remote cache utilities from the user provided cache script.
+ * @param cloudCacheFileName - The name of the cache file in the project root.
  * @returns An object containing the get and update functions for the remote cache.
  */
-export const getRemoteCacheUtils = async (): Promise<{
+export const getRemoteCacheUtils = async (
+  cloudCacheFileName: string
+): Promise<{
   getCacheCallable: FunctionsCacheGet | undefined;
   updateCacheCallable: FunctionsCacheUpdate | undefined;
 }> => {
-  const cacheFilePath = join(cwd(), 'functions-cache.ts');
+  const cacheFilePath = join(cwd(), cloudCacheFileName);
 
   if (!(await exists(cacheFilePath))) {
-    logger.debug('Remote cache user script (functions-cache.ts) not found');
+    logger.debug(`Remote cache user script (${cloudCacheFileName}) not found`);
     return { getCacheCallable: undefined, updateCacheCallable: undefined };
   }
-  logger.debug('Remote cache user script (functions-cache.ts) found!');
+  logger.debug(`Remote cache user script (${cloudCacheFileName}) found!`);
 
   try {
     const cacheModule = (await import(cacheFilePath)) as RemoteCacheModule;

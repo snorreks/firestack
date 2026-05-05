@@ -43,7 +43,10 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
   logger.info(chalk.bold.green('🚀 Starting deployment...'));
 
   const [cacheContext, environment] = await Promise.all([
-    getCacheContext(deployOptions.flavor || 'default'),
+    getCacheContext({
+      flavor: deployOptions.flavor || 'default',
+      cloudCacheFileName: deployOptions.cloudCacheFileName,
+    }),
     getEnvironment(deployOptions.flavor || 'default'),
   ]);
 
@@ -251,6 +254,10 @@ export const deployCommand = new Command('deploy')
   .option(
     '--functionsDirectory <functionsDirectory>',
     'The directory where the functions are located.'
+  )
+  .option(
+    '--cloudCacheFileName <cloudCacheFileName>',
+    'The name of the file used for the cloud cache.'
   )
   .option('--projectId <projectId>', 'The Firebase project ID to deploy to.')
   .option('--node-version <nodeVersion>', 'The Node.js version to use for the functions.')
