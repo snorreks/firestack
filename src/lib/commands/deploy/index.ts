@@ -24,9 +24,7 @@ import {
 } from './utils/process_function.ts';
 import { retryFailedFunctions } from './utils/retry_failed_functions.ts';
 
-export type ExtendedDeployOptions = DeployCommandOptions & {
-  all?: boolean;
-};
+export type ExtendedDeployOptions = DeployCommandOptions;
 
 /**
  * Main deployment action that orchestrates the entire process.
@@ -51,9 +49,9 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
 
   const { remoteUtils, mergedCache: previousCache } = cacheContext;
 
-  // 2. Rules Deployment (Optional)
-  if (cliOptions.all) {
-    logger.info(chalk.cyan('📦 Deploying all (rules and functions)...'));
+  // 2. Rules Deployment (deployed by default unless skipped or targeting specific functions)
+  if (!cliOptions.skipRules && !deployOptions.only) {
+    logger.info(chalk.cyan('📦 Deploying rules and indexes...'));
     await rulesAction({ ...cliOptions, cacheContext });
   }
 
@@ -237,7 +235,7 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
 };
 
 export const deployCommand = new Command('deploy')
-  .description('Builds and deploys all Firebase functions.')
+  .description('Builds and deploys Firebase functions, rules, and indexes.')
   .option('--flavor <flavor>', 'The flavor to use for deployment.')
   .option('--dry-run', 'Show the deployment commands without executing them.')
   .option('--force', 'Force deploy all functions, even if no files changed.')
@@ -257,7 +255,7 @@ export const deployCommand = new Command('deploy')
   .option('--projectId <projectId>', 'The Firebase project ID to deploy to.')
   .option('--node-version <nodeVersion>', 'The Node.js version to use for the functions.')
   .option('--debug', 'Enable debug mode (keeps temporary files).')
-  .option('--all', 'Deploy both functions and rules.')
+  .option('--skip-rules', 'Skip deploying rules and indexes.')
   .option('--external <external>', 'Comma-separated list of external dependencies.', (val) =>
     val.split(',')
   )

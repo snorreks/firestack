@@ -4,6 +4,17 @@ import { cwd, env as processEnv } from 'node:process';
 import { logger } from '$logger';
 
 // --- Fallback Configuration (Used if .env.example is missing) ---
+/**
+ * Keys that are explicitly blocked from being merged from `process.env`.
+ * These are typically system-level or sensitive variables that should not
+ * be included in the deployed environment.
+ *
+ * @example
+ * `FIREBASE_SERVICE_ACCOUNT` is blocked because it is only needed for local
+ * script execution (e.g., running admin scripts against Firebase). Since it
+ * is in this list, it will be stripped during deployment, so you can safely
+ * keep it in your local `.env` without worrying about leaking credentials.
+ */
 const invalidKeys = [
   'FIREBASE_SERVICE_ACCOUNT',
   'GCLOUD_PROJECT',
@@ -53,9 +64,19 @@ const isSafeFallbackKey = (key: string): boolean => {
 
 /**
  * Gets the environment variables for the given flavor.
+ *
  * Reads `.env.{flavor}` without key restrictions.
  * Overrides with `process.env` safely by checking `.env.example` (or falling back to strict regex).
- * * @param flavor The flavor to get the environment variables for.
+ *
+ * **Important:** Keys listed in `invalidKeys` (such as `FIREBASE_SERVICE_ACCOUNT`) are
+ * intentionally stripped from `process.env` during deployment. This means you can keep
+ * sensitive or local-only variables in your environment without them being shipped.
+ *
+ * **Best practice:** Keep `FIREBASE_SERVICE_ACCOUNT` in your local `.env` file so you
+ * can run local admin scripts, but rest assured it will be excluded from the deployed
+ * environment because it is present in the `invalidKeys` blocklist.
+ *
+ * @param flavor - The flavor to get the environment variables for.
  * @returns The merged environment variables.
  */
 export const getEnvironment = async (flavor: string): Promise<Record<string, string>> => {

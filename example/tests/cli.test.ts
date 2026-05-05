@@ -99,17 +99,17 @@ describe('Firestack CLI', () => {
   );
 
   test.concurrent(
-    'deploy --all dry-run',
+    'deploy dry-run',
     () => {
       const result = Bun.spawnSync(
-        ['node', FIRESTACK_BIN, 'deploy', '--all', '--dry-run', '--packageManager', 'global'],
+        ['node', FIRESTACK_BIN, 'deploy', '--dry-run', '--packageManager', 'global'],
         {
           cwd: FUNCTIONS_DIR,
         }
       );
 
       const output = result.stdout.toString();
-      expect(output).toContain('Deploying all (rules and functions)');
+      expect(output).toContain('Deploying rules and indexes');
     },
     { timeout: 60000 }
   );

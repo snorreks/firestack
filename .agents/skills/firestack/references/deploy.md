@@ -1,6 +1,6 @@
 # `/firestack deploy [flavor]`
 
-Build and deploy Firebase Cloud Functions (and optionally rules) to a specific flavor.
+Build and deploy Firebase Cloud Functions, rules, and indexes to a specific flavor.
 
 ## When to Use
 
@@ -42,13 +42,13 @@ Ask for confirmation before proceeding.
 ### Step 4: Execute Deployment
 
 ```bash
-# Standard deploy
+# Standard deploy (functions + rules + indexes)
 firestack deploy --flavor <flavor>
 
 # With specific flags
 firestack deploy --flavor <flavor> --force          # Ignore cache, redeploy all
-firestack deploy --flavor <flavor> --only func1,func2  # Deploy specific functions
-firestack deploy --flavor <flavor> --all            # Deploy functions + rules
+firestack deploy --flavor <flavor> --only func1,func2  # Deploy specific functions only
+firestack deploy --flavor <flavor> --skip-rules     # Deploy functions only
 firestack deploy --flavor <flavor> --verbose        # Show full Firebase output
 ```
 
@@ -78,8 +78,8 @@ After deployment succeeds:
 | `--flavor <flavor>` | Target environment (required). |
 | `--dry-run` | Validate build without deploying. |
 | `--force` | Redeploy all functions, ignore cache. |
-| `--only <names>` | Comma-separated list of specific functions. |
-| `--all` | Deploy both functions AND rules. |
+| `--only <names>` | Comma-separated list of specific functions. Automatically skips rules. |
+| `--skip-rules` | Skip deploying rules and indexes. |
 | `--concurrency <num>` | Parallel deployments (default: `5`). |
 | `--retryAmount <num>` | Auto-retry failed deployments. |
 | `--tsconfig <path>` | Path to a custom `tsconfig.json` (e.g., `tsconfig.app.json`). |

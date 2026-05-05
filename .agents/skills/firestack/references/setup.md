@@ -85,13 +85,17 @@ Initialize the rules testing infrastructure.
 2. Create `tests/rules/firestore.rules.test.ts`:
 
 ```typescript
-import { beforeAll, beforeEach, describe, test } from 'bun:test';
-import { assertFails, assertSucceeds, rulesTest } from '@snorreks/firestack/testing';
+import { beforeAll, beforeEach, describe, test } from "bun:test";
+import {
+  assertFails,
+  assertSucceeds,
+  rulesTest,
+} from "@snorreks/firestack/testing";
 
 const hasEmulator = !!process.env.FIRESTORE_EMULATOR_HOST;
 const describeOrSkip = hasEmulator ? describe : describe.skip;
 
-describeOrSkip('firestore.rules', () => {
+describeOrSkip("firestore.rules", () => {
   type Helpers = Awaited<ReturnType<typeof rulesTest.firestore>>;
   let helpers: Helpers;
 
@@ -103,14 +107,14 @@ describeOrSkip('firestore.rules', () => {
     await helpers.clearFirestore();
   });
 
-  test('unauthenticated cannot read secrets', async () => {
+  test("unauthenticated cannot read secrets", async () => {
     const db = helpers.withoutAuth().firestore();
-    await assertFails(db.collection('secrets').doc('x').get());
+    await assertFails(db.collection("secrets").doc("x").get());
   });
 
-  test('authenticated user can read own profile', async () => {
-    const db = helpers.withAuth('user-123').firestore();
-    await assertSucceeds(db.collection('users').doc('user-123').get());
+  test("authenticated user can read own profile", async () => {
+    const db = helpers.withAuth("user-123").firestore();
+    await assertSucceeds(db.collection("users").doc("user-123").get());
   });
 });
 ```
@@ -132,6 +136,7 @@ service cloud.firestore {
 ```
 
 4. Install `@firebase/rules-unit-testing` if not present:
+
    ```bash
    bun add -d @firebase/rules-unit-testing
    ```
@@ -151,18 +156,20 @@ Create the `scripts/on_emulate.ts` emulator seed script.
 3. Write `scripts/on_emulate.ts`:
 
 ```typescript
-import { initializeApp } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-import { getStorage } from 'firebase-admin/storage';
+import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 
 const projectId = process.env.FIREBASE_PROJECT_ID;
 if (!projectId) {
-  throw new Error('FIREBASE_PROJECT_ID environment variable not set');
+  throw new Error("FIREBASE_PROJECT_ID environment variable not set");
 }
 
 const flavor = process.env.FIREBASE_FLAVOR;
-console.log(`Initializing emulator (Project: ${projectId}, Flavor: ${flavor})...`);
+console.log(
+  `Initializing emulator (Project: ${projectId}, Flavor: ${flavor})...`,
+);
 
 const app = initializeApp({
   projectId,
@@ -174,26 +181,26 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 
 // 1. Seed Auth users
-console.log('Creating sample users...');
+console.log("Creating sample users...");
 try {
   await auth.createUser({
-    uid: 'user1',
-    email: 'john@example.com',
-    password: 'password123',
-    displayName: 'John Doe',
+    uid: "user1",
+    email: "john@example.com",
+    password: "password123",
+    displayName: "John Doe",
   });
 } catch (error) {
   const e = error as { code?: string };
-  if (e.code !== 'auth/uid-already-exists') {
-    console.error('Error creating user:', error);
+  if (e.code !== "auth/uid-already-exists") {
+    console.error("Error creating user:", error);
   }
 }
 
 // 2. Seed Firestore
-console.log('Seeding Firestore...');
-await db.collection('users').doc('user1').set({
-  name: 'John Doe',
-  email: 'john@example.com',
+console.log("Seeding Firestore...");
+await db.collection("users").doc("user1").set({
+  name: "John Doe",
+  email: "john@example.com",
   createdAt: new Date(),
 });
 
@@ -201,7 +208,7 @@ await db.collection('users').doc('user1').set({
 // const bucket = storage.bucket();
 // await bucket.file('assets/sample.txt').save('Hello', { metadata: { contentType: 'text/plain' } });
 
-console.log('Emulator initialization complete.');
+console.log("Emulator initialization complete.");
 ```
 
 4. Confirm creation and tell the user it will run automatically on `firestack emulate`.
@@ -214,24 +221,23 @@ Any `.ts` file in `scriptsDirectory` can be executed via `firestack scripts [nam
 
 ### Environment Variables
 
-| Variable | Description |
-|---|---|
+| Variable              | Description                                     |
+| --------------------- | ----------------------------------------------- |
 | `FIREBASE_PROJECT_ID` | The Firebase project ID for the current flavor. |
-| `FIREBASE_FLAVOR` | The active flavor name. |
-| `SCRIPT_CONFIG` | JSON string from `script-config.{flavor}.ts` (optional). |
+| `FIREBASE_FLAVOR`     | The active flavor name.                         |
 
 ### Example: Maintenance Script
 
 ```typescript
 // scripts/cleanup_old_sessions.ts
-import { getFirestore } from '$configs/database';
+import { getFirestore } from "$configs/database";
 
 const db = getFirestore();
 const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
 const snapshot = await db
-  .collection('sessions')
-  .where('lastActive', '<', cutoff)
+  .collection("sessions")
+  .where("lastActive", "<", cutoff)
   .get();
 
 const batch = db.batch();
@@ -245,22 +251,4 @@ Run it:
 
 ```bash
 firestack scripts cleanup_old_sessions --flavor development
-```
-
-### Flavor-Specific Config (`script-config.{flavor}.ts`)
-
-Create a `script-config.development.ts` in the project root:
-
-```typescript
-export const config = {
-  apiKey: 'dev-key',
-  webhookUrl: 'https://hooks.dev.example.com',
-};
-```
-
-Access it in scripts:
-
-```typescript
-const scriptConfig = JSON.parse(process.env.SCRIPT_CONFIG || '{}');
-console.log('Webhook URL:', scriptConfig.webhookUrl);
 ```

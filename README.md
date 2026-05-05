@@ -160,19 +160,19 @@ firestack deploy --flavor development
 | `minify`             | boolean  | `true`            | Whether to minify the bundled function code.                                          |
 | `sourcemap`          | boolean  | `true`            | Whether to generate sourcemaps.                                                       |
 | `external`           | string[] | `[]`              | Dependencies to treat as external (installed in the function env).                    |
-| `rulesTests`         | object   | `undefined`       | Configuration for `test:rules` (see Rules Testing below).                              |
+| `rulesTests`         | object   | `undefined`       | Configuration for `test:rules` (see Rules Testing below).                             |
 
 ## Commands & Options
 
 ### `firestack deploy`
 
-Builds and deploys functions to Firebase.
+Builds and deploys functions, rules, and indexes to Firebase.
 
 - `--flavor <flavor>`: The environment to deploy to.
 - `--dry-run`: Show the deployment plan without executing it.
 - `--force`: Force deploy all functions, ignoring the cache.
-- `--only <names>`: Deploy specific functions (comma-separated).
-- `--all`: Deploy both functions AND rules in one command.
+- `--only <names>`: Deploy specific functions (comma-separated). Skips rules automatically.
+- `--skip-rules`: Skip deploying rules and indexes.
 - `--concurrency <num>`: Parallel deployments (default: `5`).
 - `--retryAmount <num>`: Auto-retry failed deployments.
 - `--tsconfig <path>`: Path to a custom `tsconfig.json` (e.g., `tsconfig.app.json`).
@@ -218,20 +218,24 @@ Configure targets in `firestack.json`:
 Write tests using the `@snorreks/firestack/testing` helper:
 
 ```typescript
-import { describe, test } from 'bun:test';
-import { assertFails, assertSucceeds, rulesTest } from '@snorreks/firestack/testing';
+import { describe, test } from "bun:test";
+import {
+  assertFails,
+  assertSucceeds,
+  rulesTest,
+} from "@snorreks/firestack/testing";
 
-describe('firestore.rules', () => {
-  test('unauthenticated user cannot read secrets', async () => {
+describe("firestore.rules", () => {
+  test("unauthenticated user cannot read secrets", async () => {
     const { withoutAuth } = await rulesTest.firestore();
     const db = withoutAuth().firestore();
-    await assertFails(db.collection('secrets').doc('x').get());
+    await assertFails(db.collection("secrets").doc("x").get());
   });
 
-  test('authenticated user can read own profile', async () => {
+  test("authenticated user can read own profile", async () => {
     const { withAuth } = await rulesTest.firestore();
-    const db = withAuth('user-123').firestore();
-    await assertSucceeds(db.collection('users').doc('user-123').get());
+    const db = withAuth("user-123").firestore();
+    await assertSucceeds(db.collection("users").doc("user-123").get());
   });
 });
 ```
@@ -266,19 +270,6 @@ View Cloud Function logs from the production environment.
 - `--open`: Open the logs in the web browser.
 
 ## Advanced Usage
-
-### Script Environment & Config
-
-When running scripts via `firestack scripts` or during emulation, Firestack can load flavor-specific configurations. Create a `script-config.{flavor}.ts` file in your project root:
-
-```typescript
-// script-config.development.ts
-export const config = {
-  apiKey: "dev-key",
-};
-```
-
-This config is passed to your script via the `SCRIPT_CONFIG` environment variable (JSON stringified).
 
 ### Emulator Initialization (`on_emulate.ts`)
 

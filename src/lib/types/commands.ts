@@ -44,7 +44,7 @@ export type DeployCliOptions = BaseCliOptions & {
   concurrency?: number;
   retryAmount?: number;
   isEmulator?: boolean;
-  all?: boolean;
+  skipRules?: boolean;
 };
 
 export type DeployCommandOptions = {
@@ -75,7 +75,7 @@ export type DeployCommandOptions = {
   emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
   isEmulator?: boolean;
-  all?: boolean;
+  skipRules?: boolean;
   watch?: boolean;
   init?: boolean;
   tsconfig?: string;

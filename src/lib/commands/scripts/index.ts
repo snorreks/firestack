@@ -7,32 +7,10 @@ import { execa } from 'execa';
 import prompts from 'prompts';
 import { logger } from '$logger';
 import type { ScriptsCliOptions, ScriptsCommandOptions } from '$types';
-import { exists } from '$utils/common.ts';
 import { getScriptEnvironment } from '$utils/env.ts';
 import { getScriptsOptions } from '$utils/options.ts';
 
 type ScriptsOptions = ScriptsCliOptions;
-
-type ScriptConfig = {
-  config?: Record<string, unknown>;
-};
-
-/**
- * Loads script configuration for a specific flavor.
- */
-const getScriptConfig = async (flavor: string): Promise<Record<string, unknown>> => {
-  const configPath = join(cwd(), `script-config.${flavor}.ts`);
-
-  if (!(await exists(configPath))) return {};
-
-  try {
-    const configModule = (await import(configPath)) as ScriptConfig;
-    return configModule.config ?? {};
-  } catch (_error) {
-    logger.debug(chalk.dim(`No custom config loaded from script-config.${flavor}.ts`));
-    return {};
-  }
-};
 
 /**
  * Merges CLI options with firestack.json configuration.
@@ -70,14 +48,7 @@ const runScript = async (scriptName: string, options: ScriptsOptions) => {
 
   // Parallel fetch of environment and config
   const resolvedOptions = options as ScriptsCommandOptions;
-  const [env, scriptConfig] = await Promise.all([
-    getScriptEnvironment({ flavor: resolvedOptions.flavor }),
-    getScriptConfig(resolvedOptions.flavor),
-  ]);
-
-  if (Object.keys(scriptConfig).length > 0) {
-    env.SCRIPT_CONFIG = JSON.stringify(scriptConfig);
-  }
+  const env = await getScriptEnvironment({ flavor: resolvedOptions.flavor });
 
   const engine = options.engine || 'bun';
   const relativeScriptPath = relative(cwd(), scriptPath);
