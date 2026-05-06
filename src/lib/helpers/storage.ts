@@ -1,5 +1,12 @@
 import type { StorageEvent } from 'firebase-functions/v2/storage';
 import type { ObjectTriggerOptions } from '$types';
+import { wrapWithLogContext } from './logging.ts';
+
+const buildStorageLogContext = (event: StorageEvent) => ({
+  source: 'functions' as const,
+  trigger: 'storage',
+  requestId: event.id,
+});
 
 /**
  * Event handler sent only when a bucket has enabled object versioning. This
@@ -14,7 +21,9 @@ import type { ObjectTriggerOptions } from '$types';
 export const onObjectArchived = (
   handler: (event: StorageEvent) => PromiseLike<unknown> | unknown,
   _options?: ObjectTriggerOptions
-) => handler;
+) => {
+  return wrapWithLogContext(handler, buildStorageLogContext);
+};
 /**
  * Event handler which fires every time a Google Cloud Storage deletion occurs.
  *
@@ -31,7 +40,9 @@ export const onObjectArchived = (
 export const onObjectDeleted = (
   handler: (event: StorageEvent) => PromiseLike<unknown> | unknown,
   _options?: ObjectTriggerOptions
-) => handler;
+) => {
+  return wrapWithLogContext(handler, buildStorageLogContext);
+};
 
 /**
  * Event handler which fires every time a Google Cloud Storage object creation
@@ -48,7 +59,9 @@ export const onObjectDeleted = (
 export const onObjectFinalized = (
   handler: (event: StorageEvent) => PromiseLike<unknown> | unknown,
   _options?: ObjectTriggerOptions
-) => handler;
+) => {
+  return wrapWithLogContext(handler, buildStorageLogContext);
+};
 
 /**
  * Event handler which fires every time the metadata of an existing object
@@ -61,4 +74,6 @@ export const onObjectFinalized = (
 export const onObjectMetadataUpdated = (
   handler: (event: StorageEvent) => PromiseLike<unknown> | unknown,
   _options?: ObjectTriggerOptions
-) => handler;
+) => {
+  return wrapWithLogContext(handler, buildStorageLogContext);
+};

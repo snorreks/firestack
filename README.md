@@ -14,6 +14,7 @@ Firestack is a CLI tool for building, testing, and deploying Firebase Cloud Func
 - **Native Rules Testing**: Test Firestore and Storage security rules against ephemeral emulators with zero config.
 - **Intelligent Caching**: Differential deployments with local and remote cache support.
 - **Rules & Indexes**: Manage and deploy Firestore and Storage rules alongside your functions.
+- **Zero-Boilerplate Logging**: Auto-import your logger init file into every function; request-scoped context via `AsyncLocalStorage`.
 
 ## Installation
 
@@ -144,6 +145,71 @@ export default onAuthCreate(
 firestack deploy --flavor development
 ```
 
+## Logging & Observability
+
+Firestack provides zero-boilerplate hooks for logging, telemetry, and tracing without being opinionated about which tool you use.
+
+### Request-Scoped Context
+
+Every trigger wrapper (`onRequest`, `onCall`, `onCreated`, `onAuthCreate`, etc.) automatically runs inside an `AsyncLocalStorage` context. You can access and enrich it anywhere in the call stack:
+
+```typescript
+import { onRequest, getLogContext, setLogContext } from "@snorreks/firestack";
+
+export default onRequest((request, response) => {
+  setLogContext({ userId: request.body.userId, companyId: request.body.companyId });
+
+  const ctx = getLogContext();
+  // { source: 'functions', trigger: 'https.onRequest', requestId: '...', userId: '...', companyId: '...' }
+
+  response.send({ ok: true });
+});
+```
+
+### Auto-Import Init File (`includeFilePath`)
+
+Create `src/logger.ts` (or any custom path). If it exists, Firestack injects an import at the top of every generated function index before any handler code runs. This is the ideal place to initialize your logger, Sentry, or OpenTelemetry:
+
+```typescript
+// src/logger.ts
+import { getLogContext } from "@snorreks/firestack";
+import { getFirestore } from "./configs/database.ts";
+
+const pendingEntries: LogEntry[] = [];
+
+export const logger = {
+  info: (message: string, ...data: unknown[]) => {
+    pendingEntries.push({ timestamp: new Date(), level: "info", message, data, context: getLogContext() });
+    console.log(message, ...data);
+  },
+  flush: async () => {
+    if (pendingEntries.length === 0) return;
+    const col = getFirestore().collection("function_logs");
+    await Promise.all(pendingEntries.splice(0).map((e) => col.add(e)));
+  },
+};
+
+process.on("SIGTERM", async () => {
+  await logger.flush();
+});
+```
+
+Configure the path in `firestack.json`:
+
+```json
+{
+  "includeFilePath": "src/logger.ts"
+}
+```
+
+### `FIRESTACK_FUNCTION_NAME`
+
+Firestack injects the deployed function name as an environment variable. Useful for tagging:
+
+```typescript
+const functionName = process.env.FIRESTACK_FUNCTION_NAME;
+```
+
 ## Configuration (firestack.json)
 
 | Option               | Type     | Default           | Description                                                                           |
@@ -160,6 +226,7 @@ firestack deploy --flavor development
 | `minify`             | boolean  | `true`            | Whether to minify the bundled function code.                                          |
 | `sourcemap`          | boolean  | `true`            | Whether to generate sourcemaps.                                                       |
 | `external`           | string[] | `[]`              | Dependencies to treat as external (installed in the function env).                    |
+| `includeFilePath`    | string   | `src/logger.ts`   | File auto-imported into every function index for init (logging, tracing, etc.).      |
 | `rulesTests`         | object   | `undefined`       | Configuration for `test:rules` (see Rules Testing below).                             |
 
 ## Commands & Options

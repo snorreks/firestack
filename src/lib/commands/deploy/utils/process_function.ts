@@ -112,7 +112,11 @@ export const prepareFunction = async (options: {
     if (!buildSuccess) return { functionName, status: 'failed' };
 
     // 3. Env
-    const envNeeded = await setupEnvironment({ outputDirectory, environment });
+    const environmentWithFunctionName = {
+      ...environment,
+      FIRESTACK_FUNCTION_NAME: functionName,
+    };
+    const envNeeded = await setupEnvironment({ outputDirectory, environment: environmentWithFunctionName });
 
     // 4. Check changes
     const deployFunctionData = await checkForChanges({
@@ -296,6 +300,14 @@ const performBuild = async (options: {
   const outputFile = join(outputDirectory, 'src', 'index.js');
 
   try {
+    const projectRoot = await findProjectRoot();
+    const includeFileAbsolute = deployOptions.includeFilePath
+      ? join(projectRoot, deployOptions.includeFilePath)
+      : undefined;
+    const includeFilePath = includeFileAbsolute && existsSync(includeFileAbsolute)
+      ? deployOptions.includeFilePath
+      : undefined;
+
     const inputFile = await createTemporaryIndexFunctionFile({
       functionPath,
       functionName,
@@ -303,9 +315,10 @@ const performBuild = async (options: {
       functionOptions,
       functionsDirectoryPath,
       deployFunction,
+      includeFilePath,
+      projectRoot,
     });
 
-    const projectRoot = await findProjectRoot();
     await buildFunction({
       inputFile,
       outputFile,

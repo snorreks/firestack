@@ -11,6 +11,16 @@ type CreateIndexFileOptions = {
   functionsDirectoryPath: string;
   deployFunction: DeployFunction;
   functionOptions: FunctionOptions;
+  /**
+   * Relative path to a user file that should be imported at the top of the
+   * generated index. Useful for initializing logging or telemetry.
+   */
+  includeFilePath?: string;
+  /**
+   * Absolute path to the project root. Required when includeFilePath is set
+   * so the import can be resolved relative to the temporary directory.
+   */
+  projectRoot?: string;
 };
 
 export const createTemporaryIndexFunctionFile = async (
@@ -28,7 +38,7 @@ export const createTemporaryIndexFunctionFile = async (
 };
 
 export const toDeployIndexCode = async (options: CreateIndexFileOptions): Promise<string> => {
-  const { deployFunction, functionPath, temporaryDirectory } = options;
+  const { deployFunction, functionPath, temporaryDirectory, includeFilePath, projectRoot } = options;
 
   const rootFunctionBuilder = toRootFunction(deployFunction);
 
@@ -36,16 +46,25 @@ export const toDeployIndexCode = async (options: CreateIndexFileOptions): Promis
     .replaceAll('\\', '/')
     .replace(/\.(ts|js)$/, '')}.ts`;
 
+  const includeImportPath =
+    includeFilePath && projectRoot
+      ? `${relative(temporaryDirectory, join(projectRoot, includeFilePath))
+          .replaceAll('\\', '/')
+          .replace(/\.(ts|js)$/, '')}.ts`
+      : undefined;
+
   if (rootFunctionBuilder === 'auth') {
     return toV1FunctionCode({
       ...options,
       importPath,
+      includeImportPath,
     });
   }
 
   return toV2FunctionCode({
     ...options,
     importPath,
+    includeImportPath,
     rootFunctionBuilder,
   });
 };
@@ -53,12 +72,14 @@ export const toDeployIndexCode = async (options: CreateIndexFileOptions): Promis
 const toV2FunctionCode = (
   options: CreateIndexFileOptions & {
     importPath: string;
+    includeImportPath?: string;
     rootFunctionBuilder: FunctionBuilder;
   }
 ): string => {
   const {
     functionOptions,
     importPath,
+    includeImportPath,
     functionName,
     deployFunction,
     rootFunctionBuilder,
@@ -82,8 +103,10 @@ const toV2FunctionCode = (
 
   const optionsCode = JSON.stringify(functionOptions, null, 2);
 
+  const includeImport = includeImportPath ? `import '${includeImportPath}';\n` : '';
+
   const fileCode = `
-import { ${functionCodeType} } from 'firebase-functions/${rootFunctionBuilder}';
+${includeImport}import { ${functionCodeType} } from 'firebase-functions/${rootFunctionBuilder}';
 import functionStart from '${importPath}';
 
 export const ${functionName} = ${functionCodeType}(${optionsCode}, functionStart);
@@ -94,9 +117,10 @@ export const ${functionName} = ${functionCodeType}(${optionsCode}, functionStart
 const toV1FunctionCode = (
   options: CreateIndexFileOptions & {
     importPath: string;
+    includeImportPath?: string;
   }
 ): string => {
-  const { functionOptions, importPath, functionName, deployFunction } = options;
+  const { functionOptions, importPath, includeImportPath, functionName, deployFunction } = options;
   const { region: regionOpt, ...runtimeOptions } = functionOptions;
 
   const region = regionOpt || 'us-central1';
@@ -126,8 +150,10 @@ const toV1FunctionCode = (
       throw new Error(`Invalid v1 function type: ${deployFunction}`);
   }
 
+  const includeImport = includeImportPath ? `import '${includeImportPath}';\n` : '';
+
   return `
-import { region } from 'firebase-functions/v1';
+${includeImport}import { region } from 'firebase-functions/v1';
 import functionStart from '${importPath}';
 
 export const ${functionName} = ${chain}.${trigger}(functionStart);

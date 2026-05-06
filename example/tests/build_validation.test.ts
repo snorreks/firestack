@@ -68,6 +68,8 @@ describe('Build Output Validation', () => {
       'beforeAuthCreate',
       'beforeAuthSignIn',
       'createFirestackError',
+      'getLogContext',
+      'logContextStore',
       'onAuthCreate',
       'onAuthDelete',
       'onCall',
@@ -95,6 +97,9 @@ describe('Build Output Validation', () => {
       'onValueWritten',
       'onWritten',
       'onWrittenZod',
+      'runWithLogContext',
+      'setLogContext',
+      'wrapWithLogContext',
     ];
 
     for (const exp of expectedExports) {
@@ -108,6 +113,8 @@ describe('Build Output Validation', () => {
       'beforeAuthCreate',
       'beforeAuthSignIn',
       'createFirestackError',
+      'getLogContext',
+      'logContextStore',
       'onAuthCreate',
       'onAuthDelete',
       'onCall',
@@ -135,6 +142,9 @@ describe('Build Output Validation', () => {
       'onValueWritten',
       'onWritten',
       'onWrittenZod',
+      'runWithLogContext',
+      'setLogContext',
+      'wrapWithLogContext',
       'HttpsOptions',
       'FirestoreEvent',
       'DocumentOptions',
@@ -142,6 +152,8 @@ describe('Build Output Validation', () => {
       'ScheduleOptions',
       'FirestackError',
       'HttpStatusCode',
+      'LogContext',
+      'LogLevel',
     ];
 
     for (const exp of expectedExports) {

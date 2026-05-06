@@ -30,6 +30,14 @@ export type FirestackConfig = {
   init?: boolean;
   force?: boolean;
   cloudCacheFileName?: string;
+  /**
+   * Relative path to a file that will be auto-imported at the top of every
+   * generated function index. Useful for initializing logging, OpenTelemetry,
+   * or Sentry without boilerplate in each handler file.
+   *
+   * @default 'src/logger.ts'
+   */
+  includeFilePath?: string;
   rulesTests?: {
     firestore?: RulesTestConfig;
     storage?: RulesTestConfig;

@@ -7,6 +7,7 @@ import type {
   BeforeCreateResponse,
   BeforeSignInResponse,
 } from '$types';
+import { wrapWithLogContext } from './logging.ts';
 
 /**
  * Responds to the creation of a Firebase Auth user.
@@ -17,7 +18,13 @@ import type {
 export const onAuthCreate = (
   handler: (user: UserRecord, context: EventContext) => PromiseLike<unknown> | unknown,
   _options?: AuthTriggerOptions
-) => handler;
+) => {
+  return wrapWithLogContext(handler, (_user, context) => ({
+    source: 'functions' as const,
+    trigger: 'auth.onCreate',
+    requestId: context.eventId,
+  }));
+};
 /**
  * Responds to the deletion of a Firebase Auth user.
  *
@@ -27,7 +34,13 @@ export const onAuthCreate = (
 export const onAuthDelete = (
   handler: (user: UserRecord, context: EventContext) => PromiseLike<unknown> | unknown,
   _options?: AuthTriggerOptions
-) => handler;
+) => {
+  return wrapWithLogContext(handler, (_user, context) => ({
+    source: 'functions' as const,
+    trigger: 'auth.onDelete',
+    requestId: context.eventId,
+  }));
+};
 /**
  * Blocks request to create a Firebase Auth user.
  *
@@ -39,7 +52,13 @@ export const beforeAuthCreate = (
     context: AuthEventContext
   ) => BeforeCreateResponse | void | Promise<BeforeCreateResponse> | Promise<void>,
   _options?: AuthTriggerOptions
-) => handler;
+) => {
+  return wrapWithLogContext(handler, () => ({
+    source: 'functions' as const,
+    trigger: 'auth.beforeCreate',
+    requestId: crypto.randomUUID(),
+  }));
+};
 /**
  * Blocks request to sign-in a Firebase Auth user.
  *
@@ -51,4 +70,10 @@ export const beforeAuthSignIn = (
     context: AuthEventContext
   ) => BeforeSignInResponse | void | Promise<BeforeSignInResponse> | Promise<void>,
   _options?: AuthTriggerOptions
-) => handler;
+) => {
+  return wrapWithLogContext(handler, () => ({
+    source: 'functions' as const,
+    trigger: 'auth.beforeSignIn',
+    requestId: crypto.randomUUID(),
+  }));
+};

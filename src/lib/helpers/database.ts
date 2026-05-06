@@ -1,6 +1,14 @@
 import type { Change, ParamsOf } from 'firebase-functions/v2/core';
 import type { DatabaseEvent, DataSnapshot } from 'firebase-functions/v2/database';
 import type { ReferenceOptions } from '$types';
+import { wrapWithLogContext } from './logging.ts';
+
+const buildDatabaseLogContext = (event: DatabaseEvent<unknown, ParamsOf<string>>) => ({
+  source: 'functions' as const,
+  trigger: 'database',
+  requestId: event.id,
+});
+
 /**
  * Event handler that fires every time new data is created in Firebase Realtime
  * Database.
@@ -12,7 +20,9 @@ import type { ReferenceOptions } from '$types';
 export const onValueCreated = <Ref extends string = string>(
   handler: (event: DatabaseEvent<DataSnapshot, ParamsOf<Ref>>) => PromiseLike<unknown> | unknown,
   _options: ReferenceOptions
-) => handler;
+) => {
+  return wrapWithLogContext(handler, buildDatabaseLogContext);
+};
 
 /**
  * Event handler that fires every time data is deleted from Firebase Realtime
@@ -25,7 +35,9 @@ export const onValueCreated = <Ref extends string = string>(
 export const onValueDeleted = <Ref extends string = string>(
   handler: (event: DatabaseEvent<DataSnapshot, ParamsOf<Ref>>) => PromiseLike<unknown> | unknown,
   _options: ReferenceOptions
-) => handler;
+) => {
+  return wrapWithLogContext(handler, buildDatabaseLogContext);
+};
 
 /**
  * Event handler that fires every time data is updated in Firebase Realtime
@@ -33,14 +45,16 @@ export const onValueDeleted = <Ref extends string = string>(
  *
  * @param handler Event handler which is run every time a Firebase Realtime
  *   Database write occurs.
- * @returns A Cloud DeployFunction which you can export and deploy.
+ * @returns A Cloud DeployFunction that you can export and deploy.
  */
 export const onValueUpdated = <Ref extends string = string>(
   handler: (
     event: DatabaseEvent<Change<DataSnapshot>, ParamsOf<Ref>>
   ) => PromiseLike<unknown> | unknown,
   _options: ReferenceOptions
-) => handler;
+) => {
+  return wrapWithLogContext(handler, buildDatabaseLogContext);
+};
 
 /**
  * Event handler that fires every time a Firebase Realtime Database write of any
@@ -55,4 +69,6 @@ export const onValueWritten = <Ref extends string = string>(
     event: DatabaseEvent<Change<DataSnapshot>, ParamsOf<Ref>>
   ) => PromiseLike<unknown> | unknown,
   _options: ReferenceOptions
-) => handler;
+) => {
+  return wrapWithLogContext(handler, buildDatabaseLogContext);
+};

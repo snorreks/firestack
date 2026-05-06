@@ -35,6 +35,7 @@ export type BaseCliOptions = {
   force?: boolean;
   noForce?: boolean;
   cloudCacheFileName?: string;
+  includeFilePath?: string;
   tsconfig?: string;
 };
 
@@ -80,6 +81,7 @@ export type DeployCommandOptions = {
   watch?: boolean;
   init?: boolean;
   cloudCacheFileName: string;
+  includeFilePath?: string;
   tsconfig?: string;
 };
 
@@ -122,6 +124,7 @@ export type EmulateCommandOptions = {
   keepNames?: boolean;
   force?: boolean;
   cloudCacheFileName: string;
+  includeFilePath?: string;
   tsconfig?: string;
 };
 

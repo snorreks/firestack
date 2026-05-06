@@ -5,6 +5,7 @@ import type { z } from 'zod';
 import type { CallableFunctions, HttpsOptions, RequestFunctions, ZodOptions } from '$types';
 import { handleZodError } from '$utils/zod.ts';
 import { FirestackError, HttpStatusCode, HttpsError } from './errors.ts';
+import { runWithLogContext } from './logging.ts';
 
 export type FirebaseRequest<
   T extends Record<string, string> = Record<string, string>,
@@ -25,6 +26,38 @@ export type RequestHandler<
   request: FirebaseRequest<Params, AllFunctions[FunctionName][1], AllFunctions[FunctionName][0]>,
   response: Response<AllFunctions[FunctionName][1]>
 ) => Promise<void> | void;
+
+/**
+ * Builds a log context from an HTTP request.
+ */
+const buildRequestLogContext = (request: FirebaseRequest) => {
+  const userAgent = request.headers['user-agent'];
+  return {
+    source: 'functions' as const,
+    trigger: 'https.onRequest',
+    ip: request.ip ?? undefined,
+    route: request.path ?? undefined,
+    method: request.method,
+    userAgent: Array.isArray(userAgent) ? userAgent[0] : userAgent,
+    requestId: crypto.randomUUID(),
+  };
+};
+
+/**
+ * Builds a log context from a callable request.
+ */
+const buildCallLogContext = (request: CallableRequest<unknown>) => {
+  const rawRequest = request.rawRequest;
+  const userAgent = rawRequest?.headers['user-agent'];
+  return {
+    source: 'functions' as const,
+    trigger: 'https.onCall',
+    userId: request.auth?.uid,
+    ip: rawRequest?.ip ?? undefined,
+    userAgent: Array.isArray(userAgent) ? userAgent[0] : userAgent,
+    requestId: crypto.randomUUID(),
+  };
+};
 
 /**
  * Handles errors for HTTPS requests.
@@ -72,11 +105,14 @@ export const onRequest = <
   _options?: HttpsOptions<FunctionName>
 ): RequestHandler<AllFunctions, FunctionName, Params> => {
   return async (request, response) => {
-    try {
-      await handler(request, response);
-    } catch (error) {
-      handleHttpsError<AllFunctions, FunctionName>(error, response);
-    }
+    const logContext = buildRequestLogContext(request);
+    await runWithLogContext(logContext, async () => {
+      try {
+        await handler(request, response);
+      } catch (error) {
+        handleHttpsError<AllFunctions, FunctionName>(error, response);
+      }
+    });
   };
 };
 
@@ -96,34 +132,37 @@ export const onRequestZod = <
   options?: HttpsOptions<FunctionName> & ZodOptions
 ): RequestHandler<AllFunctions, FunctionName, Params> => {
   return async (request, response) => {
-    try {
-      const result = schema.safeParse(request.body);
+    const logContext = buildRequestLogContext(request);
+    await runWithLogContext(logContext, async () => {
+      try {
+        const result = schema.safeParse(request.body);
 
-      if (!result.success) {
-        handleZodError({
-          error: result.error,
-          ...options,
-        });
+        if (!result.success) {
+          handleZodError({
+            error: result.error,
+            ...options,
+          });
 
-        if (options?.validationStrategy === 'ignore') {
-          return handler(request, response);
+          if (options?.validationStrategy === 'ignore') {
+            return handler(request, response);
+          }
+
+          response.status(400).send({
+            error: {
+              message: 'Invalid request body',
+              code: 'invalid-argument',
+              details: result.error.issues,
+            },
+          } as unknown as AllFunctions[FunctionName][1]);
+          return;
         }
 
-        response.status(400).send({
-          error: {
-            message: 'Invalid request body',
-            code: 'invalid-argument',
-            details: result.error.issues,
-          },
-        } as unknown as AllFunctions[FunctionName][1]);
-        return;
+        request.body = result.data;
+        return handler(request, response);
+      } catch (error) {
+        handleHttpsError<AllFunctions, FunctionName>(error, response);
       }
-
-      request.body = result.data;
-      return handler(request, response);
-    } catch (error) {
-      handleHttpsError<AllFunctions, FunctionName>(error, response);
-    }
+    });
   };
 };
 
@@ -148,19 +187,22 @@ export const onCall = <
   _options?: HttpsOptions<FunctionName>
 ): CallHandler<AllFunctions, FunctionName> => {
   return async (request) => {
-    try {
-      return await handler(request);
-    } catch (error) {
-      if (error instanceof HttpsError || error instanceof FirestackError) {
-        throw error;
-      }
+    const logContext = buildCallLogContext(request);
+    return runWithLogContext(logContext, async () => {
+      try {
+        return await handler(request);
+      } catch (error) {
+        if (error instanceof HttpsError || error instanceof FirestackError) {
+          throw error;
+        }
 
-      console.error('Unhandled error in onCall:', error);
-      throw new HttpsError(
-        'internal',
-        error instanceof Error ? error.message : 'Internal Server Error'
-      );
-    }
+        console.error('Unhandled error in onCall:', error);
+        throw new HttpsError(
+          'internal',
+          error instanceof Error ? error.message : 'Internal Server Error'
+        );
+      }
+    });
   };
 };
 
@@ -179,34 +221,37 @@ export const onCallZod = <
   options?: HttpsOptions<FunctionName> & ZodOptions
 ): CallHandler<AllFunctions, FunctionName> => {
   return async (request) => {
-    try {
-      const result = schema.safeParse(request.data);
+    const logContext = buildCallLogContext(request);
+    return runWithLogContext(logContext, async () => {
+      try {
+        const result = schema.safeParse(request.data);
 
-      if (!result.success) {
-        handleZodError({
-          error: result.error,
-          ...options,
-        });
+        if (!result.success) {
+          handleZodError({
+            error: result.error,
+            ...options,
+          });
 
-        if (options?.validationStrategy === 'ignore') {
-          return handler(request);
+          if (options?.validationStrategy === 'ignore') {
+            return handler(request);
+          }
+
+          throw new HttpsError('invalid-argument', 'Invalid request data', result.error.issues);
         }
 
-        throw new HttpsError('invalid-argument', 'Invalid request data', result.error.issues);
-      }
+        request.data = result.data;
+        return handler(request);
+      } catch (error) {
+        if (error instanceof HttpsError || error instanceof FirestackError) {
+          throw error;
+        }
 
-      request.data = result.data;
-      return handler(request);
-    } catch (error) {
-      if (error instanceof HttpsError || error instanceof FirestackError) {
-        throw error;
+        console.error('Unhandled error in onCallZod:', error);
+        throw new HttpsError(
+          'internal',
+          error instanceof Error ? error.message : 'Internal Server Error'
+        );
       }
-
-      console.error('Unhandled error in onCallZod:', error);
-      throw new HttpsError(
-        'internal',
-        error instanceof Error ? error.message : 'Internal Server Error'
-      );
-    }
+    });
   };
 };

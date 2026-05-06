@@ -14,5 +14,6 @@
   "packageManager": "global",
   "minify": true,
   "sourcemap": true,
+  "includeFilePath": "src/logger.ts",
   "emulators": ["auth", "firestore", "functions", "pubsub", "storage"]
 }

@@ -284,6 +284,90 @@ export default onValueCreated(
 );
 ```
 
+## Request Context & Logging
+
+All Firestack trigger wrappers run inside an `AsyncLocalStorage` context. This means you can access and enrich invocation metadata from anywhere in the call stack without manual wrapping.
+
+### `getLogContext()` / `setLogContext()`
+
+```typescript
+import { onRequest, getLogContext, setLogContext } from '@snorreks/firestack';
+
+export default onRequest((request, response) => {
+  // Enrich context after auth validation
+  setLogContext({ userId: request.body.userId, companyId: request.body.companyId });
+
+  // Context is now available to any helper/logger deeper in the stack
+  const ctx = getLogContext();
+  console.log(ctx); // { source: 'functions', trigger: 'https.onRequest', requestId: '...', userId: '...', companyId: '...' }
+
+  response.send({ ok: true });
+});
+```
+
+**Auto-populated fields:**
+- `source` — always `'functions'`
+- `trigger` — e.g. `'https.onRequest'`, `'firestore'`, `'auth.onCreate'`
+- `requestId` — unique per invocation (from Firebase event ID or `crypto.randomUUID()`)
+- `ip`, `route`, `method`, `userAgent` — for HTTP triggers
+- `userId` — for callable functions (from `auth.uid`)
+
+### Auto-Importing a Logger File
+
+Create `src/logger.ts` (or any path configured via `includeFilePath` in `firestack.json`). If the file exists, Firestack imports it automatically into every generated function index before any handler code runs.
+
+```typescript
+// src/logger.ts
+import { getLogContext } from '@snorreks/firestack';
+import { getFirestore } from './configs/database.ts';
+
+const pendingEntries: LogEntry[] = [];
+
+export const logger = {
+  info: (message: string, ...data: unknown[]) => {
+    const context = getLogContext();
+    pendingEntries.push({ timestamp: new Date(), level: 'info', message, data, context });
+    console.log(message, ...data);
+  },
+  flush: async () => {
+    if (pendingEntries.length === 0) return;
+    const firestore = getFirestore();
+    await Promise.all(pendingEntries.map((e) => firestore.collection('function_logs').add(e)));
+    pendingEntries.length = 0;
+  },
+};
+
+// Container-level safety net (not a replacement for per-invocation flush)
+process.on('SIGTERM', async () => {
+  await logger.flush();
+});
+```
+
+Then in any handler, import and use it directly:
+
+```typescript
+import { onRequest, setLogContext } from '@snorreks/firestack';
+import { logger } from './src/logger.ts'; // or via a path alias
+
+export default onRequest(async (request, response) => {
+  setLogContext({ companyId: request.body.companyId });
+  logger.info('Processing request', { companyId: request.body.companyId });
+  await logger.flush();
+  response.send({ ok: true });
+});
+```
+
+### `FIRESTACK_FUNCTION_NAME`
+
+Firestack injects the deployed function name as an environment variable. Useful for tagging in your logger:
+
+```typescript
+const functionName = process.env.FIRESTACK_FUNCTION_NAME;
+if (functionName) {
+  setTag('function', functionName);
+}
+```
+
 ## Quick Reference Table
 
 | Category | Triggers | Directory |

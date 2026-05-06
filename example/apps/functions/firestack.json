@@ -5,6 +5,7 @@
   },
   "region": "us-east1",
   "minify": false,
+  "includeFilePath": "src/configs/logging.ts",
   "rulesTests": {
     "firestore": {
       "rulesFile": "src/rules/firestore.rules",

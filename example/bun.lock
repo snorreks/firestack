@@ -5,13 +5,13 @@
     "": {
       "name": "bunfire-example",
       "dependencies": {
-        "latest": "latest",
-        "zod": "latest",
+        "latest": "^0.2.0",
+        "zod": "^4.4.3",
       },
       "devDependencies": {
-        "@biomejs/biome": "latest",
-        "@moonrepo/cli": "latest",
-        "typescript": "latest",
+        "@biomejs/biome": "^2.4.14",
+        "@moonrepo/cli": "^2.2.3",
+        "typescript": "^6.0.3",
       },
     },
     "apps/functions": {

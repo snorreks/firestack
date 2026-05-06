@@ -99,6 +99,7 @@ export const getBaseOptions = async (cliOptions: BaseCliOptions) => {
     tsconfig: cliOptions.tsconfig,
     cloudCacheFileName:
       cliOptions.cloudCacheFileName || config.cloudCacheFileName || 'functions-cache.ts',
+    includeFilePath: cliOptions.includeFilePath || config.includeFilePath || 'src/logger.ts',
   };
 };
 
