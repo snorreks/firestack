@@ -164,6 +164,11 @@
       "additionalProperties": false,
       "description": "Custom ports for individual emulators (e.g., { \"auth\": 9099 })."
     },
+    "includeFilePath": {
+      "type": "string",
+      "default": "src/logger.ts",
+      "description": "Relative path to a file that will be auto-imported at the top of every generated function index. Useful for initializing logging, OpenTelemetry, or Sentry without boilerplate in each handler file."
+    },
     "keepNames": {
       "type": "boolean",
       "default": false,

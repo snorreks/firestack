@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { mkdtemp, rmdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { exists } from '../../src/lib/utils/common.ts';
 import { executeCommand } from '../../src/lib/utils/command.ts';
+import { exists } from '../../src/lib/utils/common.ts';
 import { findFreePort } from '../../src/lib/utils/find_free_port.ts';
 import { createFirebaseConfig, toDotEnvironmentCode } from '../../src/lib/utils/firebase_utils.ts';
 import {

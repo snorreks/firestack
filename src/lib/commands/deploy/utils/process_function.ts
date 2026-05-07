@@ -116,7 +116,10 @@ export const prepareFunction = async (options: {
       ...environment,
       FIRESTACK_FUNCTION_NAME: functionName,
     };
-    const envNeeded = await setupEnvironment({ outputDirectory, environment: environmentWithFunctionName });
+    const envNeeded = await setupEnvironment({
+      outputDirectory,
+      environment: environmentWithFunctionName,
+    });
 
     // 4. Check changes
     const deployFunctionData = await checkForChanges({
@@ -304,9 +307,10 @@ const performBuild = async (options: {
     const includeFileAbsolute = deployOptions.includeFilePath
       ? join(projectRoot, deployOptions.includeFilePath)
       : undefined;
-    const includeFilePath = includeFileAbsolute && existsSync(includeFileAbsolute)
-      ? deployOptions.includeFilePath
-      : undefined;
+    const includeFilePath =
+      includeFileAbsolute && existsSync(includeFileAbsolute)
+        ? deployOptions.includeFilePath
+        : undefined;
 
     const inputFile = await createTemporaryIndexFunctionFile({
       functionPath,

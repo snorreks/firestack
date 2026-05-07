@@ -44,12 +44,7 @@ const flushToFirestore = async (): Promise<void> => {
 /**
  * Creates a log entry, buffers it, and mirrors to the console.
  */
-const log = (
-  level: LogEntry['level'],
-  message: string,
-  data: unknown[],
-  error?: Error
-): void => {
+const log = (level: LogEntry['level'], message: string, data: unknown[], error?: Error): void => {
   const context = getLogContext() ?? { source: 'functions' };
 
   const entry: LogEntry = {

@@ -23,7 +23,7 @@ export default onRequest<RequestFunctions, 'test_api', { p: string }>(
     });
 
     const firestore = getFirestore();
-    logger.debug('Firestore instance retrieved');
+    logger.debug('Firestore instance retrieved', !!firestore);
 
     if (request.body.message === 'error') {
       logger.error('Invalid message received', { message: request.body.message });

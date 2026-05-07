@@ -25,9 +25,14 @@ export const getScriptEnvironment = async (options: {
     try {
       const envContent = await readFile(envPath, 'utf-8');
       for (const line of envContent.split('\n')) {
-        const [key, value] = line.split('=');
-        if (key && value) {
-          env[key.trim()] = value.trim();
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const eqIdx = trimmed.indexOf('=');
+        if (eqIdx === -1) continue;
+        const key = trimmed.slice(0, eqIdx).trim();
+        const value = trimmed.slice(eqIdx + 1).trim();
+        if (key) {
+          env[key] = value;
         }
       }
       logger.debug(`Loaded script environment variables from .env.${flavor}`);

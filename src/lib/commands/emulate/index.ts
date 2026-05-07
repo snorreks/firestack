@@ -134,6 +134,8 @@ const buildEmulatorFunctions = async (options: {
       functionsDirectoryPath: controllersPath,
       deployFunction,
       functionOptions,
+      includeFilePath: emulateOptions.includeFilePath,
+      projectRoot,
     });
 
     const lines = code.split('\n').filter((line: string) => line.trim() !== '');
@@ -452,6 +454,10 @@ export const emulateCommand = new Command('emulate')
     'Only start the emulator for specified services (e.g., "functions,firestore").'
   )
   .option('--tsconfig <tsconfig>', 'Path to the tsconfig file to use for the build.')
+  .option(
+    '--includeFilePath <includeFilePath>',
+    'Relative path to a file that will be auto-imported at the top of every generated function index.'
+  )
   .action(async (cliOptions: EmulateOptions) => {
     const emulateOptions = await getEmulateOptions(cliOptions);
 

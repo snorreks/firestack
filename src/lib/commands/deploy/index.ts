@@ -271,4 +271,8 @@ export const deployCommand = new Command('deploy')
     'The package manager to use (npm, yarn, pnpm, bun, global).'
   )
   .option('--tsconfig <tsconfig>', 'Path to the tsconfig file to use for the build.')
+  .option(
+    '--includeFilePath <includeFilePath>',
+    'Relative path to a file that will be auto-imported at the top of every generated function index.'
+  )
   .action(deployAction);

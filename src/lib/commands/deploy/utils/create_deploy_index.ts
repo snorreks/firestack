@@ -38,7 +38,8 @@ export const createTemporaryIndexFunctionFile = async (
 };
 
 export const toDeployIndexCode = async (options: CreateIndexFileOptions): Promise<string> => {
-  const { deployFunction, functionPath, temporaryDirectory, includeFilePath, projectRoot } = options;
+  const { deployFunction, functionPath, temporaryDirectory, includeFilePath, projectRoot } =
+    options;
 
   const rootFunctionBuilder = toRootFunction(deployFunction);
 
