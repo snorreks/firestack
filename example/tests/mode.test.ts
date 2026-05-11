@@ -11,10 +11,7 @@ const FIRESTACK_BIN = join(PROJECT_ROOT, '..', 'dist', 'main.js');
  */
 const setupTempProject = async (config: object): Promise<string> => {
   const tmpDir = await mkdtemp(join(tmpdir(), 'firestack-mode-test-'));
-  await writeFile(
-    join(tmpDir, 'firestack.json'),
-    JSON.stringify(config, null, 2),
-  );
+  await writeFile(join(tmpDir, 'firestack.json'), JSON.stringify(config, null, 2));
   await writeFile(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test-proj' }));
   return tmpDir;
 };
@@ -29,7 +26,7 @@ const setupTempTsProject = async (configContent: string): Promise<string> => {
   return tmpDir;
 };
 
-describe('Mode resolution (info commands that don\'t need functions)', () => {
+describe("Mode resolution (info commands that don't need functions)", () => {
   afterAll(async () => {
     // Cleanup all temp dirs — handled by each test
   });
@@ -39,7 +36,7 @@ describe('Mode resolution (info commands that don\'t need functions)', () => {
     const functionsDir = join(PROJECT_ROOT, 'apps', 'functions');
     const result = Bun.spawnSync(
       ['node', FIRESTACK_BIN, 'deploy', '--only', 'test_api', '--dry-run', '--mode', 'example'],
-      { cwd: functionsDir },
+      { cwd: functionsDir }
     );
 
     expect(result.success).toBe(true);
@@ -53,7 +50,7 @@ describe('Mode resolution (info commands that don\'t need functions)', () => {
     const functionsDir = join(PROJECT_ROOT, 'apps', 'functions');
     const result = Bun.spawnSync(
       ['node', FIRESTACK_BIN, 'deploy', '--only', 'test_api', '--dry-run'],
-      { cwd: functionsDir },
+      { cwd: functionsDir }
     );
 
     expect(result.success).toBe(true);
@@ -64,8 +61,18 @@ describe('Mode resolution (info commands that don\'t need functions)', () => {
   test('deploy uses correct projectId for the mode', () => {
     const functionsDir = join(PROJECT_ROOT, 'apps', 'functions');
     const result = Bun.spawnSync(
-      ['node', FIRESTACK_BIN, 'deploy', '--only', 'test_api', '--dry-run', '--mode', 'example', '--verbose'],
-      { cwd: functionsDir },
+      [
+        'node',
+        FIRESTACK_BIN,
+        'deploy',
+        '--only',
+        'test_api',
+        '--dry-run',
+        '--mode',
+        'example',
+        '--verbose',
+      ],
+      { cwd: functionsDir }
     );
 
     expect(result.success).toBe(true);
@@ -78,7 +85,7 @@ describe('Mode resolution (info commands that don\'t need functions)', () => {
     const functionsDir = join(PROJECT_ROOT, 'apps', 'functions');
     const result = Bun.spawnSync(
       ['node', FIRESTACK_BIN, 'emulate', '--dry-run', '--mode', 'example'],
-      { cwd: functionsDir },
+      { cwd: functionsDir }
     );
 
     expect(result.success).toBe(true);
@@ -89,8 +96,17 @@ describe('Mode resolution (info commands that don\'t need functions)', () => {
   test('logs command with --mode flag works', () => {
     const functionsDir = join(PROJECT_ROOT, 'apps', 'functions');
     const result = Bun.spawnSync(
-      ['node', FIRESTACK_BIN, 'logs', '--projectId', 'mock-project', '--mode', 'example', '--verbose'],
-      { cwd: functionsDir },
+      [
+        'node',
+        FIRESTACK_BIN,
+        'logs',
+        '--projectId',
+        'mock-project',
+        '--mode',
+        'example',
+        '--verbose',
+      ],
+      { cwd: functionsDir }
     );
 
     const output = result.stdout.toString() + result.stderr.toString();
@@ -122,10 +138,7 @@ describe('Mode with firestack.config.ts', () => {
 
     // We can't easily test the full pipeline in a temp dir without functions,
     // but we can verify the config is loaded and doesn't crash
-    const result = Bun.spawnSync(
-      ['node', FIRESTACK_BIN, 'build', '--help'],
-      { cwd: tmpDir },
-    );
+    const result = Bun.spawnSync(['node', FIRESTACK_BIN, 'build', '--help'], { cwd: tmpDir });
     expect(result.success).toBe(true);
   });
 
@@ -142,10 +155,7 @@ describe('Mode with firestack.config.ts', () => {
     `);
 
     // Verify the config is at least parseable
-    const result = Bun.spawnSync(
-      ['node', FIRESTACK_BIN, '--help'],
-      { cwd: tmpDir },
-    );
+    const result = Bun.spawnSync(['node', FIRESTACK_BIN, '--help'], { cwd: tmpDir });
     expect(result.success).toBe(true);
   });
 
@@ -158,7 +168,7 @@ describe('Mode with firestack.config.ts', () => {
       JSON.stringify({
         modes: { fromJson: 'json-project' },
         region: 'us-east1',
-      }),
+      })
     );
 
     await writeFile(
@@ -172,15 +182,12 @@ describe('Mode with firestack.config.ts', () => {
           fromTs: "ts-project",
         },
       });
-      `,
+      `
     );
 
     await writeFile(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test-proj' }));
 
-    const result = Bun.spawnSync(
-      ['node', FIRESTACK_BIN, '--help'],
-      { cwd: tmpDir },
-    );
+    const result = Bun.spawnSync(['node', FIRESTACK_BIN, '--help'], { cwd: tmpDir });
     expect(result.success).toBe(true);
   });
 });
@@ -197,13 +204,10 @@ describe('Mode edge cases', () => {
   test('missing mode with no modes in config shows helpful error', async () => {
     tmpDir = await setupTempProject({
       region: 'us-central1',
-      // No modes/flavors
+      // No modes
     });
 
-    const result = Bun.spawnSync(
-      ['node', FIRESTACK_BIN, 'deploy', '--dry-run'],
-      { cwd: tmpDir },
-    );
+    const result = Bun.spawnSync(['node', FIRESTACK_BIN, 'deploy', '--dry-run'], { cwd: tmpDir });
 
     expect(result.success).toBe(false);
     const stderr = result.stderr.toString();
@@ -216,10 +220,7 @@ describe('Mode edge cases', () => {
       region: 'us-central1',
     });
 
-    const result = Bun.spawnSync(
-      ['node', FIRESTACK_BIN, 'deploy', '--dry-run'],
-      { cwd: tmpDir },
-    );
+    const result = Bun.spawnSync(['node', FIRESTACK_BIN, 'deploy', '--dry-run'], { cwd: tmpDir });
 
     expect(result.success).toBe(false);
     const stderr = result.stderr.toString();
@@ -243,10 +244,9 @@ describe('Backward compatibility (flavors key)', () => {
     });
 
     // --mode=dev should work even though config uses 'flavors'
-    const result = Bun.spawnSync(
-      ['node', FIRESTACK_BIN, 'deploy', '--dry-run', '--mode', 'dev'],
-      { cwd: tmpDir },
-    );
+    const result = Bun.spawnSync(['node', FIRESTACK_BIN, 'deploy', '--dry-run', '--mode', 'dev'], {
+      cwd: tmpDir,
+    });
 
     // It should resolve the mode from 'flavors' and proceed.
     // Since no functions exist, it may succeed with nothing to deploy.
@@ -267,10 +267,7 @@ describe('Backward compatibility (flavors key)', () => {
     });
 
     // Without --mode, should use first mode ('first')
-    const result = Bun.spawnSync(
-      ['node', FIRESTACK_BIN, 'deploy', '--dry-run'],
-      { cwd: tmpDir },
-    );
+    const result = Bun.spawnSync(['node', FIRESTACK_BIN, 'deploy', '--dry-run'], { cwd: tmpDir });
 
     // Should fail because no functions, but not because of missing mode
     const stderr = result.stderr.toString();

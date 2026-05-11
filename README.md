@@ -66,7 +66,7 @@ export default defineConfig(({ mode }) => ({
 }
 ```
 
-> **Note:** Firestack looks for `firestack.config.ts` first, then falls back to `firestack.json`. If you use the JSON format, the old `flavors` key is still supported for backward compatibility.
+> **Note:** Firestack looks for `firestack.config.ts` first, then falls back to `firestack.json`.
 
 ## AI Agent Integration (Skill)
 
@@ -174,7 +174,10 @@ Every trigger wrapper (`onRequest`, `onCall`, `onCreated`, `onAuthCreate`, etc.)
 import { onRequest, getLogContext, setLogContext } from "@snorreks/firestack";
 
 export default onRequest((request, response) => {
-  setLogContext({ userId: request.body.userId, companyId: request.body.companyId });
+  setLogContext({
+    userId: request.body.userId,
+    companyId: request.body.companyId,
+  });
 
   const ctx = getLogContext();
   // { source: 'functions', trigger: 'https.onRequest', requestId: '...', userId: '...', companyId: '...' }
@@ -196,7 +199,13 @@ const pendingEntries: LogEntry[] = [];
 
 export const logger = {
   info: (message: string, ...data: unknown[]) => {
-    pendingEntries.push({ timestamp: new Date(), level: "info", message, data, context: getLogContext() });
+    pendingEntries.push({
+      timestamp: new Date(),
+      level: "info",
+      message,
+      data,
+      context: getLogContext(),
+    });
     console.log(message, ...data);
   },
   flush: async () => {
@@ -258,6 +267,7 @@ export default defineConfig(({ mode }) => {
 ```
 
 The `defineConfig` helper accepts either:
+
 - A **static config object**, or
 - A **callback** that receives `{ mode }` where `mode` is the value of the `--mode` CLI flag (or the first key in `modes` if not specified).
 
@@ -279,10 +289,8 @@ For simpler projects, use the JSON format:
 | `minify`             | boolean  | `true`            | Whether to minify the bundled function code.                                          |
 | `sourcemap`          | boolean  | `true`            | Whether to generate sourcemaps.                                                       |
 | `external`           | string[] | `[]`              | Dependencies to treat as external (installed in the function env).                    |
-| `includeFilePath`    | string   | `src/logger.ts`   | File auto-imported into every function index for init (logging, tracing, etc.).      |
+| `includeFilePath`    | string   | `src/logger.ts`   | File auto-imported into every function index for init (logging, tracing, etc.).       |
 | `rulesTests`         | object   | `undefined`       | Configuration for `test:rules` (see Rules Testing below).                             |
-
-> **Backward compatibility:** The old `flavors` key in `firestack.json` is automatically mapped to `modes`.
 
 ## Commands & Options
 

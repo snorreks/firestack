@@ -33,8 +33,8 @@ describe('Firestack CLI Extended Tests', () => {
       expect(await exists(envPath)).toBe(true);
 
       const envContent = await readFile(envPath, 'utf-8');
-      // test_api.ts uses process.env.FLAVOR
-      expect(envContent).toContain('FLAVOR=example');
+      // test_api.ts uses process.env.MODE
+      expect(envContent).toContain('MODE=example');
       // .env.example has TEST_1 and TEST_2, they should NOT be here
       expect(envContent).not.toContain('TEST_1=');
       expect(envContent).not.toContain('TEST_2=');
@@ -208,7 +208,7 @@ describe('Firestack CLI Extended Tests', () => {
       expect(firebaseJson.emulators).toHaveProperty('functions');
 
       const envContent = await readFile(join(emulatorDist, '.env'), 'utf-8');
-      expect(envContent).toContain('FLAVOR=example');
+      expect(envContent).toContain('MODE=example');
 
       // Check rules and indexes are copied
       expect(await exists(join(emulatorDist, 'firestore.rules'))).toBe(true);

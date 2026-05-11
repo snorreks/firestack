@@ -8,7 +8,7 @@ import { logger } from '$logger';
 
 export default onRequest<RequestFunctions, 'test_api', { p: string }>(
   async (request, response) => {
-    const flavor = process.env.FLAVOR;
+    const mode = process.env.MODE;
 
     // Enrich the automatic log context with business-specific fields
     setLogContext({
@@ -17,7 +17,7 @@ export default onRequest<RequestFunctions, 'test_api', { p: string }>(
     });
 
     logger.info('Handling test_api request', {
-      flavor,
+      mode,
       message: request.body.message,
       params: request.params.p,
     });
@@ -35,7 +35,7 @@ export default onRequest<RequestFunctions, 'test_api', { p: string }>(
     response.send({
       dataFromSharedLib: test(),
       test: 'test',
-      flavor,
+      mode,
     });
   },
   {

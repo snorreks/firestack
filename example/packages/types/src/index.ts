@@ -13,7 +13,7 @@ export type CallableFunctions = {
       message: string;
     },
     {
-      flavor?: string;
+      mode?: string;
       dataFromSharedLib: string;
     },
   ];
@@ -25,7 +25,7 @@ export type RequestFunctions = {
       message: string;
     },
     {
-      flavor?: string;
+      mode?: string;
       dataFromSharedLib: string;
       test: string;
     },
