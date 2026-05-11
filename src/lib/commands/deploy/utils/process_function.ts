@@ -125,7 +125,7 @@ export const prepareFunction = async (options: {
     const deployFunctionData = await checkForChanges({
       functionName,
       outputRoot: outputDirectory,
-      flavor: deployOptions.flavor || 'default',
+      mode: deployOptions.mode || 'default',
       force: deployOptions.force,
       outputDirectory: join(cwd(), 'dist'),
       environment: envNeeded,

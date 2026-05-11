@@ -3,17 +3,17 @@ import type { FunctionsCacheGet, FunctionsCacheUpdate } from '@snorreks/firestac
 const baseURL = 'https://api.jsonbin.io/v3/b';
 const accessKey = '$2a$10$CQ4GBCW8od4zQ8sV7WugXucaGegle0e.kt7XiVNxtsaoJR1BFJMCC';
 
-const getBinId = (flavor: string): string => {
-  switch (flavor) {
+const getBinId = (mode: string): string => {
+  switch (mode) {
     case 'example':
       return '69addb6843b1c97be9c21860';
     default:
-      throw new Error(`Unknown flavor: ${flavor}`);
+      throw new Error(`Unknown mode: ${mode}`);
   }
 };
 
-export const get: FunctionsCacheGet = async ({ flavor }) => {
-  const binId = getBinId(flavor);
+export const get: FunctionsCacheGet = async ({ mode }) => {
+  const binId = getBinId(mode);
   const response = await fetch(`${baseURL}/${binId}/latest`, {
     method: 'GET',
     headers: {
@@ -29,10 +29,10 @@ export const get: FunctionsCacheGet = async ({ flavor }) => {
   return await response.json();
 };
 
-export const update: FunctionsCacheUpdate = async ({ flavor, newFunctionsCache }) => {
-  const binId = getBinId(flavor);
+export const update: FunctionsCacheUpdate = async ({ mode, newFunctionsCache }) => {
+  const binId = getBinId(mode);
 
-  const oldFunctionsCache = await get({ flavor });
+  const oldFunctionsCache = await get({ mode });
 
   const mergedFunctionsCache = {
     ...oldFunctionsCache,

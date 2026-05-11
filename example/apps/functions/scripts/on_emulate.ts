@@ -10,9 +10,9 @@ if (!projectId) {
   throw new Error('FIREBASE_PROJECT_ID environment variable not set');
 }
 
-const flavor = process.env.FIREBASE_FLAVOR;
+const mode = process.env.FIREBASE_MODE;
 
-console.log(`🚀 Initializing emulator (Project: ${projectId}, Flavor: ${flavor})...`);
+console.log(`🚀 Initializing emulator (Project: ${projectId}, Mode: ${mode})...`);
 
 const app = initializeApp({
   projectId: projectId,

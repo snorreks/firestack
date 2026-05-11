@@ -2,6 +2,11 @@ import { describe, expect, test } from 'bun:test';
 import { mkdtemp, rmdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import {
+  cacheChecksumLocal,
+  checksumsFilePath,
+  loadChecksums,
+} from '../../src/lib/utils/checksum.ts';
 import { executeCommand } from '../../src/lib/utils/command.ts';
 import { exists } from '../../src/lib/utils/common.ts';
 import { findFreePort } from '../../src/lib/utils/find_free_port.ts';
@@ -11,6 +16,41 @@ import {
   extractDatabaseRef,
   extractDocumentPath,
 } from '../../src/lib/utils/function_naming.ts';
+
+describe('checksum', () => {
+  const outputDirectory = join(tmpdir(), 'firestack-checksum-test');
+  const mode = 'test-mode';
+
+  test('checksumsFilePath returns correct path', () => {
+    const path = checksumsFilePath({ outputDirectory, mode });
+    expect(path).toContain('.checksums');
+    expect(path).toContain(mode);
+    expect(path).toContain('checksums.json');
+  });
+
+  test('loadChecksums returns empty object if file does not exist', async () => {
+    const checksums = await loadChecksums({ outputDirectory: '/nonexistent', mode });
+    expect(checksums).toEqual({});
+  });
+
+  test('cacheChecksumLocal and loadChecksums work together', async () => {
+    const functionName = 'testFunction';
+    const checksum = 'abc123checksum';
+
+    await cacheChecksumLocal({
+      outputDirectory,
+      mode,
+      functionName,
+      checksum,
+    });
+
+    const loadedChecksums = await loadChecksums({ outputDirectory, mode });
+    expect(loadedChecksums[functionName]).toBe(checksum);
+
+    // Cleanup
+    await rmdir(outputDirectory, { recursive: true });
+  });
+});
 
 describe('function_naming', () => {
   test('deriveFunctionName for API routes', () => {

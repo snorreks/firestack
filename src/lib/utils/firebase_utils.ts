@@ -115,11 +115,11 @@ export const toDotEnvironmentCode = (options: { env: Record<string, string> }): 
  * @param options - The options for copying the env file.
  */
 export const copyEnvFile = async (options: {
-  flavor: string;
+  mode: string;
   outputDir: string;
 }): Promise<void> => {
-  const { flavor, outputDir } = options;
-  const envSourcePath = join(cwd(), `.env.${flavor}`);
+  const { mode, outputDir } = options;
+  const envSourcePath = join(cwd(), `.env.${mode}`);
   const envDestPath = join(outputDir, '.env');
 
   const sourceExists = await exists(envSourcePath);

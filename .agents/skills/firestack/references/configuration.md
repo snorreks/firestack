@@ -1,13 +1,45 @@
-# Firestack Configuration (`firestack.json`)
+# Firestack Configuration
 
-Firestack uses `firestack.json` in the project root. Always add `$schema` for IDE autocompletion.
+Firestack supports two configuration formats: `firestack.config.ts` (recommended) and `firestack.json`.
 
-## Complete Example
+## `firestack.config.ts` (Recommended)
+
+Use this format when you need dynamic configuration or TypeScript path aliases from `tsconfig.json`.
+
+```ts
+// firestack.config.ts
+import { defineConfig } from "@snorreks/firestack";
+import { defaultRegion } from "@myproject/constants";
+
+export default defineConfig(({ mode }) => {
+  const isProduction = mode === "production";
+
+  return {
+    region: isProduction ? "us-east1" : defaultRegion,
+    modes: {
+      development: "my-project-dev",
+      production: "my-project-prod",
+    },
+    functionsDirectory: "src/controllers",
+    rulesDirectory: "src/rules",
+    minify: isProduction,
+    nodeVersion: "24",
+  };
+});
+```
+
+The `defineConfig` helper accepts either:
+- A **static config object**, or
+- A **callback** that receives `{ mode }` where `mode` is the value of the `--mode` CLI flag.
+
+## `firestack.json`
+
+If you prefer a static config file:
 
 ```json
 {
   "$schema": "./node_modules/@snorreks/firestack/firestack.schema.json",
-  "flavors": {
+  "modes": {
     "development": "my-project-dev",
     "staging": "my-project-staging",
     "production": "my-project-prod"
@@ -51,7 +83,7 @@ Firestack uses `firestack.json` in the project root. Always add `$schema` for ID
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `flavors` | `Record<string, string>` | `{}` | Map of flavor names to Firebase project IDs. |
+| `modes` | `Record<string, string>` | `{}` | Map of mode names to Firebase project IDs. |
 | `region` | `string` | `us-central1` | Default region for all deployed functions. |
 | `functionsDirectory` | `string` | `src/controllers` | Directory where function controllers are located. |
 | `rulesDirectory` | `string` | `src/rules` | Directory containing Firestore/Storage rules and indexes. |
@@ -70,6 +102,8 @@ Firestack uses `firestack.json` in the project root. Always add `$schema` for ID
 | `emulators` | `FirebaseEmulator[]` | `[]` | Explicit list of emulators to enable. Available: `auth`, `functions`, `firestore`, `database`, `hosting`, `pubsub`, `storage`, `eventarc`, `extensions`, `ui`, `hub`, `logging`, `appcheck`. |
 | `emulatorPorts` | `Record<FirebaseEmulator, number>` | — | Custom ports for individual emulators (e.g., `{ "auth": 9099 }`). |
 | `rulesTests` | `object` | — | Configuration for `test:rules` (see below). |
+
+> **Backward compatibility:** The old `flavors` key in `firestack.json` is mapped to `modes` automatically.
 
 ## Rules Testing Configuration
 
@@ -104,9 +138,9 @@ Firestack expects a conventional layout. Only the function files themselves are 
 
 ```
 project-root/
-  firestack.json
+  firestack.config.ts     # or firestack.json
   src/
-    controllers/        # functionsDirectory
+    controllers/          # functionsDirectory
       api/
       callable/
       firestore/
@@ -114,12 +148,12 @@ project-root/
       scheduler/
       storage/
       database/
-    rules/              # rulesDirectory
+    rules/                # rulesDirectory
       firestore.rules
       firestore.indexes.json
       storage.rules
     assets/
-  scripts/              # scriptsDirectory
+  scripts/                # scriptsDirectory
     on_emulate.ts
   tests/
     rules/

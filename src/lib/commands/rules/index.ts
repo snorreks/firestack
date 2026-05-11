@@ -26,7 +26,7 @@ export const rulesAction = async (
   if (!rulesOptions.projectId) {
     logger.error(
       chalk.red(
-        'Project ID not found. Please provide it using --projectId option or in firestack.json.'
+        'Project ID not found. Please provide it using --projectId option or in firestack config.'
       )
     );
     exit(1);
@@ -36,7 +36,7 @@ export const rulesAction = async (
   const cacheContext =
     cliOptions.cacheContext ??
     (await getCacheContext({
-      flavor: rulesOptions.flavor,
+      mode: rulesOptions.mode,
       cloudCacheFileName: rulesOptions.cloudCacheFileName,
     }));
   const { remoteUtils, mergedCache: previousCache } = cacheContext;
@@ -265,7 +265,7 @@ const updateCaches = async (options: {
   remoteUtils: CacheContext['remoteUtils'];
 }): Promise<boolean> => {
   const { rulesOptions, newChecksums, previousCache, remoteUtils } = options;
-  const checksumsFolder = join(cwd(), 'dist', '.checksums', rulesOptions.flavor);
+  const checksumsFolder = join(cwd(), 'dist', '.checksums', rulesOptions.mode);
   const updatePromises: Promise<void>[] = [];
 
   // Update local cache
@@ -275,7 +275,7 @@ const updateCaches = async (options: {
     }
     const currentLocalChecksums = await loadChecksums({
       outputDirectory: join(cwd(), 'dist'),
-      flavor: rulesOptions.flavor,
+      mode: rulesOptions.mode,
     });
     const updatedLocalChecksums = { ...currentLocalChecksums, ...newChecksums };
     await writeFile(
@@ -291,7 +291,7 @@ const updateCaches = async (options: {
     const updatedRemoteCache = { ...previousCache, ...newChecksums };
     remoteSuccess = await updateRemoteCache({
       updateCacheCallable: remoteUtils.updateCacheCallable,
-      flavor: rulesOptions.flavor,
+      mode: rulesOptions.mode,
       newCache: updatedRemoteCache,
     });
   }
@@ -305,7 +305,7 @@ const updateCaches = async (options: {
  */
 export const rulesCommand = new Command('rules')
   .description('Deploys Firestore, Storage rules, and indexes.')
-  .option('--flavor <flavor>', 'The flavor to use for deployment.')
+  .option('--mode <mode>', 'The mode to use for deployment.')
   .option('--verbose', 'Whether to run the command with verbose logging.')
   .option('--projectId <projectId>', 'The Firebase project ID to deploy to.')
   .option('--only <only>', 'Only deploy the specified components (e.g., "firestore,storage").')

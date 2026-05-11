@@ -328,7 +328,7 @@ export const testRulesAction = async (cliOptions: TestRulesCliOptions) => {
   if (!config.rulesTests) {
     logger.error(
       chalk.red(
-        '❌ No rulesTests configuration found in firestack.json. Please add rulesTests.firestore or rulesTests.storage.'
+        '❌ No rulesTests configuration found in firestack config. Please add rulesTests.firestore or rulesTests.storage.'
       )
     );
     exit(1);
@@ -405,7 +405,7 @@ export const testRulesAction = async (cliOptions: TestRulesCliOptions) => {
  */
 export const testRulesCommand = new Command('test:rules')
   .description('Tests Firestore and Storage security rules using the Firebase emulator.')
-  .option('--flavor <flavor>', 'The flavor to use.')
+  .option('--mode <mode>', 'The mode to use.')
   .option('--verbose', 'Enable verbose logging.')
   .option('--silent', 'Disable logging.')
   .option('--watch', 'Watch test files for changes and re-run.')

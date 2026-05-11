@@ -25,7 +25,7 @@ export const buildCommand = new Command('build')
   .description('Builds a single entry point using esbuild.')
   .argument('<input>', 'The input file path.')
   .argument('<output>', 'The output file path.')
-  .option('--flavor <flavor>', 'The flavor to use for configuration.')
+  .option('--mode <mode>', 'The mode to use for configuration.')
   .option('--external <external>', 'Comma-separated list of external dependencies.', (val) =>
     val.split(',')
   )

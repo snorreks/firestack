@@ -11,25 +11,49 @@ Initialize or update Firestack project infrastructure.
 
 ## `setup config`
 
-Create or update `firestack.json` in the project root.
+Create or update `firestack.config.ts` (or `firestack.json`) in the project root.
 
 ### Workflow
 
-1. Check if `firestack.json` already exists. If it does, read it and ask if the user wants to update it.
+1. Check if `firestack.config.ts` or `firestack.json` already exists. If it does, read it and ask if the user wants to update it.
 2. Ask the user for:
-   - Firebase project IDs for each flavor (e.g., `development`, `production`)
+   - Firebase project IDs for each mode (e.g., `development`, `production`)
    - Default region (suggest `us-central1`)
    - Functions directory (suggest `src/controllers`)
    - Rules directory (suggest `src/rules`)
    - Scripts directory (suggest `scripts`)
    - Node version (suggest `22`)
    - Engine (suggest `bun`)
-3. Write the file:
+3. Recommend `firestack.config.ts` for dynamic config with tsconfig path alias support:
+
+```ts
+// firestack.config.ts
+import { defineConfig } from "@snorreks/firestack";
+
+export default defineConfig({
+  modes: {
+    development: "<dev-project-id>",
+    production: "<prod-project-id>",
+  },
+  region: "us-central1",
+  functionsDirectory: "src/controllers",
+  rulesDirectory: "src/rules",
+  scriptsDirectory: "scripts",
+  nodeVersion: "22",
+  engine: "bun",
+  packageManager: "global",
+  minify: true,
+  sourcemap: true,
+  emulators: ["auth", "firestore", "functions", "pubsub", "storage"],
+});
+```
+
+Or if they prefer JSON:
 
 ```json
 {
   "$schema": "./node_modules/@snorreks/firestack/firestack.schema.json",
-  "flavors": {
+  "modes": {
     "development": "<dev-project-id>",
     "production": "<prod-project-id>"
   },
@@ -37,7 +61,6 @@ Create or update `firestack.json` in the project root.
   "functionsDirectory": "src/controllers",
   "rulesDirectory": "src/rules",
   "scriptsDirectory": "scripts",
-  "initScript": "on_emulate.ts",
   "nodeVersion": "22",
   "engine": "bun",
   "packageManager": "global",
@@ -63,7 +86,7 @@ Initialize the rules testing infrastructure.
 
 ### Workflow
 
-1. Read `firestack.json`. Add `rulesTests` if missing:
+1. Read the firestack config file. Add `rulesTests` if missing:
 
 ```json
 {
@@ -151,7 +174,7 @@ Create the `scripts/on_emulate.ts` emulator seed script.
 
 ### Workflow
 
-1. Read `firestack.json` to confirm `scriptsDirectory` and `initScript`.
+1. Read the firestack config to confirm `scriptsDirectory` and `initScript`.
 2. Check if the file already exists. If so, ask before overwriting.
 3. Write `scripts/on_emulate.ts`:
 
@@ -166,9 +189,9 @@ if (!projectId) {
   throw new Error("FIREBASE_PROJECT_ID environment variable not set");
 }
 
-const flavor = process.env.FIREBASE_FLAVOR;
+const mode = process.env.FIREBASE_MODE;
 console.log(
-  `Initializing emulator (Project: ${projectId}, Flavor: ${flavor})...`,
+  `Initializing emulator (Project: ${projectId}, Mode: ${mode})...`,
 );
 
 const app = initializeApp({
@@ -223,8 +246,8 @@ Any `.ts` file in `scriptsDirectory` can be executed via `firestack scripts [nam
 
 | Variable              | Description                                     |
 | --------------------- | ----------------------------------------------- |
-| `FIREBASE_PROJECT_ID` | The Firebase project ID for the current flavor. |
-| `FIREBASE_FLAVOR`     | The active flavor name.                         |
+| `FIREBASE_PROJECT_ID` | The Firebase project ID for the current mode.   |
+| `FIREBASE_MODE`       | The active mode name.                           |
 
 ### Example: Maintenance Script
 
@@ -250,5 +273,5 @@ console.log(`Cleaned up ${snapshot.size} old sessions.`);
 Run it:
 
 ```bash
-firestack scripts cleanup_old_sessions --flavor development
+firestack scripts cleanup_old_sessions --mode development
 ```

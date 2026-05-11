@@ -34,7 +34,7 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
 
   if (!deployOptions.projectId) {
     logger.error(
-      chalk.red('❌ Project ID not found. Provide it with --projectId or in firestack.json.')
+      chalk.red('❌ Project ID not found. Provide it with --projectId or in firestack config.')
     );
     exit(1);
   }
@@ -44,10 +44,10 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
 
   const [cacheContext, environment] = await Promise.all([
     getCacheContext({
-      flavor: deployOptions.flavor || 'default',
+      mode: deployOptions.mode || 'default',
       cloudCacheFileName: deployOptions.cloudCacheFileName,
     }),
-    getEnvironment(deployOptions.flavor || 'default'),
+    getEnvironment(deployOptions.mode || 'default'),
   ]);
 
   const { remoteUtils, mergedCache: previousCache } = cacheContext;
@@ -221,13 +221,13 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
   if (remoteUtils.updateCacheCallable) {
     const latestLocalCache = await loadChecksums({
       outputDirectory: join(cwd(), 'dist'),
-      flavor: deployOptions.flavor || 'default',
+      mode: deployOptions.mode || 'default',
     });
 
     const newRemoteCacheData = { ...previousCache, ...latestLocalCache };
     const success = await updateRemoteCache({
       updateCacheCallable: remoteUtils.updateCacheCallable,
-      flavor: deployOptions.flavor || 'default',
+      mode: deployOptions.mode || 'default',
       newCache: newRemoteCacheData,
     });
     if (success) {
@@ -239,7 +239,7 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
 
 export const deployCommand = new Command('deploy')
   .description('Builds and deploys Firebase functions, rules, and indexes.')
-  .option('--flavor <flavor>', 'The flavor to use for deployment.')
+  .option('--mode <mode>', 'The mode to use for deployment.')
   .option('--dry-run', 'Show the deployment commands without executing them.')
   .option('--force', 'Force deploy all functions, even if no files changed.')
   .option('--verbose', 'Whether to run the command with verbose logging.')

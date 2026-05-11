@@ -1,17 +1,17 @@
-# `/firestack emulate [flavor]`
+# `/firestack emulate [mode]`
 
 Start the Firebase Emulator Suite with live reload.
 
 ## When to Use
 
 - User says "start emulator", "run locally", "emulate", "dev server"
-- User invokes `/firestack emulate` or `/firestack emulate --flavor development`
+- User invokes `/firestack emulate` or `/firestack emulate --mode development`
 
 ## Workflow
 
 ### Step 1: Validate Configuration
 
-Read `firestack.json`. Check that `flavors` contains the requested flavor. If no flavor specified, ask the user or use the first flavor.
+Read `firestack.config.ts` or `firestack.json`. Check that `modes` contains the requested mode. If no mode specified, ask the user or use the first mode.
 
 ### Step 2: Check for Init Script
 
@@ -22,14 +22,14 @@ Check if `scriptsDirectory/<initScript>` exists (default: `scripts/on_emulate.ts
 
 ```bash
 # Basic start
-firestack emulate --flavor <flavor>
+firestack emulate --mode <mode>
 
 # Common variants
-firestack emulate --flavor <flavor> --open          # Auto-open Emulator UI
-firestack emulate --flavor <flavor> --no-watch      # Disable live reload
-firestack emulate --flavor <flavor> --no-init       # Skip on_emulate.ts
-firestack emulate --flavor <flavor> --force         # Kill existing port processes
-firestack emulate --flavor <flavor> --only functions,firestore  # Limited services
+firestack emulate --mode <mode> --open          # Auto-open Emulator UI
+firestack emulate --mode <mode> --no-watch      # Disable live reload
+firestack emulate --mode <mode> --no-init       # Skip on_emulate.ts
+firestack emulate --mode <mode> --force         # Kill existing port processes
+firestack emulate --mode <mode> --only functions,firestore  # Limited services
 ```
 
 ### Step 4: Monitor Output
@@ -51,19 +51,19 @@ Functions: localhost:5001
 Storage: localhost:9199
 ```
 
-(Note: Ports may vary if `emulatorPorts` is configured in `firestack.json`.)
+(Note: Ports may vary if `emulatorPorts` is configured.)
 
 ## Stopping the Emulator
 
 The emulator runs in the foreground. To stop it:
 - Press `Ctrl+C` in the terminal.
-- Or run `firestack emulate --flavor <flavor> --force` to kill and restart.
+- Or run `firestack emulate --mode <mode> --force` to kill and restart.
 
 ## Troubleshooting
 
 | Issue | Resolution |
 |---|---|
-| `Port already in use` | Use `--force` to kill existing processes, or configure `emulatorPorts` in `firestack.json` |
+| `Port already in use` | Use `--force` to kill existing processes, or configure `emulatorPorts` |
 | `initScript not found` | Create `scripts/on_emulate.ts` or disable with `--no-init` |
 | `Java not found` | The Firebase emulator requires Java. Install OpenJDK 11+ |
 | `Functions not loading` | Check that each function file has exactly one `export default` |
@@ -73,7 +73,7 @@ The emulator runs in the foreground. To stop it:
 
 | Flag | Description |
 |---|---|
-| `--flavor <flavor>` | Flavor context. |
+| `--mode <mode>` | Mode context. |
 | `--open` | Open Emulator UI in browser. |
 | `--watch` / `--no-watch` | Live reload (default: `true`). |
 | `--init` / `--no-init` | Run `initScript` (default: `true`). |

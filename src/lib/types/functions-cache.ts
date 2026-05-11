@@ -16,7 +16,7 @@ export type FunctionsCache = {
  * return doc.data() as FunctionsCache; };
  */
 export type FunctionsCacheGet = (options: {
-  flavor: string;
+  mode: string;
 }) => Promise<FunctionsCache | undefined>;
 
 /**
@@ -28,7 +28,7 @@ export type FunctionsCacheGet = (options: {
  */
 export type FunctionsCacheUpdate = (options: {
   newFunctionsCache: FunctionsCache;
-  flavor: string;
+  mode: string;
 }) => Promise<void>;
 
 export type CacheContext = {

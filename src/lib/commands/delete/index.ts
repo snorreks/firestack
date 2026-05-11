@@ -8,7 +8,7 @@ import { deleteFunctions } from './utils/delete_functions.ts';
 import { getOnlineFunctionNames, getUnusedFunctionNames } from './utils/read_functions.ts';
 
 type DeleteOptions = {
-  flavor?: string;
+  mode?: string;
   projectId?: string;
   packageManager?: PackageManager;
   external?: string[];
@@ -22,7 +22,7 @@ type DeleteOptions = {
  */
 export const deleteCommand = new Command('delete')
   .description('Deletes all unused Firebase functions.')
-  .option('--flavor <flavor>', 'The flavor to use for deletion.')
+  .option('--mode <mode>', 'The mode to use for deletion.')
   .option('--dry-run', 'Show the deletion commands without executing them.')
   .option('--verbose', 'Whether to run the command with verbose logging.')
   .option('--projectId <projectId>', 'The Firebase project ID to delete from.')

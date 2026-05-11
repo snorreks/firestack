@@ -1,6 +1,6 @@
 {
   "$schema": "../../../dist/firestack.schema.json",
-  "flavors": {
+  "modes": {
     "example": "aikami-dev"
   },
   "region": "us-east1",

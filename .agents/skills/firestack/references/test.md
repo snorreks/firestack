@@ -11,7 +11,7 @@ Run Firestore and Storage security rule tests.
 
 ### Step 1: Validate Test Configuration
 
-Read `firestack.json` and check for `rulesTests`:
+Read `firestack.config.ts` or `firestack.json` and check for `rulesTests`:
 
 ```json
 {
@@ -39,16 +39,16 @@ Use the template below or `/firestack setup testing`.
 
 ```bash
 # Run all rules tests
-firestack test:rules --flavor <flavor>
+firestack test:rules --mode <mode>
 
 # Run only firestore
-firestack test:rules --flavor <flavor> --only firestore
+firestack test:rules --mode <mode> --only firestore
 
 # Watch mode
-firestack test:rules --flavor <flavor> --watch
+firestack test:rules --mode <mode> --watch
 
 # Verbose output
-firestack test:rules --flavor <flavor> --verbose
+firestack test:rules --mode <mode> --verbose
 ```
 
 ### Step 4: Parse Results
@@ -169,7 +169,7 @@ describe('storage.rules', () => {
 
 | Flag | Description |
 |---|---|
-| `--flavor <flavor>` | Flavor context. |
+| `--mode <mode>` | Mode context. |
 | `--watch` | Watch test files for changes and re-run. |
 | `--only <targets>` | Only specific targets (`firestore`, `storage`). |
 | `--verbose` | Show detailed emulator output. |

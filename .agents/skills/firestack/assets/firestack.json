@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/@snorreks/firestack/firestack.schema.json",
-  "flavors": {
+  "modes": {
     "development": "my-project-dev",
     "production": "my-project-prod"
   },

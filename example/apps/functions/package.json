@@ -11,7 +11,7 @@
     "logs": "firestack logs",
     "delete": "firestack delete",
     "rules": "firestack rules",
-    "test:rules": "firestack test:rules --flavor example",
+    "test:rules": "firestack test:rules --mode example",
     "build": "firestack build src/controllers/api/test_api.ts dist/api/src/index.js --external firebase-admin,firebase-functions"
   },
   "dependencies": {

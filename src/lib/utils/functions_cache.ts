@@ -16,15 +16,15 @@ type RemoteCacheModule = {
  * @returns The cache context.
  */
 export const getCacheContext = async (options: {
-  flavor: string;
+  mode: string;
   cloudCacheFileName: string;
 }): Promise<CacheContext> => {
-  const { flavor, cloudCacheFileName } = options;
+  const { mode, cloudCacheFileName } = options;
   const [remoteUtils, localCache] = await Promise.all([
     getRemoteCacheUtils(cloudCacheFileName),
     loadChecksums({
       outputDirectory: join(cwd(), 'dist'),
-      flavor,
+      mode,
     }),
   ]);
 
@@ -33,7 +33,7 @@ export const getCacheContext = async (options: {
   if (remoteUtils.getCacheCallable) {
     const remoteCache = await fetchRemoteCache({
       getCacheCallable: remoteUtils.getCacheCallable,
-      flavor,
+      mode,
     });
     if (remoteCache) {
       logger.debug('Using remote cache, merging with local');
@@ -90,11 +90,11 @@ export const getRemoteCacheUtils = async (
  */
 export const fetchRemoteCache = async (options: {
   getCacheCallable: FunctionsCacheGet;
-  flavor: string;
+  mode: string;
 }): Promise<FunctionsCache | undefined> => {
-  const { getCacheCallable, flavor } = options;
+  const { getCacheCallable, mode } = options;
   try {
-    return await getCacheCallable({ flavor });
+    return await getCacheCallable({ mode });
   } catch (error) {
     logger.debug('Failed to fetch remote cache:', error);
     return undefined;
@@ -106,12 +106,12 @@ export const fetchRemoteCache = async (options: {
  */
 export const updateRemoteCache = async (options: {
   updateCacheCallable: FunctionsCacheUpdate;
-  flavor: string;
+  mode: string;
   newCache: FunctionsCache;
 }): Promise<boolean> => {
-  const { updateCacheCallable, flavor, newCache } = options;
+  const { updateCacheCallable, mode, newCache } = options;
   try {
-    await updateCacheCallable({ flavor, newFunctionsCache: newCache });
+    await updateCacheCallable({ mode, newFunctionsCache: newCache });
     return true;
   } catch (error) {
     logger.error('Failed to update remote cache:', error);

@@ -230,7 +230,7 @@ Create the directory structure if needed, then write the file using the `Write` 
 Ask the user if they want to verify the new function compiles:
 
 ```bash
-firestack build --flavor <flavor>
+firestack build --mode <mode>
 ```
 
 ### Step 6: Confirm

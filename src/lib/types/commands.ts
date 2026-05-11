@@ -5,7 +5,7 @@ import type { NodeVersion } from './helper-options.ts';
 // TODO cleanup cli vs command options vs firestack config
 
 export type BaseCliOptions = {
-  flavor?: string;
+  mode?: string;
   verbose?: boolean;
   silent?: boolean;
   projectId?: string;
@@ -50,7 +50,7 @@ export type DeployCliOptions = BaseCliOptions & {
 };
 
 export type DeployCommandOptions = {
-  flavor: string;
+  mode: string;
   functionsDirectory: string;
   rulesDirectory: string;
   scriptsDirectory: string;
@@ -96,7 +96,7 @@ export type EmulateCliOptions = BaseCliOptions & {
 };
 
 export type EmulateCommandOptions = {
-  flavor: string;
+  mode: string;
   functionsDirectory: string;
   rulesDirectory: string;
   scriptsDirectory: string;
@@ -131,12 +131,15 @@ export type EmulateCommandOptions = {
 export type LogsCliOptions = BaseCliOptions & {
   only?: string;
   lines?: string;
+  limit?: string;
   since?: string;
   open?: boolean;
+  tail?: boolean;
+  type?: 'functions' | 'firestore' | 'auth' | 'storage' | 'all';
 };
 
 export type LogsCommandOptions = {
-  flavor: string;
+  mode: string;
   functionsDirectory?: string;
   rulesDirectory?: string;
   scriptsDirectory?: string;
@@ -154,8 +157,11 @@ export type LogsCommandOptions = {
   debug?: boolean;
   only?: string;
   lines?: string;
+  limit?: string;
   since?: string;
   open?: boolean;
+  tail?: boolean;
+  type?: 'functions' | 'firestore' | 'auth' | 'storage' | 'all';
   firestoreRules?: string;
   storageRules?: string;
   emulators?: FirebaseEmulator[];
@@ -171,7 +177,7 @@ export type LogsCommandOptions = {
 export type ScriptsCliOptions = BaseCliOptions;
 
 export type ScriptsCommandOptions = {
-  flavor: string;
+  mode: string;
   scriptsDirectory: string;
   engine: string;
   functionsDirectory?: string;
@@ -205,7 +211,7 @@ export type DeleteCliOptions = BaseCliOptions & {
 };
 
 export type DeleteCommandOptions = {
-  flavor: string;
+  mode: string;
   projectId: string;
   functionsDirectory: string;
   nodeVersion: NodeVersion;
@@ -240,8 +246,12 @@ export type RulesCliOptions = BaseCliOptions & {
   force?: boolean;
 };
 
+export type SyncCliOptions = BaseCliOptions & {
+  only?: string;
+};
+
 export type RulesCommandOptions = {
-  flavor: string;
+  mode: string;
   projectId: string;
   functionsDirectory: string;
   rulesDirectory: string;
@@ -257,6 +267,36 @@ export type RulesCommandOptions = {
   debug?: boolean;
   only?: string;
   force?: boolean;
+  firestoreRules?: string;
+  storageRules?: string;
+  scriptsDirectory?: string;
+  initScript?: string;
+  emulators?: FirebaseEmulator[];
+  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
+  keepNames?: boolean;
+  watch?: boolean;
+  noWatch?: boolean;
+  init?: boolean;
+  noInit?: boolean;
+  cloudCacheFileName: string;
+};
+
+export type SyncCommandOptions = {
+  mode: string;
+  projectId: string;
+  functionsDirectory: string;
+  rulesDirectory: string;
+  nodeVersion: NodeVersion;
+  region: string;
+  engine: string;
+  packageManager: PackageManager;
+  minify: boolean;
+  sourcemap: boolean;
+  external: string[];
+  verbose?: boolean;
+  silent?: boolean;
+  debug?: boolean;
+  only?: string;
   firestoreRules?: string;
   storageRules?: string;
   scriptsDirectory?: string;
@@ -290,7 +330,7 @@ export type TestRulesCliOptions = BaseCliOptions & {
 };
 
 export type TestRulesCommandOptions = {
-  flavor: string;
+  mode: string;
   projectId?: string;
   functionsDirectory: string;
   rulesDirectory: string;

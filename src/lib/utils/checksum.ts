@@ -21,19 +21,19 @@ const exists = async (options: { path: string }): Promise<boolean> => {
 };
 
 /**
- * Returns the path to the checksums file for a given flavor.
- * @param options - Options containing output directory and flavor.
+ * Returns the path to the checksums file for a given mode.
+ * @param options - Options containing output directory and mode.
  * @returns The path to the checksums JSON file.
  */
-export const checksumsFilePath = (options: { outputDirectory: string; flavor: string }): string =>
-  join(options.outputDirectory, '.checksums', options.flavor, checksumsFileName);
+export const checksumsFilePath = (options: { outputDirectory: string; mode: string }): string =>
+  join(options.outputDirectory, '.checksums', options.mode, checksumsFileName);
 
 /**
- * Loads all cached checksums for a specific flavor asynchronously.
+ * Loads all cached checksums for a specific mode asynchronously.
  */
 export const loadChecksums = async (options: {
   outputDirectory: string;
-  flavor: string;
+  mode: string;
 }): Promise<Record<string, string>> => {
   const path = checksumsFilePath(options);
   const pathExists = await exists({ path });
@@ -109,7 +109,7 @@ export const cacheChecksumLocal = async (data: ChecksumData): Promise<void> => {
     }
 
     const path = checksumsFilePath(data);
-    const folderPath = join(data.outputDirectory, '.checksums', data.flavor);
+    const folderPath = join(data.outputDirectory, '.checksums', data.mode);
 
     const folderExists = await exists({ path: folderPath });
     if (!folderExists) {

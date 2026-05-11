@@ -1,7 +1,7 @@
 export type ChecksumData = {
   functionName: string;
   outputRoot: string;
-  flavor: string;
+  mode: string;
   force?: boolean;
   outputDirectory: string;
   checksum?: string;

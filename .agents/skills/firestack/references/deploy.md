@@ -1,38 +1,38 @@
-# `/firestack deploy [flavor]`
+# `/firestack deploy [mode]`
 
-Build and deploy Firebase Cloud Functions, rules, and indexes to a specific flavor.
+Build and deploy Firebase Cloud Functions, rules, and indexes to a specific mode.
 
 ## When to Use
 
 - User says "deploy", "deploy to production", "ship it", "push functions"
-- User invokes `/firestack deploy` or `/firestack deploy --flavor production`
+- User invokes `/firestack deploy` or `/firestack deploy --mode production`
 
 ## Workflow
 
 ### Step 1: Validate Configuration
 
-Read `firestack.json`. If missing, abort and suggest `/firestack setup config`.
+Read `firestack.config.ts` (or `firestack.json`). If missing, abort and suggest `/firestack setup config`.
 
-Check that `flavors` exists and contains the requested flavor. If the user didn't specify a flavor, ask them to pick one from the available flavors.
+Check that `modes` exists and contains the requested mode. If the user didn't specify a mode, ask them to pick one from the available modes.
 
 ### Step 2: Pre-Deploy Check
 
 ```bash
 # Run a dry-run build to validate everything compiles
-firestack deploy --flavor <flavor> --dry-run
+firestack deploy --mode <mode> --dry-run
 ```
 
 If this fails, inspect the error output:
 - **Type errors** → Fix the source code.
 - **Missing dependencies** → Run `bun install` or `npm install`.
-- **Invalid firestack.json** → Fix the config.
+- **Invalid config** → Fix the config file.
 
 ### Step 3: Confirm Deployment (Destructive)
 
 Show the user what will be deployed:
 
 ```
-Deploying to: <project-id> (flavor: <flavor>)
+Deploying to: <project-id> (mode: <mode>)
 Region: <region>
 Functions directory: <functionsDirectory>
 ```
@@ -43,13 +43,13 @@ Ask for confirmation before proceeding.
 
 ```bash
 # Standard deploy (functions + rules + indexes)
-firestack deploy --flavor <flavor>
+firestack deploy --mode <mode>
 
 # With specific flags
-firestack deploy --flavor <flavor> --force          # Ignore cache, redeploy all
-firestack deploy --flavor <flavor> --only func1,func2  # Deploy specific functions only
-firestack deploy --flavor <flavor> --skip-rules     # Deploy functions only
-firestack deploy --flavor <flavor> --verbose        # Show full Firebase output
+firestack deploy --mode <mode> --force          # Ignore cache, redeploy all
+firestack deploy --mode <mode> --only func1,func2  # Deploy specific functions only
+firestack deploy --mode <mode> --skip-rules     # Deploy functions only
+firestack deploy --mode <mode> --verbose        # Show full Firebase output
 ```
 
 ### Step 5: Post-Deploy Verification
@@ -57,7 +57,7 @@ firestack deploy --flavor <flavor> --verbose        # Show full Firebase output
 After deployment succeeds:
 1. List the deployed function URLs (for HTTP functions):
    ```bash
-   firestack logs --flavor <flavor> -n 20
+   firestack logs -n 20
    ```
 2. For HTTP functions, the URL format is: `https://<region>-<project-id>.cloudfunctions.net/<function-name>`
 
@@ -68,14 +68,14 @@ After deployment succeeds:
 | `firebase login required` | Run `firebase login` or `npx firebase login` |
 | `functions already exist with different source` | Use `--force` to overwrite |
 | `esbuild error` | Check for TypeScript errors in the function source |
-| `external dependency not found` | Add it to `external` in function options or global `external` in `firestack.json` |
+| `external dependency not found` | Add it to `external` in function options or global `external` in config |
 | `assets not found` | Ensure asset paths are relative to project root |
 
 ## Full Flag Reference
 
 | Flag | Description |
 |---|---|
-| `--flavor <flavor>` | Target environment (required). |
+| `--mode <mode>` | Target environment (required). |
 | `--dry-run` | Validate build without deploying. |
 | `--force` | Redeploy all functions, ignore cache. |
 | `--only <names>` | Comma-separated list of specific functions. Automatically skips rules. |

@@ -6,20 +6,20 @@ import { exists } from '$utils/common.ts';
 
 /**
  * Loads environment variables for scripts.
- * Uses `.env.{flavor}` as the base, then overrides with `process.env`.
+ * Uses `.env.{mode}` as the base, then overrides with `process.env`.
  * This allows CI pipelines to inject secrets without modifying files.
- * @param options - The options containing the flavor.
+ * @param options - The options containing the mode.
  * @returns A promise that resolves to the loaded environment variables.
  */
 export const getScriptEnvironment = async (options: {
-  flavor: string;
+  mode: string;
 }): Promise<Record<string, string>> => {
-  const { flavor } = options;
-  const envPath = join(cwd(), `.env.${flavor}`);
+  const { mode } = options;
+  const envPath = join(cwd(), `.env.${mode}`);
 
   const env: Record<string, string> = {};
 
-  // 1. Load from .env.{flavor} as the base
+  // 1. Load from .env.{mode} as the base
   const envExists = await exists(envPath);
   if (envExists) {
     try {
@@ -35,12 +35,12 @@ export const getScriptEnvironment = async (options: {
           env[key] = value;
         }
       }
-      logger.debug(`Loaded script environment variables from .env.${flavor}`);
+      logger.debug(`Loaded script environment variables from .env.${mode}`);
     } catch (error) {
-      logger.debug(`Failed to read .env.${flavor}:`, error);
+      logger.debug(`Failed to read .env.${mode}:`, error);
     }
   } else {
-    logger.debug(`.env.${flavor} not found, using process.env only.`);
+    logger.debug(`.env.${mode} not found, using process.env only.`);
   }
 
   // 2. Merge process.env on top (CI-friendly override)

@@ -9,7 +9,7 @@ Firestack is a CLI tool for building, testing, and deploying Firebase Cloud Func
 - **TypeScript First**: Write functions in standard TypeScript with modern features.
 - **Auto-Discovery**: Automatically finds and builds functions based on your file structure.
 - **Parallel Execution**: Uses a worker-pool pattern for concurrent deployments.
-- **Multi-Environment (Flavors)**: Support for development, staging, and production environments.
+- **Multi-Environment (Modes)**: Support for development, staging, and production environments.
 - **Emulator Support**: Run Firebase emulators with live reload, auto-open UI, and initialization scripts.
 - **Native Rules Testing**: Test Firestore and Storage security rules against ephemeral emulators with zero config.
 - **Intelligent Caching**: Differential deployments with local and remote cache support.
@@ -28,12 +28,30 @@ bun add @snorreks/firestack
 
 ### 1. Setup Configuration
 
-Create a `firestack.json` in your project root. You can add the `$schema` property to get autocompletion and validation in your editor. We recommend pointing to the schema in your `node_modules` for the best performance:
+Create a `firestack.config.ts` (recommended) or `firestack.json` in your project root.
+
+**TypeScript config** — supports path aliases from your `tsconfig.json`:
+
+```ts
+// firestack.config.ts
+import { defineConfig } from "@snorreks/firestack";
+import { defaultRegion } from "@myproject/constants";
+
+export default defineConfig(({ mode }) => ({
+  region: defaultRegion,
+  modes: {
+    development: "my-project-dev",
+    production: "my-project-prod",
+  },
+}));
+```
+
+**JSON config** — simple, static:
 
 ```json
 {
   "$schema": "./node_modules/@snorreks/firestack/firestack.schema.json",
-  "flavors": {
+  "modes": {
     "development": "my-project-dev",
     "production": "my-project-prod"
   },
@@ -48,8 +66,7 @@ Create a `firestack.json` in your project root. You can add the `$schema` proper
 }
 ```
 
-Alternatively, you can use the remote schema if you are not using a local installation:
-`https://raw.githubusercontent.com/snorreks/firestack/master/firestack.schema.json`
+> **Note:** Firestack looks for `firestack.config.ts` first, then falls back to `firestack.json`. If you use the JSON format, the old `flavors` key is still supported for backward compatibility.
 
 ## AI Agent Integration (Skill)
 
@@ -142,7 +159,7 @@ export default onAuthCreate(
 ### 3. Deploy
 
 ```bash
-firestack deploy --flavor development
+firestack deploy --mode development
 ```
 
 ## Logging & Observability
@@ -194,7 +211,7 @@ process.on("SIGTERM", async () => {
 });
 ```
 
-Configure the path in `firestack.json`:
+Configure the path in `firestack.config.ts` or `firestack.json`:
 
 ```json
 {
@@ -210,11 +227,47 @@ Firestack injects the deployed function name as an environment variable. Useful 
 const functionName = process.env.FIRESTACK_FUNCTION_NAME;
 ```
 
-## Configuration (firestack.json)
+## Configuration
+
+Firestack supports two configuration formats: `firestack.config.ts` (recommended) and `firestack.json`.
+
+### `firestack.config.ts` (Recommended)
+
+Use this format when you need dynamic configuration, TypeScript path aliases from `tsconfig.json`, or computed values.
+
+```ts
+// firestack.config.ts
+import { defineConfig } from "@snorreks/firestack";
+import { defaultRegion } from "@myproject/constants";
+
+export default defineConfig(({ mode }) => {
+  const isProduction = mode === "production";
+
+  return {
+    region: isProduction ? "us-east1" : defaultRegion,
+    modes: {
+      development: "my-project-dev",
+      production: "my-project-prod",
+    },
+    functionsDirectory: "src/controllers",
+    rulesDirectory: "src/rules",
+    minify: isProduction,
+    nodeVersion: "24",
+  };
+});
+```
+
+The `defineConfig` helper accepts either:
+- A **static config object**, or
+- A **callback** that receives `{ mode }` where `mode` is the value of the `--mode` CLI flag (or the first key in `modes` if not specified).
+
+### `firestack.json`
+
+For simpler projects, use the JSON format:
 
 | Option               | Type     | Default           | Description                                                                           |
 | -------------------- | -------- | ----------------- | ------------------------------------------------------------------------------------- |
-| `flavors`            | object   | `{}`              | Map of flavor names to Firebase project IDs.                                          |
+| `modes`              | object   | `{}`              | Map of mode names to Firebase project IDs.                                            |
 | `region`             | string   | `us-central1`     | Default region for all deployed functions.                                            |
 | `functionsDirectory` | string   | `src/controllers` | Directory where your function controllers are located.                                |
 | `rulesDirectory`     | string   | `src/rules`       | Directory containing Firestore/Storage rules and indexes.                             |
@@ -229,13 +282,15 @@ const functionName = process.env.FIRESTACK_FUNCTION_NAME;
 | `includeFilePath`    | string   | `src/logger.ts`   | File auto-imported into every function index for init (logging, tracing, etc.).      |
 | `rulesTests`         | object   | `undefined`       | Configuration for `test:rules` (see Rules Testing below).                             |
 
+> **Backward compatibility:** The old `flavors` key in `firestack.json` is automatically mapped to `modes`.
+
 ## Commands & Options
 
 ### `firestack deploy`
 
 Builds and deploys functions, rules, and indexes to Firebase.
 
-- `--flavor <flavor>`: The environment to deploy to.
+- `--mode <mode>`: The environment to deploy to.
 - `--dry-run`: Show the deployment plan without executing it.
 - `--force`: Force deploy all functions, ignoring the cache.
 - `--only <names>`: Deploy specific functions (comma-separated). Skips rules automatically.
@@ -255,7 +310,7 @@ Starts the Firebase emulator with live reload and real-time UI detection.
 - `--force` / `--no-force`: Kill any existing servers running on emulator ports before starting (default: `false`).
 - `--projectId <id>`: Override the Firebase project ID for emulation.
 - `--only <services>`: Only start specified services (e.g., `functions,firestore`).
-- `--flavor <flavor>`: The flavor context for emulation.
+- `--mode <mode>`: The mode context for emulation.
 - `--tsconfig <path>`: Path to a custom `tsconfig.json` (e.g., `tsconfig.app.json`).
 - `--verbose`: Stream full emulator logs to the console.
 
@@ -263,12 +318,12 @@ Starts the Firebase emulator with live reload and real-time UI detection.
 
 Tests Firestore and Storage security rules using ephemeral Firebase emulators.
 
-- `--flavor <flavor>`: The flavor to use.
+- `--mode <mode>`: The mode to use.
 - `--watch`: Watch test files for changes and re-run.
 - `--only <targets>`: Only test specific targets (e.g., `firestore,storage`).
 - `--verbose`: Show detailed emulator output.
 
-Configure targets in `firestack.json`:
+Configure targets in `firestack.config.ts` or `firestack.json`:
 
 ```json
 {
@@ -325,7 +380,7 @@ Removes unused functions from your Firebase project.
 
 Runs a custom script from the `scriptsDirectory`. If no name is provided, an interactive selector appears.
 
-- `--flavor <flavor>`: The flavor context for the script.
+- `--mode <mode>`: The mode context for the script.
 - `--engine <engine>`: Override the default execution engine.
 
 ### `firestack logs`
@@ -365,12 +420,12 @@ import type {
   FunctionsCacheUpdate,
 } from "@snorreks/firestack";
 
-export const get: FunctionsCacheGet = async ({ flavor }) => {
+export const get: FunctionsCacheGet = async ({ mode }) => {
   // Fetch cached checksums from your remote storage
 };
 
 export const update: FunctionsCacheUpdate = async ({
-  flavor,
+  mode,
   newFunctionsCache,
 }) => {
   // Save updated checksums to your remote storage
@@ -385,7 +440,7 @@ Organize your rules in the `rulesDirectory`:
 - `firestore.indexes.json`: Firestore index definitions.
 - `storage.rules`: Cloud Storage security rules.
 
-Deploy them using `firestack rules --flavor production`.
+Deploy them using `firestack rules --mode production`.
 
 ## License
 

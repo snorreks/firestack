@@ -15,7 +15,7 @@ export type FirestackConfig = {
   storageRules?: string;
   scriptsDirectory?: string;
   initScript?: string;
-  flavors?: Record<string, string>;
+  modes?: Record<string, string>;
   region?: string;
   nodeVersion?: NodeVersion;
   engine?: string;
@@ -42,4 +42,42 @@ export type FirestackConfig = {
     firestore?: RulesTestConfig;
     storage?: RulesTestConfig;
   };
+};
+
+export type DefineConfigParams = {
+  /**
+   * The current mode (from --mode CLI flag).
+   * When undefined, defaults to the first key in the `modes` config.
+   */
+  mode?: string;
+};
+
+/**
+ * Helper function that provides full type safety for firestack.config.ts.
+ *
+ * Supports both a static config object and a callback factory that receives
+ * the resolved mode (similar to SvelteKit's `defineConfig`).
+ *
+ * @example
+ * ```ts
+ * // Static config
+ * export default defineConfig({
+ *   region: 'us-central1',
+ *   modes: { development: 'dev-project' },
+ * });
+ *
+ * // Dynamic config with mode
+ * export default defineConfig(({ mode }) => ({
+ *   region: mode === 'production' ? 'us-east1' : 'us-central1',
+ *   modes: {
+ *     development: 'dev-project',
+ *     production: 'prod-project',
+ *   },
+ * }));
+ * ```
+ */
+export const defineConfig = (
+  config: FirestackConfig | ((params: DefineConfigParams) => FirestackConfig),
+): FirestackConfig | ((params: DefineConfigParams) => FirestackConfig) => {
+  return config;
 };

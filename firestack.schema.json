@@ -41,12 +41,19 @@
       "default": "on_emulate.ts",
       "description": "Script to run automatically when starting the emulator."
     },
+    "modes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Map of mode names to Firebase project IDs."
+    },
     "flavors": {
       "type": "object",
       "additionalProperties": {
         "type": "string"
       },
-      "description": "Map of flavor names to Firebase project IDs."
+      "description": "Deprecated: use 'modes' instead. Map of flavor names to Firebase project IDs."
     },
     "region": {
       "type": "string",

@@ -5,8 +5,8 @@ import type { AllFunctionOptions, NodeVersion } from './helper-options.ts';
 export type PackageManager = 'npm' | 'yarn' | 'pnpm' | 'bun' | 'global';
 
 type SharedDeployExecutorBaseOptions = ExecutorBaseBuildOptions & {
-  /** The project flavor */
-  flavor?: string;
+  /** The project mode */
+  mode?: string;
   /** The default region is us-central1 */
   region?: string;
   /** Only build the function, don't deploy it */
@@ -53,9 +53,9 @@ export type DeployExecutorOptions = SharedDeployExecutorBaseOptions & {
    * @default `dist/<relative-path-to-project>`
    */
   outputDirectory?: string;
-  /** If true, will set the flavor as production */
+  /** If true, will set the mode as production */
   production?: boolean;
-  /** If true, will set the flavor as development */
+  /** If true, will set the mode as development */
   development?: boolean;
   /** Don't log anything */
   silent?: boolean;
@@ -93,8 +93,8 @@ export type DeployExecutorOptions = SharedDeployExecutorBaseOptions & {
   /** Only deploy the given function names, separated by a comma */
   only?: string;
 
-  flavor?: string;
-  flavors: Record<string, string>;
+  mode?: string;
+  modes: Record<string, string>;
 
   envFiles?: Record<string, string>;
 
@@ -130,7 +130,7 @@ export type BaseDeployOptions = SharedDeployExecutorBaseOptions & {
   outputDirectory: string;
   defaultRegion: string;
   temporaryDirectory: string;
-  flavor: string;
+  mode: string;
   /** Stringified code of the environments */
   environment?: Environment;
 
@@ -201,7 +201,7 @@ export type BuildFunctionData<T extends FunctionBuilder = FunctionBuilder> = Omi
 
     sentry?: SentryData;
 
-    flavor: string;
+    mode: string;
 
     nodeVersion: NodeVersion;
   };

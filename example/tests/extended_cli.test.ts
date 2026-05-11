@@ -23,9 +23,9 @@ describe('Firestack CLI Extended Tests', () => {
     '1. .env file generation (only needed envs)',
     async () => {
       // Run deploy dry-run to trigger preparation of test_api
-      // Use flavor 'example' because it's in firestack.json
+      // Use mode 'example' because it's in firestack config
       Bun.spawnSync(
-        ['node', FIRESTACK_BIN, 'deploy', '--only', 'test_api', '--dry-run', '--flavor', 'example'],
+        ['node', FIRESTACK_BIN, 'deploy', '--only', 'test_api', '--dry-run', '--mode', 'example'],
         { cwd: FUNCTIONS_DIR }
       );
 
@@ -54,7 +54,7 @@ describe('Firestack CLI Extended Tests', () => {
           '--only',
           'auth_created_renamed',
           '--dry-run',
-          '--flavor',
+          '--mode',
           'example',
         ],
         { cwd: FUNCTIONS_DIR }
@@ -84,7 +84,7 @@ describe('Firestack CLI Extended Tests', () => {
           '--only',
           'assets_test_api',
           '--dry-run',
-          '--flavor',
+          '--mode',
           'example',
         ],
         { cwd: FUNCTIONS_DIR }
@@ -115,7 +115,7 @@ describe('Firestack CLI Extended Tests', () => {
           '--only',
           'auth_created_renamed',
           '--dry-run',
-          '--flavor',
+          '--mode',
           'example',
         ],
         { cwd: FUNCTIONS_DIR }
@@ -143,7 +143,7 @@ describe('Firestack CLI Extended Tests', () => {
           '--only',
           'auth_created_renamed',
           '--dry-run',
-          '--flavor',
+          '--mode',
           'example',
         ],
         { cwd: FUNCTIONS_DIR }
@@ -165,7 +165,7 @@ describe('Firestack CLI Extended Tests', () => {
     async () => {
       // scheduler/daily.ts
       Bun.spawnSync(
-        ['node', FIRESTACK_BIN, 'deploy', '--only', 'daily', '--dry-run', '--flavor', 'example'],
+        ['node', FIRESTACK_BIN, 'deploy', '--only', 'daily', '--dry-run', '--mode', 'example'],
         { cwd: FUNCTIONS_DIR }
       );
 
@@ -190,7 +190,7 @@ describe('Firestack CLI Extended Tests', () => {
           '--dry-run',
           '--minify',
           '--sourcemap',
-          '--flavor',
+          '--mode',
           'example',
         ],
         { cwd: FUNCTIONS_DIR }

@@ -21,14 +21,14 @@ Firestack is a TypeScript-first CLI for Firebase Cloud Functions v2. This skill 
 
 1. **One Function Per File** — Every `.ts` file in `functionsDirectory` must contain exactly one `export default` of a trigger wrapper. No named exports, no multiple functions per file.
 2. **Auto-Derived Names** — The deployed function name comes from the file path: `api/hello.ts` → `hello`, `firestore/users/[uid]/created.ts` → `users_created`. Override with `functionName` in options.
-3. **Always check `firestack.json`** before running any command. If it doesn't exist, offer to run `/firestack setup config` first.
+3. **Always check `firestack.config.ts` (or `firestack.json`)** before running any command. If neither exists, offer to run `/firestack setup config` first.
 
 ## Command Registry
 
 | Command | Description | Reference |
 |---|---|---|
-| `deploy [flavor]` | Build and deploy functions/rules to Firebase | [references/deploy.md](references/deploy.md) |
-| `emulate [flavor]` | Start Firebase emulators with live reload | [references/emulate.md](references/emulate.md) |
+| `deploy [mode]` | Build and deploy functions/rules to Firebase | [references/deploy.md](references/deploy.md) |
+| `emulate [mode]` | Start Firebase emulators with live reload | [references/emulate.md](references/emulate.md) |
 | `create api <name>` | Scaffold a new HTTP function | [references/create.md](references/create.md) |
 | `create callable <name>` | Scaffold a new callable function | [references/create.md](references/create.md) |
 | `create firestore <path> <event>` | Scaffold a Firestore trigger | [references/create.md](references/create.md) |
@@ -52,7 +52,7 @@ Firestack is a TypeScript-first CLI for Firebase Cloud Functions v2. This skill 
 
 When executing any Firestack command, the agent should:
 
-1. Read `firestack.json` to understand the project configuration.
+1. Read `firestack.config.ts` (or `firestack.json`) to understand the project configuration.
 2. Read `package.json` to check if `@snorreks/firestack` is installed.
 3. Use the `functionsDirectory` (default: `src/controllers`) as the root for all function scaffolding.
 4. Use the `scriptsDirectory` (default: `scripts`) for custom scripts and `on_emulate.ts`.

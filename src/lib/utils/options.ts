@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { cwd } from 'node:process';
 import { DEFAULT_NODE_VERSION } from '$constants';
 import { logger } from '$logger';
+import { exists } from '$utils/common.ts';
 import type {
   BaseCliOptions,
   DeleteCliOptions,
@@ -18,46 +19,167 @@ import type {
   RulesCommandOptions,
   ScriptsCliOptions,
   ScriptsCommandOptions,
+  SyncCliOptions,
+  SyncCommandOptions,
   TestRulesCliOptions,
   TestRulesCommandOptions,
 } from '$types';
 
-export const getFirestackConfig = async (): Promise<FirestackConfig> => {
-  const configPath = join(cwd(), 'firestack.json');
-  let config: FirestackConfig = {};
-  try {
-    const configContent = await readFile(configPath, 'utf-8');
-    config = JSON.parse(configContent);
-    logger.debug(`Using configuration from ${configPath}`);
-  } catch (e) {
-    const error = e as Error & { code?: string };
-    if (error.code === 'ENOENT') {
-      logger.debug('firestack.json not found, using command-line options.');
-    } else {
-      logger.error(`Failed to read firestack.json at ${configPath}: ${error.message}`);
-      throw error;
-    }
-  }
-
-  return config;
-};
-
-const getFirstFlavor = (config: FirestackConfig): string | undefined => {
-  const flavors = config.flavors ?? {};
-  return Object.keys(flavors)[0];
+type ConfigLoaderResult = {
+  config: FirestackConfig;
+  configPath: string;
 };
 
 /**
- * Gets base options by merging CLI options with firestack.json configuration.
+ * Attempts to load firestack.config.ts using jiti with tsconfig path alias support.
+ * If the config exports a function (defineConfig callback), it calls it with
+ * the given mode to resolve the final config.
+ */
+const loadTsConfig = async (configPath: string): Promise<ConfigLoaderResult | undefined> => {
+  if (!(await exists(configPath))) {
+    return undefined;
+  }
+
+  try {
+    // Dynamic import of jiti — it's a CJS module, loaded lazily
+    const { createJiti } = await import('jiti');
+    const jiti = createJiti(configPath, {
+      // Let jiti auto-discover tsconfig.json by walking up from configPath
+      // to resolve path aliases (@myproject/constants → real path)
+    });
+
+    const mod = (await jiti.import(configPath)) as Record<string, unknown>;
+    const raw = (mod.default ?? mod) as
+      | FirestackConfig
+      | ((params: { mode?: string }) => FirestackConfig);
+
+    let config: FirestackConfig;
+    if (typeof raw === 'function') {
+      // Call with undefined mode first to get the base config structure
+      // (just to read modes, region, etc.)
+      config = raw({ mode: undefined });
+    } else {
+      config = raw;
+    }
+
+    logger.debug(`Using configuration from ${configPath}`);
+
+    return { config, configPath };
+  } catch (error) {
+    logger.error(`Failed to load ${configPath}: ${(error as Error).message}`);
+    throw error;
+  }
+};
+
+/**
+ * Attempts to load firestack.json.
+ * Also handles backward compatibility: if the JSON config has `flavors`
+ * (the old key name), it maps it to `modes`.
+ */
+const loadJsonConfig = async (configPath: string): Promise<ConfigLoaderResult | undefined> => {
+  if (!(await exists(configPath))) {
+    return undefined;
+  }
+
+  try {
+    const configContent = await readFile(configPath, 'utf-8');
+    const parsed = JSON.parse(configContent);
+
+    // Backward compatibility: map old `flavors` key to `modes`
+    const config: FirestackConfig = {
+      ...parsed,
+      modes: parsed.modes ?? parsed.flavors,
+    };
+
+    logger.debug(`Using configuration from ${configPath}`);
+
+    return { config, configPath };
+  } catch (error) {
+    logger.error(`Failed to read ${configPath}: ${(error as Error).message}`);
+    throw error;
+  }
+};
+
+/**
+ * Resolves the config for a given mode by calling the config factory with
+ * the mode if the config is a factory function.
+ *
+ * This is used when the mode is known (e.g., from CLI or default) and we
+ * need to re-evaluate a defineConfig callback with the resolved mode.
+ */
+const resolveConfigForMode = async (
+  configPath: string,
+  mode: string,
+): Promise<FirestackConfig> => {
+  if (!configPath.endsWith('.ts')) {
+    // JSON config doesn't need re-resolution
+    return {};
+  }
+
+  try {
+    const { createJiti } = await import('jiti');
+    const jiti = createJiti(configPath);
+
+    const mod = (await jiti.import(configPath)) as Record<string, unknown>;
+    const raw = (mod.default ?? mod) as
+      | FirestackConfig
+      | ((params: { mode?: string }) => FirestackConfig);
+
+    if (typeof raw === 'function') {
+      return raw({ mode });
+    }
+
+    return raw;
+  } catch (error) {
+    logger.error(`Failed to resolve config for mode '${mode}': ${(error as Error).message}`);
+    throw error;
+  }
+};
+
+/**
+ * Loads the firestack configuration.
+ * Tries firestack.config.ts first, then falls back to firestack.json.
+ *
+ * For TS configs that use the defineConfig callback pattern, this loads the
+ * base structure (with mode=undefined) to extract default values like modes.
+ * Call `resolveConfigForMode` separately when the actual mode is known.
+ */
+export const getFirestackConfig = async (): Promise<FirestackConfig> => {
+  const tsConfigPath = join(cwd(), 'firestack.config.ts');
+  const jsonConfigPath = join(cwd(), 'firestack.json');
+
+  // 1. Try TypeScript config first
+  const tsResult = await loadTsConfig(tsConfigPath);
+  if (tsResult) {
+    return tsResult.config;
+  }
+
+  // 2. Fall back to JSON config
+  const jsonResult = await loadJsonConfig(jsonConfigPath);
+  if (jsonResult) {
+    return jsonResult.config;
+  }
+
+  logger.debug('No firestack.config.ts or firestack.json found, using default options.');
+  return {};
+};
+
+const getFirstMode = (config: FirestackConfig): string | undefined => {
+  const modes = config.modes ?? {};
+  return Object.keys(modes)[0];
+};
+
+/**
+ * Gets base options by merging CLI options with firestack configuration.
  */
 export const getBaseOptions = async (cliOptions: BaseCliOptions) => {
   const config = await getFirestackConfig();
-  const firstFlavor = getFirstFlavor(config);
-  const flavor = cliOptions.flavor ?? firstFlavor;
+  const firstMode = getFirstMode(config);
+  const mode = cliOptions.mode ?? firstMode;
 
-  if (!flavor) {
+  if (!mode) {
     throw new Error(
-      'Flavor is required. Please provide a flavor via CLI or configure in firestack.json'
+      'Mode is required. Please provide a mode via CLI or configure in firestack config.'
     );
   }
 
@@ -74,7 +196,7 @@ export const getBaseOptions = async (cliOptions: BaseCliOptions) => {
 
   return {
     config,
-    flavor,
+    mode,
     functionsDirectory:
       cliOptions.functionsDirectory || config.functionsDirectory || 'src/controllers',
     rulesDirectory: cliOptions.rulesDirectory || config.rulesDirectory || 'src/rules',
@@ -84,7 +206,7 @@ export const getBaseOptions = async (cliOptions: BaseCliOptions) => {
     initScript: cliOptions.initScript || config.initScript || 'on_emulate.ts',
     region: cliOptions.region || config.region || 'us-central1',
     nodeVersion: cliOptions.nodeVersion || config.nodeVersion || DEFAULT_NODE_VERSION,
-    projectId: cliOptions.projectId || config.flavors?.[flavor],
+    projectId: cliOptions.projectId || config.modes?.[mode],
     engine: cliOptions.engine || config.engine || 'bun',
     minify,
     sourcemap,
@@ -115,7 +237,7 @@ export const getDeployOptions = async (
     sourcemap: base.sourcemap,
     watch: base.watch,
     init: base.init,
-    flavor: base.flavor,
+    mode: base.mode,
   };
 
   logger.setLogSeverity(options);
@@ -137,7 +259,7 @@ export const getEmulateOptions = async (
     sourcemap: base.sourcemap,
     watch: base.watch,
     init: base.init,
-    flavor: base.flavor,
+    mode: base.mode,
   };
 
   logger.setLogSeverity(options);
@@ -157,7 +279,7 @@ export const getLogsOptions = async (cliOptions: LogsCliOptions): Promise<LogsCo
     sourcemap: base.sourcemap,
     watch: base.watch,
     init: base.init,
-    flavor: base.flavor,
+    mode: base.mode,
   };
 
   logger.setLogSeverity(options);
@@ -176,7 +298,7 @@ export const getScriptsOptions = async (
     ...base,
     ...cliOptions,
     // Script should not have minify/sourcemap as it just runs a file
-    flavor: base.flavor,
+    mode: base.mode,
   };
 
   logger.setLogSeverity(options);
@@ -193,7 +315,7 @@ export const getDeleteOptions = async (
 
   if (!base.projectId) {
     throw new Error(
-      'Project ID is required. Please provide it via CLI or configure in firestack.json'
+      'Project ID is required. Please provide it via CLI or configure in firestack config.'
     );
   }
 
@@ -205,7 +327,7 @@ export const getDeleteOptions = async (
     sourcemap: base.sourcemap,
     watch: base.watch,
     init: base.init,
-    flavor: base.flavor,
+    mode: base.mode,
   };
 
   logger.setLogSeverity(options);
@@ -222,7 +344,7 @@ export const getRulesOptions = async (
 
   if (!base.projectId) {
     throw new Error(
-      'Project ID is required. Please provide it via CLI or configure in firestack.json'
+      'Project ID is required. Please provide it via CLI or configure in firestack config.'
     );
   }
 
@@ -234,7 +356,7 @@ export const getRulesOptions = async (
     sourcemap: base.sourcemap,
     watch: base.watch,
     init: base.init,
-    flavor: base.flavor,
+    mode: base.mode,
   };
 
   logger.setLogSeverity(options);
@@ -244,10 +366,37 @@ export const getRulesOptions = async (
   return options;
 };
 
+export const getSyncOptions = async (cliOptions: SyncCliOptions): Promise<SyncCommandOptions> => {
+  const base = await getBaseOptions(cliOptions);
+
+  if (!base.projectId) {
+    throw new Error(
+      'Project ID is required. Please provide it via CLI or configure in firestack config.'
+    );
+  }
+
+  const options: SyncCommandOptions = {
+    ...base,
+    ...cliOptions,
+    projectId: base.projectId,
+    minify: base.minify,
+    sourcemap: base.sourcemap,
+    watch: base.watch,
+    init: base.init,
+    mode: base.mode,
+  };
+
+  logger.setLogSeverity(options);
+  logger.debug('Syncing rules and indexes...');
+  logger.debug('Options:', options);
+
+  return options;
+};
+
 export const getBuildOptions = async (cliOptions: BaseCliOptions) => {
   const config = await getFirestackConfig();
-  const firstFlavor = getFirstFlavor(config);
-  const flavor = cliOptions.flavor ?? firstFlavor;
+  const firstMode = getFirstMode(config);
+  const mode = cliOptions.mode ?? firstMode;
 
   const minify = cliOptions.noMinify ? false : (cliOptions.minify ?? config.minify ?? true);
   const sourcemap = cliOptions.noSourcemap
@@ -256,7 +405,7 @@ export const getBuildOptions = async (cliOptions: BaseCliOptions) => {
 
   return {
     config,
-    flavor,
+    mode,
     nodeVersion: cliOptions.nodeVersion || config.nodeVersion || DEFAULT_NODE_VERSION,
     minify,
     sourcemap,
@@ -279,7 +428,7 @@ export const getTestRulesOptions = async (
     minify: base.minify,
     sourcemap: base.sourcemap,
     watch,
-    flavor: base.flavor,
+    mode: base.mode,
   };
 
   logger.setLogSeverity(options);

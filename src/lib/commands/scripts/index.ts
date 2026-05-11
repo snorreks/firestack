@@ -13,7 +13,7 @@ import { getScriptsOptions } from '$utils/options.ts';
 type ScriptsOptions = ScriptsCliOptions;
 
 /**
- * Merges CLI options with firestack.json configuration.
+ * Merges CLI options with firestack configuration.
  */
 const getOptions = async (cliOptions: ScriptsCliOptions): Promise<ScriptsCommandOptions> => {
   const options = await getScriptsOptions(cliOptions);
@@ -48,7 +48,7 @@ const runScript = async (scriptName: string, options: ScriptsOptions) => {
 
   // Parallel fetch of environment and config
   const resolvedOptions = options as ScriptsCommandOptions;
-  const env = await getScriptEnvironment({ flavor: resolvedOptions.flavor });
+  const env = await getScriptEnvironment({ mode: resolvedOptions.mode });
 
   const engine = options.engine || 'bun';
   const relativeScriptPath = relative(cwd(), scriptPath);
@@ -76,7 +76,7 @@ const runScript = async (scriptName: string, options: ScriptsOptions) => {
  */
 export const scriptsCommand = new Command('scripts')
   .description('Run a script from the scripts directory.')
-  .option('--flavor <flavor>', 'The flavor to use.')
+  .option('--mode <mode>', 'The mode to use.')
   .option('--verbose', 'Enable verbose logging.')
   .option('--silent', 'Disable logging.')
   .option('--engine <engine>', 'The engine to use (e.g., "bun", "node").')

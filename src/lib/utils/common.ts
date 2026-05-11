@@ -37,7 +37,7 @@ export const readDir = async (path: string): Promise<DirEntry[]> => {
 };
 
 /**
- * Finds the project root by searching for firestack.json or package.json.
+ * Finds the project root by searching for firestack.config.ts, firestack.json, or package.json.
  * @returns A promise that resolves to the project root path.
  * @throws An error if the project root cannot be found.
  */
@@ -46,7 +46,12 @@ export const findProjectRoot = async (): Promise<string> => {
   while (true) {
     const entries = await readDir(current);
     for (const entry of entries) {
-      if (entry.isFile() && (entry.name === 'firestack.json' || entry.name === 'package.json')) {
+      if (
+        entry.isFile() &&
+        (entry.name === 'firestack.config.ts' ||
+          entry.name === 'firestack.json' ||
+          entry.name === 'package.json')
+      ) {
         return current;
       }
     }

@@ -122,7 +122,7 @@ describe('Firestack CLI', () => {
           'node',
           FIRESTACK_BIN,
           'test:rules',
-          '--flavor',
+          '--mode',
           'example',
           '--only',
           'firestore',
@@ -139,5 +139,89 @@ describe('Firestack CLI', () => {
       expect(output).toContain('All rules tests passed');
     },
     { timeout: 300000 }
+  );
+
+  test(
+    'sync command help and dry-run simulation',
+    () => {
+      // Testing help first to ensure command is registered
+      const helpResult = Bun.spawnSync(['node', FIRESTACK_BIN, 'sync', '--help'], {
+        cwd: FUNCTIONS_DIR,
+      });
+      expect(helpResult.stdout.toString()).toContain('Syncs Firestore, Storage rules, and indexes');
+
+      // Running sync with a mock project ID to see it attempt execution
+      // We use verbose to see the debug logs of what it's trying to do
+      const result = Bun.spawnSync(
+        [
+          'node',
+          FIRESTACK_BIN,
+          'sync',
+          '--projectId',
+          'mock-project',
+          '--only',
+          'firestore',
+          '--verbose',
+        ],
+        {
+          cwd: FUNCTIONS_DIR,
+        }
+      );
+
+      const output = result.stdout.toString() + result.stderr.toString();
+      expect(output).toContain('Fetching Firestore rules...');
+      // Check that it TRIED to run the command, but don't be too strict about the exact bin path
+      expect(output).toContain('firestore:rules:get');
+      expect(output).toContain('--project mock-project');
+    },
+    { timeout: 60000 }
+  );
+
+  test(
+    'logs command functionality',
+    () => {
+      // 1. Test standard firebase logs (default)
+      const firebaseResult = Bun.spawnSync(
+        ['node', FIRESTACK_BIN, 'logs', '--projectId', 'mock-project', '--verbose'],
+        {
+          cwd: FUNCTIONS_DIR,
+        }
+      );
+      const firebaseOutput = firebaseResult.stdout.toString() + firebaseResult.stderr.toString();
+      expect(firebaseOutput).toContain('Fetching logs for project: mock-project');
+      expect(firebaseOutput).toContain('firebase functions:log --project mock-project');
+
+      // 2. Test gcloud integration (with --tail)
+      const gcloudResult = Bun.spawnSync(
+        ['node', FIRESTACK_BIN, 'logs', '--projectId', 'mock-project', '--tail', '--verbose'],
+        {
+          cwd: FUNCTIONS_DIR,
+        }
+      );
+      const gcloudOutput = gcloudResult.stdout.toString() + gcloudResult.stderr.toString();
+      expect(gcloudOutput).toContain('Tailing functions logs for project: mock-project');
+      expect(gcloudOutput).toContain('gcloud logging tail');
+
+      // 3. Test different types (firestore)
+      const firestoreResult = Bun.spawnSync(
+        [
+          'node',
+          FIRESTACK_BIN,
+          'logs',
+          '--projectId',
+          'mock-project',
+          '--type',
+          'firestore',
+          '--verbose',
+        ],
+        {
+          cwd: FUNCTIONS_DIR,
+        }
+      );
+      const firestoreOutput = firestoreResult.stdout.toString() + firestoreResult.stderr.toString();
+      expect(firestoreOutput).toContain('Reading last 100 firestore logs');
+      expect(firestoreOutput).toContain('resource.type="cloud_firestore_database"');
+    },
+    { timeout: 60000 }
   );
 });

@@ -59,7 +59,7 @@ const runOnEmulate = async (options: EmulateOptions & { env: Record<string, stri
     FIREBASE_AUTH_EMULATOR_HOST: `127.0.0.1:${ports.auth}`,
     FIREBASE_STORAGE_EMULATOR_HOST: `127.0.0.1:${ports.storage}`,
     FIREBASE_DATABASE_EMULATOR_HOST: `127.0.0.1:${ports.database}`,
-    FIREBASE_FLAVOR: options.flavor || '',
+    FIREBASE_MODE: options.mode || '',
     // Suppress Java warnings in emulators
     JAVA_OPTS:
       '-XX:+IgnoreUnrecognizedVMOptions --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
@@ -429,7 +429,7 @@ const watchAndRebuild = (options: {
  */
 export const emulateCommand = new Command('emulate')
   .description('Starts the Firebase emulator with live reload.')
-  .option('--flavor <flavor>', 'The flavor to use.')
+  .option('--mode <mode>', 'The mode to use.')
   .option('--verbose', 'Enable verbose logging.')
   .option('--debug', 'Enable debug mode (keeps temporary files).')
   .option('--silent', 'Disable logging.')
@@ -463,13 +463,13 @@ export const emulateCommand = new Command('emulate')
 
     if (!emulateOptions.projectId) {
       logger.error(
-        chalk.red('❌ Project ID not found. Provide it with --projectId or in firestack.json.')
+        chalk.red('❌ Project ID not found. Provide it with --projectId or in firestack config.')
       );
       process.exit(1);
     }
 
-    // Generate .env for emulator containing all flavor envs (minus service account)
-    const env = await getEnvironment(emulateOptions.flavor);
+    // Generate .env for emulator containing all mode envs (minus service account)
+    const env = await getEnvironment(emulateOptions.mode);
 
     let functionsPath: string | undefined;
     let functionFiles: string[] = [];

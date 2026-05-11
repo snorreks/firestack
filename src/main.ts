@@ -6,13 +6,14 @@ import { emulateCommand } from '$commands/emulate/index.ts';
 import { logsCommand } from '$commands/logs/index.ts';
 import { rulesCommand } from '$commands/rules/index.ts';
 import { scriptsCommand } from '$commands/scripts/index.ts';
+import { syncCommand } from '$commands/sync/index.ts';
 import { testRulesCommand } from '$commands/test-rules/index.ts';
 
 const program = new Command();
 
 program
   .name('firestack')
-  .version('0.0.55')
+  .version('0.0.56')
   .description('CLI for building and deploying Firebase Cloud Functions.');
 
 program.addCommand(buildCommand);
@@ -21,6 +22,7 @@ program.addCommand(scriptsCommand);
 program.addCommand(deleteCommand);
 program.addCommand(emulateCommand);
 program.addCommand(rulesCommand);
+program.addCommand(syncCommand);
 program.addCommand(logsCommand);
 program.addCommand(testRulesCommand);
 

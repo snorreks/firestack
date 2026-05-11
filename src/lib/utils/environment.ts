@@ -90,34 +90,34 @@ const parseEnvFile = async (filePath: string): Promise<Record<string, string> | 
 };
 
 /**
- * Step 1: Loads the .env.{flavor} file and filters out unsafe keys.
+ * Step 1: Loads the .env.{mode} file and filters out unsafe keys.
  */
-const loadFlavorEnv = async (flavor: string): Promise<Record<string, string>> => {
-  const envPath = join(cwd(), `.env.${flavor}`);
+const loadModeEnv = async (mode: string): Promise<Record<string, string>> => {
+  const envPath = join(cwd(), `.env.${mode}`);
   const rawEnv = await parseEnvFile(envPath);
 
   if (!rawEnv) {
-    logger.debug(`No .env.${flavor} file found.`);
+    logger.debug(`No .env.${mode} file found.`);
     return {};
   }
 
   const safeEnv: Record<string, string> = {};
   for (const [key, value] of Object.entries(rawEnv)) {
     if (!isSafeKey(key)) {
-      logger.warn(`Invalid key in .env.${flavor}: ${key}. Skipping.`);
+      logger.warn(`Invalid key in .env.${mode}: ${key}. Skipping.`);
       continue;
     }
     safeEnv[key] = value;
   }
 
-  logger.debug(`Loaded environment variables from .env.${flavor}`);
+  logger.debug(`Loaded environment variables from .env.${mode}`);
   return safeEnv;
 };
 
 /**
- * Step 2: Creates an allowlist from .env.example combined with validated flavor keys.
+ * Step 2: Creates an allowlist from .env.example combined with validated mode keys.
  */
-const loadAllowlist = async (flavorKeys: string[]): Promise<Set<string> | null> => {
+const loadAllowlist = async (modeKeys: string[]): Promise<Set<string> | null> => {
   const examplePath = join(cwd(), '.env.example');
   const rawExample = await parseEnvFile(examplePath);
 
@@ -127,7 +127,7 @@ const loadAllowlist = async (flavorKeys: string[]): Promise<Set<string> | null> 
   }
 
   const allowedKeys = new Set(Object.keys(rawExample));
-  for (const key of flavorKeys) {
+  for (const key of modeKeys) {
     allowedKeys.add(key);
   }
 
@@ -163,20 +163,20 @@ const mergeProcessEnv = (
 };
 
 /**
- * Gets the environment variables for the given flavor.
+ * Gets the environment variables for the given mode.
  *
- * Reads `.env.{flavor}` and filters out invalid or system-level keys.
+ * Reads `.env.{mode}` and filters out invalid or system-level keys.
  * Overrides with `process.env` safely by checking `.env.example` (or falling back to strict regex).
  *
  * **Important:** Keys listed in `invalidKeys` (such as `FIREBASE_SERVICE_ACCOUNT`) are
  * intentionally stripped from both the `.env` file and `process.env` to prevent leaking credentials.
  *
- * @param flavor - The flavor to get the environment variables for.
+ * @param mode - The mode to get the environment variables for.
  * @returns The merged environment variables.
  */
-export const getEnvironment = async (flavor: string): Promise<Record<string, string>> => {
-  const flavorEnv = await loadFlavorEnv(flavor);
-  const allowedKeys = await loadAllowlist(Object.keys(flavorEnv));
+export const getEnvironment = async (mode: string): Promise<Record<string, string>> => {
+  const modeEnv = await loadModeEnv(mode);
+  const allowedKeys = await loadAllowlist(Object.keys(modeEnv));
 
-  return mergeProcessEnv(flavorEnv, allowedKeys);
+  return mergeProcessEnv(modeEnv, allowedKeys);
 };
