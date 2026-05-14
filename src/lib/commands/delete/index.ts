@@ -2,7 +2,7 @@ import { exit } from 'node:process';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { logger } from '$logger';
-import type { PackageManager } from '$types';
+import type { FunctionIdentifier, PackageManager } from '$types';
 import { getDeleteOptions } from '$utils/options.ts';
 import { deleteFunctions } from './utils/delete_functions.ts';
 import { getOnlineFunctionNames, getUnusedFunctionNames } from './utils/read_functions.ts';
@@ -49,9 +49,13 @@ export const deleteCommand = new Command('delete')
       return;
     }
 
+    const functionLabels = functionsToDelete.map(
+      (fn: FunctionIdentifier) => `${fn.name} (${fn.region})`
+    );
+
     logger.info(
       chalk.cyan(
-        `🔍 Found ${chalk.bold(functionsToDelete.length)} function(s) to delete: ${chalk.dim(functionsToDelete.join(', '))}`
+        `🔍 Found ${chalk.bold(functionsToDelete.length)} function(s) to delete: ${chalk.dim(functionLabels.join(', '))}`
       )
     );
 

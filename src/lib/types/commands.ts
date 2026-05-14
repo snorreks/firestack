@@ -210,6 +210,11 @@ export type DeleteCliOptions = BaseCliOptions & {
   all?: boolean;
 };
 
+export type FunctionIdentifier = {
+  name: string;
+  region: string;
+};
+
 export type DeleteCommandOptions = {
   mode: string;
   projectId: string;

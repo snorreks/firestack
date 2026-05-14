@@ -927,8 +927,6 @@
 
     "jackspeak": ["jackspeak@3.4.3", "", { "dependencies": { "@isaacs/cliui": "^8.0.2" }, "optionalDependencies": { "@pkgjs/parseargs": "^0.11.0" } }, "sha512-OGlZQpz2yfahA/Rd1Y8Cd9SIEsqvXkLVoSw/cgwhnhFMDbsQFeZYoJJ7bIZBS9BcamUW96asq/npPWugM+RQBw=="],
 
-    "jiti": ["jiti@2.7.0", "", { "bin": { "jiti": "lib/jiti-cli.mjs" } }, "sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ=="],
-
     "jju": ["jju@1.4.0", "", {}, "sha512-8wb9Yw966OSxApiCt0K3yNJL8pnNeIv+OEq2YMidz4FKP6nonSRoOXc80iXY4JaN2FC11B9qsNmDsm+ZOfMROA=="],
 
     "join-path": ["join-path@1.1.1", "", { "dependencies": { "as-array": "^2.0.0", "url-join": "0.0.1", "valid-url": "^1" } }, "sha512-jnt9OC34sLXMLJ6YfPQ2ZEKrR9mB5ZbSnQb4LPaOx1c5rTzxpR33L18jjp0r75mGGTJmsil3qwN1B5IBeTnSSA=="],
@@ -1595,7 +1593,7 @@
 
     "@pnpm/network.ca-file/graceful-fs": ["graceful-fs@4.2.10", "", {}, "sha512-9ByhssR2fPVsNZj478qUUbKfmL0+t5BDVyjShtyZZLiK7ZDAArFFfopyOTj0M05wE2tJPisA4iTnnXl2YoPvOA=="],
 
-    "@shared/types/@snorreks/firestack": ["@snorreks/firestack@file:../dist", { "dependencies": { "@firebase/rules-unit-testing": "^5.0.1", "chalk": "^5.6.2", "commander": "^14.0.3", "esbuild": "^0.28.0", "execa": "^9.6.1", "firebase-tools": "^15.17.0", "jiti": "^2.7.0", "latest": "^0.2.0", "prompts": "^2.4.2", "zod": "^4.4.3" }, "bin": { "firestack": "main.js" } }],
+    "@shared/types/@snorreks/firestack": ["@snorreks/firestack@file:../dist", { "dependencies": { "@firebase/rules-unit-testing": "^5.0.1", "chalk": "^5.6.2", "commander": "^14.0.3", "esbuild": "^0.28.0", "execa": "^9.6.1", "firebase-tools": "^15.17.0", "latest": "^0.2.0", "prompts": "^2.4.2", "zod": "^4.4.3" }, "bin": { "firestack": "main.js" } }],
 
     "@types/request/form-data": ["form-data@2.5.5", "", { "dependencies": { "asynckit": "^0.4.0", "combined-stream": "^1.0.8", "es-set-tostringtag": "^2.1.0", "hasown": "^2.0.2", "mime-types": "^2.1.35", "safe-buffer": "^5.2.1" } }, "sha512-jqdObeR2rxZZbPSGL+3VckHMYtu+f9//KXBsVny6JSX/pa38Fy+bGjuG8eW/H6USNQWhLi8Num++cU2yOCNz4A=="],
 
@@ -1669,7 +1667,7 @@
 
     "firebase-tools/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
-    "functions/@snorreks/firestack": ["@snorreks/firestack@file:../dist", { "dependencies": { "@firebase/rules-unit-testing": "^5.0.1", "chalk": "^5.6.2", "commander": "^14.0.3", "esbuild": "^0.28.0", "execa": "^9.6.1", "firebase-tools": "^15.17.0", "jiti": "^2.7.0", "latest": "^0.2.0", "prompts": "^2.4.2", "zod": "^4.4.3" }, "bin": { "firestack": "main.js" } }],
+    "functions/@snorreks/firestack": ["@snorreks/firestack@file:../dist", { "dependencies": { "@firebase/rules-unit-testing": "^5.0.1", "chalk": "^5.6.2", "commander": "^14.0.3", "esbuild": "^0.28.0", "execa": "^9.6.1", "firebase-tools": "^15.17.0", "latest": "^0.2.0", "prompts": "^2.4.2", "zod": "^4.4.3" }, "bin": { "firestack": "main.js" } }],
 
     "gaxios/is-stream": ["is-stream@2.0.1", "", {}, "sha512-hFoiJiTl63nn+kstHGBtewWSKnQLpyb155KHheA1l39uvtO9nWIop1p3udqPcUd/xbF1VLMO4n7OI6p7RbngDg=="],
 

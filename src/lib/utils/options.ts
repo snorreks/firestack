@@ -3,7 +3,6 @@ import { join } from 'node:path';
 import { cwd } from 'node:process';
 import { DEFAULT_NODE_VERSION } from '$constants';
 import { logger } from '$logger';
-import { exists } from '$utils/common.ts';
 import type {
   BaseCliOptions,
   DeleteCliOptions,
@@ -24,6 +23,7 @@ import type {
   TestRulesCliOptions,
   TestRulesCommandOptions,
 } from '$types';
+import { exists } from '$utils/common.ts';
 
 type ConfigLoaderResult = {
   config: FirestackConfig;
@@ -107,9 +107,9 @@ const loadJsonConfig = async (configPath: string): Promise<ConfigLoaderResult | 
  * This is used when the mode is known (e.g., from CLI or default) and we
  * need to re-evaluate a defineConfig callback with the resolved mode.
  */
-const resolveConfigForMode = async (
+const _resolveConfigForMode = async (
   configPath: string,
-  mode: string,
+  mode: string
 ): Promise<FirestackConfig> => {
   if (!configPath.endsWith('.ts')) {
     // JSON config doesn't need re-resolution

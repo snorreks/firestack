@@ -77,7 +77,7 @@ export type DefineConfigParams = {
  * ```
  */
 export const defineConfig = (
-  config: FirestackConfig | ((params: DefineConfigParams) => FirestackConfig),
+  config: FirestackConfig | ((params: DefineConfigParams) => FirestackConfig)
 ): FirestackConfig | ((params: DefineConfigParams) => FirestackConfig) => {
   return config;
 };

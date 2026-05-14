@@ -15,9 +15,7 @@ export type FunctionsCache = {
  *
  * return doc.data() as FunctionsCache; };
  */
-export type FunctionsCacheGet = (options: {
-  mode: string;
-}) => Promise<FunctionsCache | undefined>;
+export type FunctionsCacheGet = (options: { mode: string }) => Promise<FunctionsCache | undefined>;
 
 /**
  * Having a cloud-cache.ts file in the root of the project allows you to get
