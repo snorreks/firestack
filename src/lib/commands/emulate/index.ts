@@ -542,13 +542,41 @@ export const emulateCommand = new Command('emulate')
 
     const cleanupOnExit = () => {
       if (emulatorSubprocess && !emulatorSubprocess.killed) {
-        emulatorSubprocess.kill('SIGTERM');
+        const pid = emulatorSubprocess.pid;
+        if (pid !== undefined) {
+          try {
+            // Kill the entire process group so grandchildren (Java emulators) also stop.
+            process.kill(-pid, 'SIGTERM');
+          } catch {
+            emulatorSubprocess.kill('SIGTERM');
+          }
+        } else {
+          emulatorSubprocess.kill('SIGTERM');
+        }
       }
-      exit(0);
+
+      // Safety net: kill any leftover processes on the known emulator ports.
+      const allEmulatorPorts = [
+        emulateOptions.emulatorPorts?.ui ?? 4000,
+        emulateOptions.emulatorPorts?.functions ?? 5001,
+        emulateOptions.emulatorPorts?.firestore ?? 8080,
+        emulateOptions.emulatorPorts?.pubsub ?? 8085,
+        emulateOptions.emulatorPorts?.auth ?? 9099,
+        emulateOptions.emulatorPorts?.storage ?? 9199,
+        emulateOptions.emulatorPorts?.database ?? 9000,
+        4400,
+        4401,
+        4500,
+        4501,
+      ];
+      // Fire-and-forget with a timeout so we always exit within 2s
+      void killProcessesOnPorts(allEmulatorPorts).finally(() => exit(0));
+      setTimeout(() => exit(0), 2000);
     };
 
     process.on('SIGINT', cleanupOnExit);
     process.on('SIGTERM', cleanupOnExit);
+    process.on('SIGHUP', cleanupOnExit);
 
     const emulatorProcess = executeCommand('firebase', {
       args: commandArgs,
