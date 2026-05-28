@@ -42,13 +42,16 @@ Ask for confirmation before proceeding.
 ### Step 4: Execute Deployment
 
 ```bash
-# Standard deploy (functions + rules + indexes)
+# Standard deploy (functions + rules + indexes + dataconnect)
 firestack deploy --mode <mode>
 
 # With specific flags
 firestack deploy --mode <mode> --force          # Ignore cache, redeploy all
 firestack deploy --mode <mode> --only func1,func2  # Deploy specific functions only
-firestack deploy --mode <mode> --skip-rules     # Deploy functions only
+firestack deploy --mode <mode> --only dataconnect  # Deploy Data Connect only
+firestack deploy --mode <mode> --only rules,dataconnect  # Deploy rules and Data Connect only
+firestack deploy --mode <mode> --skip-rules     # Deploy functions and dataconnect only
+firestack deploy --mode <mode> --skip-dataconnect  # Deploy functions and rules only
 firestack deploy --mode <mode> --verbose        # Show full Firebase output
 ```
 
@@ -78,8 +81,9 @@ After deployment succeeds:
 | `--mode <mode>` | Target environment (required). |
 | `--dry-run` | Validate build without deploying. |
 | `--force` | Redeploy all functions, ignore cache. |
-| `--only <names>` | Comma-separated list of specific functions. Automatically skips rules. |
+| `--only <names>` | Comma-separated list. Can include function names, `dataconnect`, `rules`, or a mix. |
 | `--skip-rules` | Skip deploying rules and indexes. |
+| `--skip-dataconnect` | Skip deploying Data Connect. |
 | `--concurrency <num>` | Parallel deployments (default: `5`). |
 | `--retryAmount <num>` | Auto-retry failed deployments. |
 | `--tsconfig <path>` | Path to a custom `tsconfig.json` (e.g., `tsconfig.app.json`). |

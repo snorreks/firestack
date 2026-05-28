@@ -60,6 +60,7 @@ If you prefer a static config file:
   "keepNames": false,
   "external": [],
   "emulators": ["auth", "firestore", "functions", "pubsub", "storage"],
+  "dataconnectDirectory": "dataconnect",
   "emulatorPorts": {
     "auth": 9099,
     "firestore": 8080,
@@ -100,7 +101,8 @@ If you prefer a static config file:
 | `keepNames`          | `boolean`                                        | `false`           | Whether to keep original function names in the bundle (useful for debugging).                                                                                                                |
 | `external`           | `string[]`                                       | `[]`              | Dependencies to treat as external (installed in the function env at deploy time).                                                                                                            |
 | `includeFilePath`    | `string`                                         | `src/logger.ts`   | Relative path to a file that is auto-imported at the top of every generated function index. Useful for initializing logging, OpenTelemetry, or Sentry. Only imported if the file exists.     |
-| `emulators`          | `FirebaseEmulator[]`                             | `[]`              | Explicit list of emulators to enable. Available: `auth`, `functions`, `firestore`, `database`, `hosting`, `pubsub`, `storage`, `eventarc`, `extensions`, `ui`, `hub`, `logging`, `appcheck`. |
+| `dataconnectDirectory` | `string`                                       | `dataconnect`     | Directory containing the Data Connect configuration (`dataconnect.yaml`). Relative to the project root. Auto-detected when `dataconnect/dataconnect.yaml` exists. |
+| `emulators`          | `FirebaseEmulator[]`                             | `[]`              | Explicit list of emulators to enable. Available: `auth`, `functions`, `firestore`, `database`, `hosting`, `pubsub`, `storage`, `eventarc`, `extensions`, `ui`, `hub`, `logging`, `appcheck`, `dataconnect`. |
 | `emulatorPorts`      | `Record<FirebaseEmulator, number>`               | —                 | Custom ports for individual emulators (e.g., `{ "auth": 9099 }`).                                                                                                                            |
 | `rulesTests`         | `object`                                         | —                 | Configuration for `test:rules` (see below).                                                                                                                                                  |
 

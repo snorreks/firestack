@@ -11,7 +11,7 @@ export type FirebaseRequest<
   T extends Record<string, string> = Record<string, string>,
   _ResBody = unknown,
   ReqBody = unknown,
-> = Request & {
+> = Omit<Request, 'body'> & {
   /** The wire format representation of the request body. */
   rawBody: Buffer;
   body: ReqBody;
@@ -62,13 +62,7 @@ const buildCallLogContext = (request: CallableRequest<unknown>) => {
 /**
  * Handles errors for HTTPS requests.
  */
-const handleHttpsError = <
-  AllFunctions extends RequestFunctions,
-  FunctionName extends keyof AllFunctions,
->(
-  error: unknown,
-  response: Response<AllFunctions[FunctionName][1]>
-) => {
+const handleHttpsError = <ResBody = unknown>(error: unknown, response: Response<ResBody>) => {
   if (error instanceof HttpsError || error instanceof FirestackError) {
     const statusCode = HttpStatusCode[error.code] || 500;
     response.status(statusCode).send({
@@ -77,7 +71,7 @@ const handleHttpsError = <
         code: error.code,
         details: error.details,
       },
-    } as unknown as AllFunctions[FunctionName][1]);
+    } as unknown as ResBody);
     return;
   }
 
@@ -87,7 +81,7 @@ const handleHttpsError = <
       message: error instanceof Error ? error.message : 'Internal Server Error',
       code: 'internal',
     },
-  } as unknown as AllFunctions[FunctionName][1]);
+  } as unknown as ResBody);
 };
 
 /**
@@ -110,11 +104,20 @@ export const onRequest = <
       try {
         await handler(request, response);
       } catch (error) {
-        handleHttpsError<AllFunctions, FunctionName>(error, response);
+        handleHttpsError(error, response);
       }
     });
   };
 };
+
+export type ZodRequestHandler<
+  Body extends Record<string, unknown> = Record<string, unknown>,
+  ResBody = unknown,
+  Params extends Record<string, string> = Record<string, string>,
+> = (
+  request: FirebaseRequest<Params, ResBody, Body>,
+  response: Response<ResBody>
+) => Promise<void> | void;
 
 /**
  * Handles HTTPS requests with Zod validation.
@@ -123,14 +126,14 @@ export const onRequest = <
  * @param options - Configuration for the HTTPS request and Zod validation.
  */
 export const onRequestZod = <
-  AllFunctions extends RequestFunctions,
-  FunctionName extends keyof AllFunctions,
+  Body extends Record<string, unknown>,
+  ResBody = unknown,
   Params extends Record<string, string> = Record<string, string>,
 >(
-  schema: z.ZodSchema<AllFunctions[FunctionName][0]>,
-  handler: RequestHandler<AllFunctions, FunctionName, Params>,
-  options?: HttpsOptions<FunctionName> & ZodOptions
-): RequestHandler<AllFunctions, FunctionName, Params> => {
+  schema: z.ZodSchema<Body>,
+  handler: ZodRequestHandler<Body, ResBody, Params>,
+  options?: HttpsOptions<string> & ZodOptions
+): ZodRequestHandler<Body, ResBody, Params> => {
   return async (request, response) => {
     const logContext = buildRequestLogContext(request);
     await runWithLogContext(logContext, async () => {
@@ -153,14 +156,14 @@ export const onRequestZod = <
               code: 'invalid-argument',
               details: result.error.issues,
             },
-          } as unknown as AllFunctions[FunctionName][1]);
+          } as unknown as ResBody);
           return;
         }
 
         request.body = result.data;
         return handler(request, response);
       } catch (error) {
-        handleHttpsError<AllFunctions, FunctionName>(error, response);
+        handleHttpsError(error, response);
       }
     });
   };
@@ -206,20 +209,21 @@ export const onCall = <
   };
 };
 
+export type ZodCallHandler<Body = unknown, ResBody = unknown> = (
+  request: CallableRequest<Body>
+) => Promise<ResBody> | ResBody;
+
 /**
  * Declares a callable method with Zod validation.
  * @param schema - The Zod schema for the request data.
  * @param handler - The call handler function.
  * @param options - Configuration for the callable function and Zod validation.
  */
-export const onCallZod = <
-  AllFunctions extends CallableFunctions,
-  FunctionName extends keyof AllFunctions,
->(
-  schema: z.ZodSchema<AllFunctions[FunctionName][0]>,
-  handler: CallHandler<AllFunctions, FunctionName>,
-  options?: HttpsOptions<FunctionName> & ZodOptions
-): CallHandler<AllFunctions, FunctionName> => {
+export const onCallZod = <Body, ResBody = unknown>(
+  schema: z.ZodSchema<Body>,
+  handler: ZodCallHandler<Body, ResBody>,
+  options?: HttpsOptions<string> & ZodOptions
+): ZodCallHandler<Body, ResBody> => {
   return async (request) => {
     const logContext = buildCallLogContext(request);
     return runWithLogContext(logContext, async () => {

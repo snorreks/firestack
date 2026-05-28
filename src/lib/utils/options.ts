@@ -5,6 +5,8 @@ import { DEFAULT_NODE_VERSION } from '$constants';
 import { logger } from '$logger';
 import type {
   BaseCliOptions,
+  DataconnectCliOptions,
+  DataconnectCommandOptions,
   DeleteCliOptions,
   DeleteCommandOptions,
   DeployCliOptions,
@@ -222,6 +224,8 @@ export const getBaseOptions = async (cliOptions: BaseCliOptions) => {
     cloudCacheFileName:
       cliOptions.cloudCacheFileName || config.cloudCacheFileName || 'functions-cache.ts',
     includeFilePath: cliOptions.includeFilePath || config.includeFilePath || 'src/logger.ts',
+    dataconnectDirectory:
+      cliOptions.dataconnectDirectory || config.dataconnectDirectory || 'dataconnect',
   };
 };
 
@@ -433,6 +437,26 @@ export const getTestRulesOptions = async (
 
   logger.setLogSeverity(options);
   logger.debug('Starting rules tests...');
+  logger.debug('Options:', options);
+
+  return options;
+};
+
+export const getDataconnectOptions = async (
+  cliOptions: DataconnectCliOptions
+): Promise<DataconnectCommandOptions> => {
+  const base = await getBaseOptions(cliOptions);
+
+  const options: DataconnectCommandOptions = {
+    ...base,
+    ...cliOptions,
+    mode: base.mode,
+    dataconnectDirectory:
+      cliOptions.dataconnectDirectory || base.dataconnectDirectory || 'dataconnect',
+  };
+
+  logger.setLogSeverity(options);
+  logger.debug('Starting dataconnect deployment...');
   logger.debug('Options:', options);
 
   return options;

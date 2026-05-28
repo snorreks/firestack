@@ -3,6 +3,6 @@ $schema: "https://moonrepo.dev/schemas/workspace.json"
 
 # Projects
 projects:
-  functions: "apps/functions"
+  firebase: "apps/firebase"
   utils: "packages/utils"
   types: "packages/types"

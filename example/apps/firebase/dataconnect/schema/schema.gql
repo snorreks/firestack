@@ -1,0 +1,10 @@
+# Data Connect Schema — Example
+#
+# Sample schema for testing firestack dataconnect integration.
+
+type User @table(name: "users") {
+  id: String! @col(name: "id")
+  name: String! @col(name: "name")
+  email: String! @col(name: "email")
+  createdAt: Timestamp! @col(name: "created_at")
+}

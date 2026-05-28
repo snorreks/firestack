@@ -1,0 +1,20 @@
+# Data Connect Queries — Example
+#
+# Sample queries for testing firestack dataconnect integration.
+
+query GetUser($id: String!) @auth(level: PUBLIC) {
+  user(id: $id) {
+    id
+    name
+    email
+    createdAt
+  }
+}
+
+query ListUsers @auth(level: PUBLIC) {
+  users {
+    id
+    name
+    email
+  }
+}

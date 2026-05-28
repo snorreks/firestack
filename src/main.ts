@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { buildCommand } from '$commands/build/index.ts';
+import { dataconnectCommand } from '$commands/dataconnect/index.ts';
 import { deleteCommand } from '$commands/delete/index.ts';
 import { deployCommand } from '$commands/deploy/index.ts';
 import { emulateCommand } from '$commands/emulate/index.ts';
@@ -13,11 +14,12 @@ const program = new Command();
 
 program
   .name('firestack')
-  .version('0.0.59')
+  .version('0.0.60')
   .description('CLI for building and deploying Firebase Cloud Functions.');
 
 program.addCommand(buildCommand);
 program.addCommand(deployCommand);
+program.addCommand(dataconnectCommand);
 program.addCommand(scriptsCommand);
 program.addCommand(deleteCommand);
 program.addCommand(emulateCommand);

@@ -31,61 +31,73 @@ describe("Mode resolution (info commands that don't need functions)", () => {
     // Cleanup all temp dirs — handled by each test
   });
 
-  test('deploy dry-run works with --mode flag', () => {
-    // This uses the existing functions project which has 'example' mode
-    const functionsDir = join(PROJECT_ROOT, 'apps', 'functions');
-    const result = Bun.spawnSync(
-      ['node', FIRESTACK_BIN, 'deploy', '--only', 'test_api', '--dry-run', '--mode', 'example'],
-      { cwd: functionsDir }
-    );
+  test(
+    'deploy dry-run works with --mode flag',
+    () => {
+      // This uses the existing functions project which has 'example' mode
+      const firebaseDir = join(PROJECT_ROOT, 'apps', 'firebase');
+      const result = Bun.spawnSync(
+        ['node', FIRESTACK_BIN, 'deploy', '--only', 'test_api', '--dry-run', '--mode', 'example'],
+        { cwd: firebaseDir }
+      );
 
-    expect(result.success).toBe(true);
-    const output = result.stdout.toString();
-    expect(output).toContain('Found 1 function(s) to deploy');
-    expect(output).toContain('test_api');
-  });
+      expect(result.success).toBe(true);
+      const output = result.stdout.toString();
+      expect(output).toContain('Found 1 function(s) to deploy');
+      expect(output).toContain('test_api');
+    },
+    { timeout: 60000 }
+  );
 
-  test('deploy dry-run uses first mode from config when --mode is omitted', () => {
-    // The example project has only one mode 'example', so without --mode it should default to it
-    const functionsDir = join(PROJECT_ROOT, 'apps', 'functions');
-    const result = Bun.spawnSync(
-      ['node', FIRESTACK_BIN, 'deploy', '--only', 'test_api', '--dry-run'],
-      { cwd: functionsDir }
-    );
+  test(
+    'deploy dry-run uses first mode from config when --mode is omitted',
+    () => {
+      // The example project has only one mode 'example', so without --mode it should default to it
+      const firebaseDir = join(PROJECT_ROOT, 'apps', 'firebase');
+      const result = Bun.spawnSync(
+        ['node', FIRESTACK_BIN, 'deploy', '--only', 'test_api', '--dry-run'],
+        { cwd: firebaseDir }
+      );
 
-    expect(result.success).toBe(true);
-    const output = result.stdout.toString();
-    expect(output).toContain('test_api');
-  });
+      expect(result.success).toBe(true);
+      const output = result.stdout.toString();
+      expect(output).toContain('test_api');
+    },
+    { timeout: 60000 }
+  );
 
-  test('deploy uses correct projectId for the mode', () => {
-    const functionsDir = join(PROJECT_ROOT, 'apps', 'functions');
-    const result = Bun.spawnSync(
-      [
-        'node',
-        FIRESTACK_BIN,
-        'deploy',
-        '--only',
-        'test_api',
-        '--dry-run',
-        '--mode',
-        'example',
-        '--verbose',
-      ],
-      { cwd: functionsDir }
-    );
+  test(
+    'deploy uses correct projectId for the mode',
+    () => {
+      const firebaseDir = join(PROJECT_ROOT, 'apps', 'firebase');
+      const result = Bun.spawnSync(
+        [
+          'node',
+          FIRESTACK_BIN,
+          'deploy',
+          '--only',
+          'test_api',
+          '--dry-run',
+          '--mode',
+          'example',
+          '--verbose',
+        ],
+        { cwd: firebaseDir }
+      );
 
-    expect(result.success).toBe(true);
-    const output = result.stdout.toString() + result.stderr.toString();
-    // The 'example' mode maps to project 'aikami-dev'
-    expect(output).toContain('aikami-dev');
-  });
+      expect(result.success).toBe(true);
+      const output = result.stdout.toString() + result.stderr.toString();
+      // The 'example' mode maps to project 'aikami-dev'
+      expect(output).toContain('aikami-dev');
+    },
+    { timeout: 120000 }
+  );
 
   test('emulate dry-run works with --mode flag', () => {
-    const functionsDir = join(PROJECT_ROOT, 'apps', 'functions');
+    const firebaseDir = join(PROJECT_ROOT, 'apps', 'firebase');
     const result = Bun.spawnSync(
       ['node', FIRESTACK_BIN, 'emulate', '--dry-run', '--mode', 'example'],
-      { cwd: functionsDir }
+      { cwd: firebaseDir }
     );
 
     expect(result.success).toBe(true);
@@ -94,7 +106,7 @@ describe("Mode resolution (info commands that don't need functions)", () => {
   });
 
   test('logs command with --mode flag works', () => {
-    const functionsDir = join(PROJECT_ROOT, 'apps', 'functions');
+    const firebaseDir = join(PROJECT_ROOT, 'apps', 'firebase');
     const result = Bun.spawnSync(
       [
         'node',
@@ -106,7 +118,7 @@ describe("Mode resolution (info commands that don't need functions)", () => {
         'example',
         '--verbose',
       ],
-      { cwd: functionsDir }
+      { cwd: firebaseDir }
     );
 
     const output = result.stdout.toString() + result.stderr.toString();

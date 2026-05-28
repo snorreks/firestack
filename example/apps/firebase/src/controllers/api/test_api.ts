@@ -12,8 +12,7 @@ export default onRequest<RequestFunctions, 'test_api', { p: string }>(
 
     // Enrich the automatic log context with business-specific fields
     setLogContext({
-      companyId: request.body.companyId,
-      userId: request.body.userId,
+      message: request.body.message,
     });
 
     logger.info('Handling test_api request', {

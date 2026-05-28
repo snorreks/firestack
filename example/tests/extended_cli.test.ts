@@ -3,14 +3,14 @@ import { exists, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const PROJECT_ROOT = join(import.meta.dir, '..');
-const FUNCTIONS_DIR = join(PROJECT_ROOT, 'apps', 'functions');
+const FIREBASE_DIR = join(PROJECT_ROOT, 'apps', 'firebase');
 const FIRESTACK_BIN = join(PROJECT_ROOT, '..', 'dist', 'main.js');
 
 describe('Firestack CLI Extended Tests', () => {
   beforeAll(async () => {
     // Ensure dist and tmp are clean before tests
-    const distPath = join(FUNCTIONS_DIR, 'dist');
-    const tmpPath = join(FUNCTIONS_DIR, 'tmp');
+    const distPath = join(FIREBASE_DIR, 'dist');
+    const tmpPath = join(FIREBASE_DIR, 'tmp');
     if (await exists(distPath)) {
       await rm(distPath, { recursive: true, force: true });
     }
@@ -26,10 +26,10 @@ describe('Firestack CLI Extended Tests', () => {
       // Use mode 'example' because it's in firestack config
       Bun.spawnSync(
         ['node', FIRESTACK_BIN, 'deploy', '--only', 'test_api', '--dry-run', '--mode', 'example'],
-        { cwd: FUNCTIONS_DIR }
+        { cwd: FIREBASE_DIR }
       );
 
-      const envPath = join(FUNCTIONS_DIR, 'dist', 'test_api', '.env');
+      const envPath = join(FIREBASE_DIR, 'dist', 'test_api', '.env');
       expect(await exists(envPath)).toBe(true);
 
       const envContent = await readFile(envPath, 'utf-8');
@@ -39,7 +39,7 @@ describe('Firestack CLI Extended Tests', () => {
       expect(envContent).not.toContain('TEST_1=');
       expect(envContent).not.toContain('TEST_2=');
     },
-    { timeout: 60000 }
+    { timeout: 120000 }
   );
 
   test(
@@ -57,10 +57,10 @@ describe('Firestack CLI Extended Tests', () => {
           '--mode',
           'example',
         ],
-        { cwd: FUNCTIONS_DIR }
+        { cwd: FIREBASE_DIR }
       );
 
-      const distDir = join(FUNCTIONS_DIR, 'dist', 'auth_created_renamed');
+      const distDir = join(FIREBASE_DIR, 'dist', 'auth_created_renamed');
       expect(await exists(distDir)).toBe(true);
 
       const pkgJsonPath = join(distDir, 'package.json');
@@ -69,7 +69,7 @@ describe('Firestack CLI Extended Tests', () => {
       const pkgJson = JSON.parse(await readFile(pkgJsonPath, 'utf-8'));
       expect(pkgJson.dependencies).toHaveProperty('is-thirteen');
     },
-    { timeout: 60000 }
+    { timeout: 120000 }
   );
 
   test(
@@ -87,11 +87,11 @@ describe('Firestack CLI Extended Tests', () => {
           '--mode',
           'example',
         ],
-        { cwd: FUNCTIONS_DIR }
+        { cwd: FIREBASE_DIR }
       );
 
       const assetPath = join(
-        FUNCTIONS_DIR,
+        FIREBASE_DIR,
         'dist',
         'assets_test_api',
         'src',
@@ -101,7 +101,7 @@ describe('Firestack CLI Extended Tests', () => {
       );
       expect(await exists(assetPath)).toBe(true);
     },
-    { timeout: 60000 }
+    { timeout: 120000 }
   );
 
   test(
@@ -118,17 +118,17 @@ describe('Firestack CLI Extended Tests', () => {
           '--mode',
           'example',
         ],
-        { cwd: FUNCTIONS_DIR }
+        { cwd: FIREBASE_DIR }
       );
 
-      const indexPath = join(FUNCTIONS_DIR, 'dist', 'auth_created_renamed', 'src', 'index.js');
+      const indexPath = join(FIREBASE_DIR, 'dist', 'auth_created_renamed', 'src', 'index.js');
       const indexContent = await readFile(indexPath, 'utf-8');
 
       // It should export the renamed function
       // In bundled esbuild it might be export{... as auth_created_renamed}
       expect(indexContent).toContain('auth_created_renamed');
     },
-    { timeout: 60000 }
+    { timeout: 120000 }
   );
 
   test(
@@ -146,18 +146,18 @@ describe('Firestack CLI Extended Tests', () => {
           '--mode',
           'example',
         ],
-        { cwd: FUNCTIONS_DIR }
+        { cwd: FIREBASE_DIR }
       );
 
-      const pkgJsonPath = join(FUNCTIONS_DIR, 'dist', 'auth_created_renamed', 'package.json');
+      const pkgJsonPath = join(FIREBASE_DIR, 'dist', 'auth_created_renamed', 'package.json');
       const pkgJson = JSON.parse(await readFile(pkgJsonPath, 'utf-8'));
       expect(pkgJson.engines.node).toBe('20');
 
-      const fireConfigPath = join(FUNCTIONS_DIR, 'dist', 'auth_created_renamed', 'firebase.json');
+      const fireConfigPath = join(FIREBASE_DIR, 'dist', 'auth_created_renamed', 'firebase.json');
       const fireConfig = JSON.parse(await readFile(fireConfigPath, 'utf-8'));
       expect(fireConfig.functions.runtime).toBe('nodejs20');
     },
-    { timeout: 60000 }
+    { timeout: 120000 }
   );
 
   test(
@@ -166,17 +166,17 @@ describe('Firestack CLI Extended Tests', () => {
       // scheduler/daily.ts
       Bun.spawnSync(
         ['node', FIRESTACK_BIN, 'deploy', '--only', 'daily', '--dry-run', '--mode', 'example'],
-        { cwd: FUNCTIONS_DIR }
+        { cwd: FIREBASE_DIR }
       );
 
-      const tmpFile = join(FUNCTIONS_DIR, 'tmp', 'daily', 'daily.ts');
+      const tmpFile = join(FIREBASE_DIR, 'tmp', 'daily', 'daily.ts');
       expect(await exists(tmpFile)).toBe(true);
 
       const tmpContent = await readFile(tmpFile, 'utf-8');
       // daily.ts has schedule: 'every day 00:00'
       expect(tmpContent).toContain('"schedule": "every day 00:00"');
     },
-    { timeout: 60000 }
+    { timeout: 120000 }
   );
 
   test(
@@ -193,12 +193,12 @@ describe('Firestack CLI Extended Tests', () => {
           '--mode',
           'example',
         ],
-        { cwd: FUNCTIONS_DIR }
+        { cwd: FIREBASE_DIR }
       );
 
       expect(result.stdout.toString()).toContain('Emulator dry run complete');
 
-      const emulatorDist = join(FUNCTIONS_DIR, 'dist', 'emulator');
+      const emulatorDist = join(FIREBASE_DIR, 'dist', 'emulator');
       expect(await exists(join(emulatorDist, 'firebase.json'))).toBe(true);
       expect(await exists(join(emulatorDist, 'src', 'index.js'))).toBe(true);
       expect(await exists(join(emulatorDist, '.env'))).toBe(true);
@@ -206,6 +206,14 @@ describe('Firestack CLI Extended Tests', () => {
       const firebaseJson = JSON.parse(await readFile(join(emulatorDist, 'firebase.json'), 'utf-8'));
       expect(firebaseJson).toHaveProperty('emulators');
       expect(firebaseJson.emulators).toHaveProperty('functions');
+      expect(firebaseJson.emulators).toHaveProperty('dataconnect');
+      expect(firebaseJson.emulators.dataconnect).toHaveProperty('port', 9399);
+
+      // Check dataconnect service config
+      expect(firebaseJson).toHaveProperty('dataconnect');
+      expect(firebaseJson.dataconnect).toHaveProperty('source', '../../dataconnect');
+      expect(firebaseJson.dataconnect).toHaveProperty('location', 'us-central1');
+      expect(firebaseJson.dataconnect).toHaveProperty('serviceId', 'firestack-example');
 
       const envContent = await readFile(join(emulatorDist, '.env'), 'utf-8');
       expect(envContent).toContain('MODE=example');

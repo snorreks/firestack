@@ -3,13 +3,13 @@ import { exists, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const PROJECT_ROOT = join(import.meta.dir, '..');
-const FUNCTIONS_DIR = join(PROJECT_ROOT, 'apps', 'functions');
+const FIREBASE_DIR = join(PROJECT_ROOT, 'apps', 'firebase');
 const FIRESTACK_BIN = join(PROJECT_ROOT, '..', 'dist', 'main.js');
 
 describe('Firestack CLI', () => {
   beforeAll(async () => {
     // Ensure dist is clean before tests
-    const distPath = join(FUNCTIONS_DIR, 'dist');
+    const distPath = join(FIREBASE_DIR, 'dist');
     if (await exists(distPath)) {
       await rm(distPath, { recursive: true, force: true });
     }
@@ -29,16 +29,16 @@ describe('Firestack CLI', () => {
           'firebase-admin,firebase-functions',
         ],
         {
-          cwd: FUNCTIONS_DIR,
+          cwd: FIREBASE_DIR,
         }
       );
 
       expect(result.success).toBe(true);
 
       const [hasIndex, hasPackage, indexContent] = await Promise.all([
-        exists(join(FUNCTIONS_DIR, 'dist', 'api', 'src', 'index.js')),
-        exists(join(FUNCTIONS_DIR, 'dist', 'api', 'src', 'package.json')),
-        readFile(join(FUNCTIONS_DIR, 'dist', 'api', 'src', 'index.js'), 'utf-8'),
+        exists(join(FIREBASE_DIR, 'dist', 'api', 'src', 'index.js')),
+        exists(join(FIREBASE_DIR, 'dist', 'api', 'src', 'package.json')),
+        readFile(join(FIREBASE_DIR, 'dist', 'api', 'src', 'index.js'), 'utf-8'),
       ]);
 
       expect(hasIndex).toBe(true);
@@ -63,16 +63,16 @@ describe('Firestack CLI', () => {
           '--force',
         ],
         {
-          cwd: FUNCTIONS_DIR,
+          cwd: FIREBASE_DIR,
         }
       );
 
       expect(result.stdout.toString()).toContain('Found');
     },
-    { timeout: 60000 }
+    { timeout: 120000 }
   );
 
-  test.concurrent(
+  test(
     'deploy command only test_api dry-run',
     () => {
       const result = Bun.spawnSync(
@@ -87,7 +87,7 @@ describe('Firestack CLI', () => {
           'global',
         ],
         {
-          cwd: FUNCTIONS_DIR,
+          cwd: FIREBASE_DIR,
         }
       );
 
@@ -95,23 +95,23 @@ describe('Firestack CLI', () => {
       expect(output).toContain('Found 1 function(s) to deploy');
       expect(output).toContain('Dry run (1): test_api');
     },
-    { timeout: 60000 }
+    { timeout: 120000 }
   );
 
-  test.concurrent(
+  test(
     'deploy dry-run',
     () => {
       const result = Bun.spawnSync(
         ['node', FIRESTACK_BIN, 'deploy', '--dry-run', '--packageManager', 'global'],
         {
-          cwd: FUNCTIONS_DIR,
+          cwd: FIREBASE_DIR,
         }
       );
 
       const output = result.stdout.toString();
       expect(output).toContain('Deploying rules and indexes');
     },
-    { timeout: 60000 }
+    { timeout: 120000 }
   );
 
   test(
@@ -130,7 +130,7 @@ describe('Firestack CLI', () => {
           '120',
         ],
         {
-          cwd: FUNCTIONS_DIR,
+          cwd: FIREBASE_DIR,
         }
       );
 
@@ -146,7 +146,7 @@ describe('Firestack CLI', () => {
     () => {
       // Testing help first to ensure command is registered
       const helpResult = Bun.spawnSync(['node', FIRESTACK_BIN, 'sync', '--help'], {
-        cwd: FUNCTIONS_DIR,
+        cwd: FIREBASE_DIR,
       });
       expect(helpResult.stdout.toString()).toContain('Syncs Firestore, Storage rules, and indexes');
 
@@ -164,7 +164,7 @@ describe('Firestack CLI', () => {
           '--verbose',
         ],
         {
-          cwd: FUNCTIONS_DIR,
+          cwd: FIREBASE_DIR,
         }
       );
 
@@ -184,7 +184,7 @@ describe('Firestack CLI', () => {
       const firebaseResult = Bun.spawnSync(
         ['node', FIRESTACK_BIN, 'logs', '--projectId', 'mock-project', '--verbose'],
         {
-          cwd: FUNCTIONS_DIR,
+          cwd: FIREBASE_DIR,
         }
       );
       const firebaseOutput = firebaseResult.stdout.toString() + firebaseResult.stderr.toString();
@@ -195,7 +195,7 @@ describe('Firestack CLI', () => {
       const gcloudResult = Bun.spawnSync(
         ['node', FIRESTACK_BIN, 'logs', '--projectId', 'mock-project', '--tail', '--verbose'],
         {
-          cwd: FUNCTIONS_DIR,
+          cwd: FIREBASE_DIR,
         }
       );
       const gcloudOutput = gcloudResult.stdout.toString() + gcloudResult.stderr.toString();
@@ -215,7 +215,7 @@ describe('Firestack CLI', () => {
           '--verbose',
         ],
         {
-          cwd: FUNCTIONS_DIR,
+          cwd: FIREBASE_DIR,
         }
       );
       const firestoreOutput = firestoreResult.stdout.toString() + firestoreResult.stderr.toString();

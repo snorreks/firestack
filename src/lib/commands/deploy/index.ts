@@ -52,10 +52,35 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
 
   const { remoteUtils, mergedCache: previousCache } = cacheContext;
 
+  // Determine deployment scope
+  const shouldDeployEverything = !deployOptions.only;
+  const onlyValues = deployOptions.only
+    ? deployOptions.only.split(',').map((v) => v.trim().toLowerCase())
+    : [];
+  const wantsDataconnect = onlyValues.includes('dataconnect');
+  const wantsRules = onlyValues.includes('rules');
+  const isOnlyServices = wantsDataconnect || wantsRules;
+
   // 2. Rules Deployment (deployed by default unless skipped or targeting specific functions)
-  if (!cliOptions.skipRules && !deployOptions.only) {
+  if (!cliOptions.skipRules && (shouldDeployEverything || wantsRules)) {
     logger.info(chalk.cyan('📦 Deploying rules and indexes...'));
     await rulesAction({ ...cliOptions, cacheContext });
+  }
+
+  // 2b. Data Connect Deployment (deployed by default unless skipped or targeting specific functions)
+  if (!cliOptions.skipDataconnect && (shouldDeployEverything || wantsDataconnect)) {
+    logger.info(chalk.cyan('🔗 Deploying Data Connect...'));
+    const { dataconnectAction } = await import('$commands/dataconnect/index.ts');
+    await dataconnectAction({ ...cliOptions, cacheContext });
+  }
+
+  // If only services were requested (no functions), stop here
+  if (isOnlyServices && !shouldDeployEverything) {
+    const serviceOnly = onlyValues.filter((v) => v !== 'dataconnect' && v !== 'rules');
+    if (serviceOnly.length === 0) {
+      logger.info(chalk.bold.green('\n✨ Dataconnect, rules, and indexes deployment complete!'));
+      return;
+    }
   }
 
   // 3. Functions Discovery & Metadata Parsing
@@ -83,11 +108,18 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
 
   // Filter if '--only' is specified
   if (deployOptions.only) {
-    const onlyFunctions = deployOptions.only.split(',').map((f) => f.trim());
-    functionMetadata = filterFunctionsByOnly({
-      functionMetadata,
-      only: onlyFunctions,
-    });
+    // Filter out service-level targets (dataconnect, rules) from function filtering
+    const functionOnly = onlyValues.filter((v) => v !== 'dataconnect' && v !== 'rules');
+    if (functionOnly.length > 0) {
+      functionMetadata = filterFunctionsByOnly({
+        functionMetadata,
+        only: functionOnly,
+      });
+    } else if (isOnlyServices) {
+      // Only services were requested, skip functions entirely
+      logger.info(chalk.green('✅ Deployment complete.'));
+      return;
+    }
   }
 
   if (functionMetadata.length === 0) {
@@ -263,6 +295,7 @@ export const deployCommand = new Command('deploy')
   .option('--node-version <nodeVersion>', 'The Node.js version to use for the functions.')
   .option('--debug', 'Enable debug mode (keeps temporary files).')
   .option('--skip-rules', 'Skip deploying rules and indexes.')
+  .option('--skip-dataconnect', 'Skip deploying Data Connect.')
   .option('--external <external>', 'Comma-separated list of external dependencies.', (val) =>
     val.split(',')
   )

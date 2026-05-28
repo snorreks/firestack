@@ -1,4 +1,4 @@
-import { existsSync, watch } from 'node:fs';
+import { existsSync, readFileSync, watch } from 'node:fs';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { exit } from 'node:process';
@@ -208,19 +208,44 @@ const generateFirebaseJson = async (options: {
   // 1. Collect potential emulators to enable
   const emulatorsToEnable = new Set<string>();
 
+  // Compute dataconnect paths once (used for detection + config)
+  const projectRoot = process.cwd();
+  const dataconnectDir = join(projectRoot, emulateOptions.dataconnectDirectory || 'dataconnect');
+  const dataconnectYamlPath = join(dataconnectDir, 'dataconnect.yaml');
+
   if (emulateOptions.emulators) {
-    for (const e of emulateOptions.emulators) emulatorsToEnable.add(e);
+    // User provided explicit list — use it as-is
+    for (const e of emulateOptions.emulators) {
+      emulatorsToEnable.add(e);
+    }
   } else {
-    emulatorsToEnable.add('auth');
+    // Auto-detect which emulators are needed based on project contents
+
+    // Dataconnect: check if dataconnect.yaml exists
+    if (existsSync(dataconnectYamlPath)) {
+      emulatorsToEnable.add('dataconnect');
+    }
+
+    // Functions + Auth + Firestore: enabled when there are function files
     if (functionFiles.length > 0) {
       emulatorsToEnable.add('functions');
+      emulatorsToEnable.add('auth');
       emulatorsToEnable.add('firestore');
+
       if (await checkHasScheduler(functionFiles)) {
         emulatorsToEnable.add('pubsub');
       }
     }
-    if (await hasRuleFile(emulateOptions, 'firestore')) emulatorsToEnable.add('firestore');
-    if (await hasRuleFile(emulateOptions, 'storage')) emulatorsToEnable.add('storage');
+
+    // Firestore rules
+    if (await hasRuleFile(emulateOptions, 'firestore')) {
+      emulatorsToEnable.add('firestore');
+    }
+
+    // Storage rules
+    if (await hasRuleFile(emulateOptions, 'storage')) {
+      emulatorsToEnable.add('storage');
+    }
   }
 
   const firebaseConfig: Record<string, unknown> = {
@@ -251,6 +276,7 @@ const generateFirebaseJson = async (options: {
     storage: 9199,
     database: 9000,
     hosting: 5000,
+    dataconnect: 9399,
   };
 
   const ports = { ...defaultPorts, ...emulateOptions.emulatorPorts };
@@ -262,9 +288,39 @@ const generateFirebaseJson = async (options: {
   if (emulatorsToEnable.has('storage')) emulators.storage = { port: ports.storage };
   if (emulatorsToEnable.has('database')) emulators.database = { port: ports.database };
   if (emulatorsToEnable.has('hosting')) emulators.hosting = { port: ports.hosting };
+  if (emulatorsToEnable.has('dataconnect')) emulators.dataconnect = { port: ports.dataconnect };
 
   // 2. Rules and Indexes Handling
   await copyRulesAndIndexes({ outputDir, emulateOptions, firebaseConfig });
+
+  // 3. Data Connect Configuration (only if detected)
+  if (emulatorsToEnable.has('dataconnect')) {
+    // Path is relative from dist/emulator/ to the project root's dataconnect directory.
+    const relativeDataconnectPath = join(
+      '..',
+      '..',
+      emulateOptions.dataconnectDirectory || 'dataconnect'
+    );
+    firebaseConfig.dataconnect = {
+      source: relativeDataconnectPath,
+    };
+
+    // Read location and serviceId from dataconnect.yaml
+    try {
+      const yamlContent = readFileSync(dataconnectYamlPath, 'utf-8');
+      const locationMatch = yamlContent.match(/location:\s*(.+)/);
+      const serviceIdMatch = yamlContent.match(/serviceId:\s*(.+)/);
+      if (locationMatch) {
+        (firebaseConfig.dataconnect as Record<string, unknown>).location = locationMatch[1].trim();
+      }
+      if (serviceIdMatch) {
+        (firebaseConfig.dataconnect as Record<string, unknown>).serviceId =
+          serviceIdMatch[1].trim();
+      }
+    } catch {
+      // Non-critical: location and serviceId are optional in firebase.json
+    }
+  }
 
   await writeFile(join(outputDir, 'firebase.json'), JSON.stringify(firebaseConfig, null, 2));
 };
@@ -511,6 +567,7 @@ export const emulateCommand = new Command('emulate')
         emulateOptions.emulatorPorts?.auth ?? 9099,
         emulateOptions.emulatorPorts?.storage ?? 9199,
         emulateOptions.emulatorPorts?.database ?? 9000,
+        emulateOptions.emulatorPorts?.dataconnect ?? 9399,
         4400,
         4401,
         4500,
@@ -564,6 +621,7 @@ export const emulateCommand = new Command('emulate')
         emulateOptions.emulatorPorts?.auth ?? 9099,
         emulateOptions.emulatorPorts?.storage ?? 9199,
         emulateOptions.emulatorPorts?.database ?? 9000,
+        emulateOptions.emulatorPorts?.dataconnect ?? 9399,
         4400,
         4401,
         4500,

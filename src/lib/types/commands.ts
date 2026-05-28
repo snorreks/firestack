@@ -37,6 +37,7 @@ export type BaseCliOptions = {
   cloudCacheFileName?: string;
   includeFilePath?: string;
   tsconfig?: string;
+  dataconnectDirectory?: string;
 };
 
 export type DeployCliOptions = BaseCliOptions & {
@@ -47,6 +48,7 @@ export type DeployCliOptions = BaseCliOptions & {
   retryAmount?: number;
   isEmulator?: boolean;
   skipRules?: boolean;
+  skipDataconnect?: boolean;
 };
 
 export type DeployCommandOptions = {
@@ -78,6 +80,7 @@ export type DeployCommandOptions = {
   keepNames?: boolean;
   isEmulator?: boolean;
   skipRules?: boolean;
+  skipDataconnect?: boolean;
   watch?: boolean;
   init?: boolean;
   cloudCacheFileName: string;
@@ -126,6 +129,7 @@ export type EmulateCommandOptions = {
   cloudCacheFileName: string;
   includeFilePath?: string;
   tsconfig?: string;
+  dataconnectDirectory?: string;
 };
 
 export type LogsCliOptions = BaseCliOptions & {
@@ -332,6 +336,25 @@ export type TestRulesCliOptions = BaseCliOptions & {
   ci?: boolean;
   only?: string;
   timeout?: number;
+};
+
+export type DataconnectCliOptions = BaseCliOptions & {
+  force?: boolean;
+  dryRun?: boolean;
+};
+
+export type DataconnectCommandOptions = {
+  mode: string;
+  projectId?: string;
+  dataconnectDirectory: string;
+  region?: string;
+  engine: string;
+  packageManager: PackageManager;
+  verbose?: boolean;
+  silent?: boolean;
+  debug?: boolean;
+  force?: boolean;
+  cloudCacheFileName: string;
 };
 
 export type TestRulesCommandOptions = {

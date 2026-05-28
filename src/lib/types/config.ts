@@ -15,6 +15,13 @@ export type FirestackConfig = {
   storageRules?: string;
   scriptsDirectory?: string;
   initScript?: string;
+  /**
+   * Directory containing the Data Connect configuration (dataconnect.yaml).
+   * Relative to the project root.
+   *
+   * @default 'dataconnect'
+   */
+  dataconnectDirectory?: string;
   modes?: Record<string, string>;
   region?: string;
   nodeVersion?: NodeVersion;

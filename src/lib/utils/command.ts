@@ -10,6 +10,7 @@ export type CommandOptions = {
   onStderr?: (data: string) => void;
   onSubprocess?: (subprocess: Subprocess) => void;
   cwd?: string;
+  stdin?: 'pipe' | 'inherit' | 'ignore';
   stdout?: 'pipe' | 'inherit' | ['inherit', 'pipe'];
   stderr?: 'pipe' | 'inherit' | ['inherit', 'pipe'];
   stdio?: 'pipe' | 'inherit' | ['inherit', 'pipe'];
@@ -37,6 +38,7 @@ export const executeCommand = async (
     onStderr,
     onSubprocess,
     cwd,
+    stdin,
     stdout,
     stderr,
     env,
@@ -94,6 +96,7 @@ export const executeCommand = async (
     const subprocess = execa(finalCmd, finalArgs, {
       cwd,
       env: finalEnv,
+      stdin: stdin ?? 'inherit',
       stdout: stdout ?? (isVerbose ? ['inherit', 'pipe'] : 'pipe'),
       stderr: stderr ?? (isVerbose ? ['inherit', 'pipe'] : 'pipe'),
     });

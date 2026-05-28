@@ -11,4 +11,5 @@ export type FirebaseEmulator =
   | 'ui'
   | 'hub'
   | 'logging'
-  | 'appcheck';
+  | 'appcheck'
+  | 'dataconnect';

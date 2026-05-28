@@ -1,0 +1,15 @@
+specVersion: v1alpha
+
+serviceId: firestack-example
+location: us-central1
+
+schema:
+  datasource:
+    postgresql:
+      database: example
+      cloudSql:
+        instance: firestack-example-db
+  source: ./schema
+
+connectorDirs:
+  - ./connector

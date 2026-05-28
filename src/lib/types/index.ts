@@ -4,6 +4,7 @@ export * from './commands.ts';
 export * from './config.ts';
 export * from './core.ts';
 export * from './deploy.ts';
+export * from './emulators.ts';
 export * from './firebase-auth-v2.ts';
 export * from './function-types.ts';
 export * from './functions-cache.ts';

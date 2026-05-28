@@ -34,6 +34,7 @@ describe('Build Output Validation', () => {
     expect(content).toContain('program.addCommand(deleteCommand)');
     expect(content).toContain('program.addCommand(emulateCommand)');
     expect(content).toContain('program.addCommand(rulesCommand)');
+    expect(content).toContain('program.addCommand(dataconnectCommand)');
     expect(content).toContain('program.addCommand(logsCommand)');
     expect(content).toContain('program.parse(process.argv)');
   });

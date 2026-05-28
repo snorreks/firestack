@@ -23,11 +23,27 @@ Firestack is a TypeScript-first CLI for Firebase Cloud Functions v2. This skill 
 2. **Auto-Derived Names** — The deployed function name comes from the file path: `api/hello.ts` → `hello`, `firestore/users/[uid]/created.ts` → `users_created`. Override with `functionName` in options.
 3. **Always check `firestack.config.ts` (or `firestack.json`)** before running any command. If neither exists, offer to run `/firestack setup config` first.
 
+## Post-Task Workflow
+
+After EVERY code change task (fix, feature, refactor), run these steps in order:
+
+```bash
+bun run fix        # Biome lint/format fix
+bun run check      # TypeScript type check
+cd example
+bun run sync       # Rebuild + reinstall dependencies
+bun run check      # TypeScript type check (example)
+bun run test       # Run test suite
+```
+
+If any step fails, fix it before marking the task complete. Pre-existing unrelated test failures (e.g., timeouts) are acceptable — note them.
+
 ## Command Registry
 
 | Command | Description | Reference |
 |---|---|---|
 | `deploy [mode]` | Build and deploy functions/rules to Firebase | [references/deploy.md](references/deploy.md) |
+| `dataconnect [mode]` | Deploy Data Connect schema and connectors | [references/dataconnect.md](references/dataconnect.md) |
 | `emulate [mode]` | Start Firebase emulators with live reload | [references/emulate.md](references/emulate.md) |
 | `create api <name>` | Scaffold a new HTTP function | [references/create.md](references/create.md) |
 | `create callable <name>` | Scaffold a new callable function | [references/create.md](references/create.md) |

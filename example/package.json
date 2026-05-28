@@ -8,21 +8,21 @@
   ],
   "scripts": {
     "moon": "moon",
-    "build": "moon run functions:build --",
-    "deploy": "moon run functions:deploy --",
-    "delete": "moon run functions:delete --",
-    "emulate": "moon run functions:emulate --",
-    "rules": "moon run functions:rules --",
-    "scripts": "moon run functions:scripts --",
-    "logs": "moon run functions:logs --",
+    "build": "moon run firebase:build --",
+    "deploy": "moon run firebase:deploy --",
+    "delete": "moon run firebase:delete --",
+    "emulate": "moon run firebase:emulate --",
+    "rules": "moon run firebase:rules --",
+    "scripts": "moon run firebase:scripts --",
+    "logs": "moon run firebase:logs --",
     "check": "moon run :check --",
     "fix": "moon run :fix --",
     "test": "bun test tests",
-    "sync": "cd .. && bun run build && cd example/apps/functions && bun install && cd ../../packages/types && bun install"
+    "sync": "cd .. && bun run build && cd example/apps/firebase && bun install && cd ../../packages/types && bun install"
   },
   "devDependencies": {
     "typescript": "^6.0.3",
-    "@moonrepo/cli": "^2.2.4",
+    "@moonrepo/cli": "^2.2.5",
     "@biomejs/biome": "^2.4.15"
   },
   "dependencies": {
