@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, watch } from 'node:fs';
+import { existsSync, watch } from 'node:fs';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { exit } from 'node:process';
@@ -295,31 +295,14 @@ const generateFirebaseJson = async (options: {
 
   // 3. Data Connect Configuration (only if detected)
   if (emulatorsToEnable.has('dataconnect')) {
-    // Path is relative from dist/emulator/ to the project root's dataconnect directory.
-    const relativeDataconnectPath = join(
-      '..',
-      '..',
-      emulateOptions.dataconnectDirectory || 'dataconnect'
-    );
-    firebaseConfig.dataconnect = {
-      source: relativeDataconnectPath,
-    };
+    // Copy the dataconnect source directory into dist/emulator so Firebase CLI
+    // can access it (relative paths going above the firebase.json directory are rejected).
+    const dataconnectOutputDir = join(outputDir, 'dataconnect');
+    await copyDataconnectDirectory(dataconnectDir, dataconnectOutputDir);
 
-    // Read location and serviceId from dataconnect.yaml
-    try {
-      const yamlContent = readFileSync(dataconnectYamlPath, 'utf-8');
-      const locationMatch = yamlContent.match(/location:\s*(.+)/);
-      const serviceIdMatch = yamlContent.match(/serviceId:\s*(.+)/);
-      if (locationMatch) {
-        (firebaseConfig.dataconnect as Record<string, unknown>).location = locationMatch[1].trim();
-      }
-      if (serviceIdMatch) {
-        (firebaseConfig.dataconnect as Record<string, unknown>).serviceId =
-          serviceIdMatch[1].trim();
-      }
-    } catch {
-      // Non-critical: location and serviceId are optional in firebase.json
-    }
+    firebaseConfig.dataconnect = {
+      source: 'dataconnect',
+    };
   }
 
   await writeFile(join(outputDir, 'firebase.json'), JSON.stringify(firebaseConfig, null, 2));
@@ -410,6 +393,20 @@ const hasRuleFile = async (
   ];
   const results = await Promise.all(paths.map((p) => exists(p)));
   return results.some((r) => r);
+};
+
+/**
+ * Copies the dataconnect source directory into the emulator output directory.
+ */
+const copyDataconnectDirectory = async (sourceDir: string, targetDir: string): Promise<void> => {
+  const { cp } = await import('node:fs/promises');
+
+  try {
+    await cp(sourceDir, targetDir, { recursive: true });
+    logger.debug(`Copied dataconnect directory to ${targetDir}`);
+  } catch (error) {
+    logger.warn(`Failed to copy dataconnect directory: ${(error as Error).message}`);
+  }
 };
 
 /**

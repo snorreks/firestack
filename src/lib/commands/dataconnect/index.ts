@@ -8,11 +8,7 @@ import type { CacheContext, DataconnectCliOptions } from '$types';
 import { executeCommand } from '$utils/command.ts';
 import { getCacheContext, updateRemoteCache } from '$utils/functions_cache.ts';
 import { getDataconnectOptions } from '$utils/options.ts';
-import {
-  findDataconnectFiles,
-  generateDataconnectChecksum,
-  readDataconnectYaml,
-} from './utils/dataconnect_files.ts';
+import { findDataconnectFiles, generateDataconnectChecksum } from './utils/dataconnect_files.ts';
 
 type DataconnectOptions = DataconnectCliOptions;
 
@@ -71,26 +67,18 @@ export const dataconnectAction = async (
 
   logger.info(chalk.cyan('📡 Deploying Data Connect...'));
 
-  // 4. Read location and serviceId from dataconnect.yaml
-  const yamlInfo = await readDataconnectYaml(dataconnectDir);
-
-  // 5. Prepare a temporary deployment directory with firebase.json
+  // 4. Prepare a temporary deployment directory
   const uniqueId = Math.random().toString(36).slice(2, 8);
   const tempDir = join(projectRoot, 'dist', `dataconnect-deploy-${uniqueId}`);
   await mkdir(tempDir, { recursive: true });
 
-  // Build firebase.json with dataconnect section pointing to the source
-  const dataconnectConfig: Record<string, unknown> = {
-    source: join('..', '..', options.dataconnectDirectory),
-  };
-  if (yamlInfo.location) {
-    dataconnectConfig.location = yamlInfo.location;
-  }
-  if (yamlInfo.serviceId) {
-    dataconnectConfig.serviceId = yamlInfo.serviceId;
-  }
+  // Copy dataconnect source into temp directory so Firebase CLI can find it
+  const { cp } = await import('node:fs/promises');
+  const dataconnectTempDir = join(tempDir, 'dataconnect');
+  await cp(dataconnectDir, dataconnectTempDir, { recursive: true });
 
-  const firebaseConfig = { dataconnect: dataconnectConfig };
+  // Build firebase.json with dataconnect source pointing to the copied directory
+  const firebaseConfig = { dataconnect: { source: 'dataconnect' } };
   await writeFile(join(tempDir, 'firebase.json'), JSON.stringify(firebaseConfig, null, 2));
 
   // 6. Handle dry-run

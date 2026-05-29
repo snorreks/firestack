@@ -56,9 +56,13 @@ describe('Firestack Dataconnect', () => {
 
       const firebaseJson = JSON.parse(await readFile(firebaseJsonPath, 'utf-8'));
       expect(firebaseJson).toHaveProperty('dataconnect');
-      expect(firebaseJson.dataconnect).toHaveProperty('source', '../../dataconnect');
-      expect(firebaseJson.dataconnect).toHaveProperty('location', 'us-central1');
-      expect(firebaseJson.dataconnect).toHaveProperty('serviceId', 'firestack-example');
+      expect(firebaseJson.dataconnect).toHaveProperty('source', 'dataconnect');
+
+      // Verify dataconnect source files were copied
+      expect(await exists(join(distDir, deployDir, 'dataconnect', 'dataconnect.yaml'))).toBe(true);
+      expect(await exists(join(distDir, deployDir, 'dataconnect', 'schema', 'schema.gql'))).toBe(
+        true
+      );
     },
     { timeout: 60000 }
   );

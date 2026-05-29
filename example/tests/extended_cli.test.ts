@@ -211,9 +211,14 @@ describe('Firestack CLI Extended Tests', () => {
 
       // Check dataconnect service config
       expect(firebaseJson).toHaveProperty('dataconnect');
-      expect(firebaseJson.dataconnect).toHaveProperty('source', '../../dataconnect');
-      expect(firebaseJson.dataconnect).toHaveProperty('location', 'us-central1');
-      expect(firebaseJson.dataconnect).toHaveProperty('serviceId', 'firestack-example');
+      expect(firebaseJson.dataconnect).toHaveProperty('source', 'dataconnect');
+
+      // Check dataconnect source directory was copied
+      expect(await exists(join(emulatorDist, 'dataconnect', 'dataconnect.yaml'))).toBe(true);
+      expect(await exists(join(emulatorDist, 'dataconnect', 'schema', 'schema.gql'))).toBe(true);
+      expect(await exists(join(emulatorDist, 'dataconnect', 'connector', 'queries.gql'))).toBe(
+        true
+      );
 
       const envContent = await readFile(join(emulatorDist, '.env'), 'utf-8');
       expect(envContent).toContain('MODE=example');
