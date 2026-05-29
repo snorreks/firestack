@@ -146,7 +146,8 @@
           "ui",
           "hub",
           "logging",
-          "appcheck"
+          "appcheck",
+          "dataconnect"
         ]
       },
       "description": "List of emulators to enable during emulation."
@@ -166,7 +167,8 @@
         "ui": { "type": "integer" },
         "hub": { "type": "integer" },
         "logging": { "type": "integer" },
-        "appcheck": { "type": "integer" }
+        "appcheck": { "type": "integer" },
+        "dataconnect": { "type": "integer" }
       },
       "additionalProperties": false,
       "description": "Custom ports for individual emulators (e.g., { \"auth\": 9099 })."
@@ -175,6 +177,11 @@
       "type": "string",
       "default": "src/logger.ts",
       "description": "Relative path to a file that will be auto-imported at the top of every generated function index. Useful for initializing logging, OpenTelemetry, or Sentry without boilerplate in each handler file."
+    },
+    "dataconnectDirectory": {
+      "type": "string",
+      "default": "dataconnect",
+      "description": "Directory containing the Data Connect configuration (dataconnect.yaml). Relative to the project root."
     },
     "keepNames": {
       "type": "boolean",

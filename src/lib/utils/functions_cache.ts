@@ -37,7 +37,9 @@ export const getCacheContext = async (options: {
     });
     if (remoteCache) {
       logger.debug('Using remote cache, merging with local');
-      mergedCache = { ...mergedCache, ...remoteCache };
+      // Local takes priority: after a partial failure, the remote cache may
+      // be stale (not synced), but the local per-function files are up-to-date.
+      mergedCache = { ...remoteCache, ...mergedCache };
     }
   }
 

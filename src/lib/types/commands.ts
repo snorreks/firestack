@@ -257,6 +257,8 @@ export type RulesCliOptions = BaseCliOptions & {
 
 export type SyncCliOptions = BaseCliOptions & {
   only?: string;
+  watch?: boolean;
+  dataconnectDirectory?: string;
 };
 
 export type RulesCommandOptions = {
@@ -318,6 +320,7 @@ export type SyncCommandOptions = {
   init?: boolean;
   noInit?: boolean;
   cloudCacheFileName: string;
+  dataconnectDirectory?: string;
 };
 
 export type BuildCommandOptions = {

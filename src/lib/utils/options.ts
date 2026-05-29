@@ -388,6 +388,8 @@ export const getSyncOptions = async (cliOptions: SyncCliOptions): Promise<SyncCo
     watch: base.watch,
     init: base.init,
     mode: base.mode,
+    dataconnectDirectory:
+      cliOptions.dataconnectDirectory || base.dataconnectDirectory || 'dataconnect',
   };
 
   logger.setLogSeverity(options);
