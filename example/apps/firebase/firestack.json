@@ -5,12 +5,5 @@
   },
   "region": "us-east1",
   "minify": false,
-  "includeFilePath": "src/configs/logging.ts",
-  "rulesTests": {
-    "firestore": {
-      "rulesFile": "src/rules/firestore.rules",
-      "testPattern": "tests/rules/**/*.rules.test.ts",
-      "projectId": "firestack-rules-test"
-    }
-  }
+  "includeFilePath": "src/configs/logging.ts"
 }

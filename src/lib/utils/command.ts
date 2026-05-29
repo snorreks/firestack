@@ -3,6 +3,91 @@ import { logger } from '$logger';
 import type { PackageManager } from '$types';
 import { resolveFirebaseCommand } from '$utils/firebase_tools.ts';
 
+const ANSI_ESCAPE_RE = new RegExp(`${String.fromCharCode(0x1b)}\\[[0-9;]*[A-Za-z]`, 'g');
+
+/**
+ * Checks whether a line looks like Firebase CLI's normal progress output
+ * (not an interactive prompt). Used to detect when the interactive session
+ * has ended and normal output has resumed.
+ */
+const isFirebaseProgressLine = (line: string): boolean => {
+  // Strip ANSI escape codes for detection
+  const clean = line.replace(ANSI_ESCAPE_RE, '').trim();
+  if (!clean) return false;
+  // Firebase CLI log prefixes: `i  `, `✔  `, `⚠  `, `✖  `, `=== `, `⚠ `
+  if (/^[i✔⚠✖] {2}/.test(clean)) return true;
+  if (clean.startsWith('=== ')) return true;
+  if (clean.startsWith('⚠ ')) return true;
+  return false;
+};
+
+/**
+ * Installs a data handler on the subprocess stdout that selectively echoes
+ * only interactive prompts (inquirer questions) to the terminal.
+ * Normal Firebase progress output is captured but not shown.
+ *
+ * When an interactive prompt is detected, recent buffered context lines
+ * are flushed first so the user has context for the prompt.
+ *
+ * @param subprocess - The execa subprocess
+ * @returns A cleanup function that removes the listener
+ */
+const installInteractiveFilter = (subprocess: Subprocess): (() => void) => {
+  if (!subprocess.stdout) {
+    return () => {};
+  }
+
+  let lineBuffer = '';
+  let isInInteractive = false;
+  const contextChunks: string[] = [];
+  const MAX_CONTEXT_CHUNKS = 60;
+
+  const onData = (chunk: Buffer) => {
+    const data = chunk.toString();
+
+    // Always capture via the stream (execa result.stdout will still have it)
+
+    // Check for interactive markers in the raw chunk (before line-splitting)
+    const hasPrompt = /\? /.test(data) || data.includes('❯');
+
+    if (hasPrompt && !isInInteractive) {
+      // Flush recent context so user understands the prompt
+      for (const ctx of contextChunks) {
+        process.stdout.write(ctx);
+      }
+      contextChunks.length = 0;
+      isInInteractive = true;
+    }
+
+    if (isInInteractive) {
+      process.stdout.write(data);
+
+      // Accumulate lines to detect when interactive mode ends
+      lineBuffer += data;
+      const lines = lineBuffer.split('\n');
+      lineBuffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (isFirebaseProgressLine(line)) {
+          isInInteractive = false;
+          break;
+        }
+      }
+    } else {
+      // Buffer for context
+      contextChunks.push(data);
+      while (contextChunks.length > MAX_CONTEXT_CHUNKS) {
+        contextChunks.shift();
+      }
+    }
+  };
+
+  subprocess.stdout.on('data', onData);
+  return () => {
+    subprocess.stdout?.removeListener('data', onData);
+  };
+};
+
 export type CommandOptions = {
   args?: string[];
   packageManager?: PackageManager;
@@ -90,15 +175,19 @@ export const executeCommand = async (
     logger.debug(`Working directory: ${cwd}`);
   }
 
-  const isVerbose = logger.currentLogSeverity === 'debug';
+  // Non-verbose mode: pipe everything, selectively echo only interactive prompts.
+  // Interactive content (inquirer prompts) always goes to stdout, while Firebase
+  // progress/spinner output also goes to stdout, so we filter by content patterns.
+  const shouldFilter = !logger.verbose && !stdout && !stderr;
+  let cleanupFilter: (() => void) | undefined;
 
   try {
     const subprocess = execa(finalCmd, finalArgs, {
       cwd,
       env: finalEnv,
       stdin: stdin ?? 'inherit',
-      stdout: stdout ?? (isVerbose ? ['inherit', 'pipe'] : 'pipe'),
-      stderr: stderr ?? (isVerbose ? ['inherit', 'pipe'] : 'pipe'),
+      stdout: stdout ?? (shouldFilter ? 'pipe' : ['inherit', 'pipe']),
+      stderr: stderr ?? (shouldFilter ? 'pipe' : ['inherit', 'pipe']),
     });
 
     if (onSubprocess) {
@@ -118,7 +207,15 @@ export const executeCommand = async (
       });
     }
 
+    // In non-verbose mode, install a selective echo filter that shows only
+    // interactive prompts (inquirer) to the terminal while keeping noisy
+    // Firebase progress output hidden.
+    if (shouldFilter) {
+      cleanupFilter = installInteractiveFilter(subprocess);
+    }
+
     const result = await subprocess;
+    cleanupFilter?.();
 
     return {
       code: result.exitCode ?? 0,
@@ -127,6 +224,7 @@ export const executeCommand = async (
       success: true,
     };
   } catch (error) {
+    cleanupFilter?.();
     const err = error as ExecaError;
     return {
       code: err.exitCode ?? 1,

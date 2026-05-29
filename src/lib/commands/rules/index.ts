@@ -245,7 +245,7 @@ const executeDeployment = async (options: {
   const commandArgs = ['deploy', '--only', deployTargets.join(','), '--project', projectId];
 
   logger.info(`📡 Deploying targets: ${chalk.cyan(deployTargets.join(', '))}`);
-  logger.debug(`🔥 Running: ${chalk.dim('firebase ' + commandArgs.join(' '))}`);
+  logger.debug(`🔥 Running: ${chalk.dim(`firebase ${commandArgs.join(' ')}`)}`);
   logger.debug(`📂 Working directory: ${chalk.dim(tempDirectory)}`);
 
   const result = await executeCommand('firebase', {
