@@ -1,6 +1,6 @@
 {
   "name": "@snorreks/firestack",
-  "version": "0.0.62",
+  "version": "0.0.63",
   "description": "CLI tool for deploying Firebase Cloud Functions with ease",
   "type": "module",
   "main": "index.js",
