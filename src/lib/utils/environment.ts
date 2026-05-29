@@ -115,47 +115,14 @@ const loadModeEnv = async (mode: string): Promise<Record<string, string>> => {
 };
 
 /**
- * Step 2: Creates an allowlist from .env.example combined with validated mode keys.
+ * Step 2: Merges process.env safely, filtering out dangerous keys.
  */
-const loadAllowlist = async (modeKeys: string[]): Promise<Set<string> | null> => {
-  const examplePath = join(cwd(), '.env.example');
-  const rawExample = await parseEnvFile(examplePath);
-
-  if (!rawExample) {
-    logger.debug(`No .env.example found. Falling back to strict regex filtering for process.env.`);
-    return null;
-  }
-
-  const allowedKeys = new Set(Object.keys(rawExample));
-  for (const key of modeKeys) {
-    allowedKeys.add(key);
-  }
-
-  logger.debug(`Loaded allowlist from .env.example for process.env merging.`);
-  return allowedKeys;
-};
-
-/**
- * Step 3: Merges process.env safely using guard clauses.
- */
-const mergeProcessEnv = (
-  baseEnv: Record<string, string>,
-  allowedKeys: Set<string> | null
-): Record<string, string> => {
+const mergeProcessEnv = (baseEnv: Record<string, string>): Record<string, string> => {
   const finalEnv = { ...baseEnv };
 
   for (const [key, value] of Object.entries(processEnv)) {
     if (!value) continue;
-
-    // Guard: If we have an allowlist, but the key isn't in it, skip silently.
-    if (allowedKeys && !allowedKeys.has(key)) continue;
-
-    // Guard: The key passed the allowlist (or there is no allowlist), but is inherently unsafe.
-    if (!isSafeKey(key)) {
-      if (allowedKeys) logger.warn(`Invalid key in process.env: ${key}. Skipping.`);
-      continue;
-    }
-
+    if (!isSafeKey(key)) continue;
     finalEnv[key] = value;
   }
 
@@ -166,7 +133,7 @@ const mergeProcessEnv = (
  * Gets the environment variables for the given mode.
  *
  * Reads `.env.{mode}` and filters out invalid or system-level keys.
- * Overrides with `process.env` safely by checking `.env.example` (or falling back to strict regex).
+ * Overrides with `process.env` (filtered through `isSafeKey`).
  *
  * **Important:** Keys listed in `invalidKeys` (such as `FIREBASE_SERVICE_ACCOUNT`) are
  * intentionally stripped from both the `.env` file and `process.env` to prevent leaking credentials.
@@ -176,7 +143,6 @@ const mergeProcessEnv = (
  */
 export const getEnvironment = async (mode: string): Promise<Record<string, string>> => {
   const modeEnv = await loadModeEnv(mode);
-  const allowedKeys = await loadAllowlist(Object.keys(modeEnv));
 
-  return mergeProcessEnv(modeEnv, allowedKeys);
+  return mergeProcessEnv(modeEnv);
 };
