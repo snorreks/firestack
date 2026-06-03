@@ -45,12 +45,18 @@ export const onAuthDelete = (
  * Blocks request to create a Firebase Auth user.
  *
  * @param handler Event handler that blocks creation of a Firebase Auth user.
+ * @typeParam TCustomClaims - Optional type for custom claims added to the user token.
+ *   When provided, `customClaims` becomes required in the response.
  */
-export const beforeAuthCreate = (
+export const beforeAuthCreate = <TCustomClaims = never>(
   handler: (
     user: AuthUserRecord,
     context: AuthEventContext
-  ) => BeforeCreateResponse | void | Promise<BeforeCreateResponse> | Promise<void>,
+  ) =>
+    | BeforeCreateResponse<TCustomClaims>
+    | void
+    | Promise<BeforeCreateResponse<TCustomClaims>>
+    | Promise<void>,
   _options?: AuthTriggerOptions
 ) => {
   return wrapWithLogContext(handler, () => ({
@@ -63,12 +69,20 @@ export const beforeAuthCreate = (
  * Blocks request to sign-in a Firebase Auth user.
  *
  * @param handler Event handler that blocks sign-in of a Firebase Auth user.
+ * @typeParam TCustomClaims - Optional type for custom claims added to the ID token.
+ *   When provided, `customClaims` becomes required in the response.
+ * @typeParam TSessionClaims - Optional type for session claims scoped to the current session.
+ *   When provided, `sessionClaims` becomes required in the response.
  */
-export const beforeAuthSignIn = (
+export const beforeAuthSignIn = <TCustomClaims = never, TSessionClaims = never>(
   handler: (
     user: AuthUserRecord,
     context: AuthEventContext
-  ) => BeforeSignInResponse | void | Promise<BeforeSignInResponse> | Promise<void>,
+  ) =>
+    | BeforeSignInResponse<TCustomClaims, TSessionClaims>
+    | void
+    | Promise<BeforeSignInResponse<TCustomClaims, TSessionClaims>>
+    | Promise<void>,
   _options?: AuthTriggerOptions
 ) => {
   return wrapWithLogContext(handler, () => ({

@@ -14,6 +14,8 @@ import type {
   EmulateCliOptions,
   EmulateCommandOptions,
   FirestackConfig,
+  GenerateCliOptions,
+  GenerateCommandOptions,
   LogsCliOptions,
   LogsCommandOptions,
   RulesCliOptions,
@@ -226,6 +228,7 @@ export const getBaseOptions = async (cliOptions: BaseCliOptions) => {
     includeFilePath: cliOptions.includeFilePath || config.includeFilePath || 'src/logger.ts',
     dataconnectDirectory:
       cliOptions.dataconnectDirectory || config.dataconnectDirectory || 'dataconnect',
+    chokidarPolling: cliOptions.chokidarPolling ?? config.chokidarPolling ?? 'auto',
   };
 };
 
@@ -264,6 +267,13 @@ export const getEmulateOptions = async (
     watch: base.watch,
     init: base.init,
     mode: base.mode,
+    // Handle --polling / --no-polling: CLI takes priority over config.
+    // Commander maps --polling → polling=true, --no-polling → polling=false,
+    // neither → polling=undefined. Falls back to config.chokidarPolling (default 'auto').
+    polling:
+      cliOptions.polling ??
+      ((base as Record<string, unknown>).chokidarPolling as boolean | 'auto' | undefined) ??
+      'auto',
   };
 
   logger.setLogSeverity(options);
@@ -385,15 +395,41 @@ export const getSyncOptions = async (cliOptions: SyncCliOptions): Promise<SyncCo
     projectId: base.projectId,
     minify: base.minify,
     sourcemap: base.sourcemap,
-    watch: base.watch,
-    init: base.init,
     mode: base.mode,
-    dataconnectDirectory:
-      cliOptions.dataconnectDirectory || base.dataconnectDirectory || 'dataconnect',
   };
 
   logger.setLogSeverity(options);
   logger.debug('Syncing rules and indexes...');
+  logger.debug('Options:', options);
+
+  return options;
+};
+
+export const getGenerateOptions = async (
+  cliOptions: GenerateCliOptions
+): Promise<GenerateCommandOptions> => {
+  const base = await getBaseOptions(cliOptions);
+
+  if (!base.projectId) {
+    throw new Error(
+      'Project ID is required. Please provide it via CLI or configure in firestack config.'
+    );
+  }
+
+  const options: GenerateCommandOptions = {
+    mode: base.mode,
+    projectId: base.projectId,
+    dataconnectDirectory:
+      cliOptions.dataconnectDirectory || base.dataconnectDirectory || 'dataconnect',
+    packageManager: base.packageManager,
+    verbose: cliOptions.verbose,
+    silent: cliOptions.silent,
+    debug: cliOptions.debug,
+    watch: cliOptions.watch,
+  };
+
+  logger.setLogSeverity(options);
+  logger.debug('Generating Data Connect SDKs...');
   logger.debug('Options:', options);
 
   return options;

@@ -1,4 +1,4 @@
-import { existsSync, watch } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, watch } from 'node:fs';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { exit } from 'node:process';
@@ -17,9 +17,84 @@ import { getEnvironment } from '$utils/environment';
 import { findFunctions } from '$utils/find_functions.ts';
 import { createPackageJson, toDotEnvironmentCode } from '$utils/firebase_utils.ts';
 import { getEmulateOptions } from '$utils/options.ts';
-import { killProcessesOnPorts } from '$utils/ports.ts';
+import { forceCleanupEmulators } from '$utils/ports.ts';
+
+/**
+ * Resolves the chokidar polling mode.
+ * - 'auto': checks if inotify watches are ≥ 90% consumed → enables polling with warning.
+ * - true/false: explicit, no detection.
+ *
+ * Returns the resolved boolean and a warning message (if any).
+ */
+const resolveChokidarPolling = (
+  pollingMode: boolean | 'auto'
+): { enabled: boolean; warning?: string } => {
+  if (pollingMode !== 'auto') {
+    return { enabled: pollingMode };
+  }
+
+  try {
+    const maxWatches = parseInt(
+      readFileSync('/proc/sys/fs/inotify/max_user_watches', 'utf8').trim(),
+      10
+    );
+    if (!maxWatches || maxWatches <= 0) return { enabled: false };
+
+    // Count actual inotify watches by scanning /proc/*/fdinfo
+    let used = 0;
+    const procDirs = readdirSync('/proc').filter((d) => /^\d+$/.test(d));
+    for (const pidDir of procDirs) {
+      try {
+        const fdinfoDir = `/proc/${pidDir}/fdinfo`;
+        for (const fdinfo of readdirSync(fdinfoDir)) {
+          try {
+            const content = readFileSync(`${fdinfoDir}/${fdinfo}`, 'utf8');
+            const lines = content.split('\n');
+            for (const line of lines) {
+              if (line.startsWith('inotify')) {
+                const wdMatch = line.match(/inotify wd:([0-9,]+)/);
+                if (wdMatch) {
+                  used += wdMatch[1].split(',').length;
+                }
+              }
+            }
+          } catch {
+            /* skip unreadable fdinfo */
+          }
+        }
+      } catch {
+        /* skip unreadable proc dir */
+      }
+    }
+
+    const usageRatio = used / maxWatches;
+    if (usageRatio >= 0.9) {
+      const pct = Math.round(usageRatio * 100);
+      return {
+        enabled: true,
+        warning: `Inotify watches ${pct}% consumed (${used}/${maxWatches}). Enabling chokidar polling to bypass kernel watcher limit. Consider increasing fs.inotify.max_user_watches in your kernel config.`,
+      };
+    }
+  } catch {
+    /* non-Linux or unreadable — skip auto-detect */
+  }
+
+  return { enabled: false };
+};
 
 type EmulateOptions = EmulateCommandOptions;
+
+const defaultPorts = {
+  ui: 4000,
+  auth: 9099,
+  functions: 5001,
+  firestore: 8080,
+  pubsub: 8085,
+  storage: 9199,
+  database: 9000,
+  hosting: 5000,
+  dataconnect: 9399,
+} as const satisfies Record<string, number>;
 
 /**
  * Runs the initialization script for the emulator.
@@ -36,10 +111,10 @@ const runOnEmulate = async (options: EmulateOptions & { env: Record<string, stri
   }
 
   const ports = {
-    auth: options.emulatorPorts?.auth || 9099,
-    firestore: options.emulatorPorts?.firestore || 8080,
-    storage: options.emulatorPorts?.storage || 9199,
-    database: options.emulatorPorts?.database || 9000,
+    auth: options.emulatorPorts?.auth || defaultPorts.auth,
+    firestore: options.emulatorPorts?.firestore || defaultPorts.firestore,
+    storage: options.emulatorPorts?.storage || defaultPorts.storage,
+    database: options.emulatorPorts?.database || defaultPorts.database,
   };
 
   const projectId = options.projectId || DEFAULT_EMULATOR_PROJECT_ID;
@@ -251,7 +326,7 @@ const generateFirebaseJson = async (options: {
   const firebaseConfig: Record<string, unknown> = {
     emulators: {
       singleProjectMode: true,
-      ui: { enabled: true, port: emulateOptions.emulatorPorts?.ui || 4000 },
+      ui: { enabled: true, port: emulateOptions.emulatorPorts?.ui || defaultPorts.ui },
     },
   };
 
@@ -266,18 +341,6 @@ const generateFirebaseJson = async (options: {
   }
 
   const emulators = firebaseConfig.emulators as Record<string, unknown>;
-
-  const defaultPorts: Record<string, number> = {
-    ui: 4000,
-    auth: 9099,
-    functions: 5001,
-    firestore: 8080,
-    pubsub: 8085,
-    storage: 9199,
-    database: 9000,
-    hosting: 5000,
-    dataconnect: 9399,
-  };
 
   const ports = { ...defaultPorts, ...emulateOptions.emulatorPorts };
 
@@ -498,6 +561,8 @@ export const emulateCommand = new Command('emulate')
   .option('--dry-run', 'Build functions and rules for emulator but do not start it.')
   .option('--force', 'Kill any existing servers running on the emulator ports.')
   .option('--no-force', 'Do not kill existing servers on the emulator ports.')
+  .option('--polling', 'Use chokidar polling instead of inotify (bypasses kernel watcher limits).')
+  .option('--no-polling', 'Disable polling (force inotify, even if auto-detect would enable it).')
   .option('--emulators <emulators>', 'Comma-separated list of emulators to enable.', (val) =>
     val.split(',')
   )
@@ -520,6 +585,22 @@ export const emulateCommand = new Command('emulate')
       );
       process.exit(1);
     }
+
+    // Safety net: kill any leftover processes on the known emulator ports.
+    const allEmulatorPorts = [
+      emulateOptions.emulatorPorts?.ui ?? 4000,
+      emulateOptions.emulatorPorts?.functions ?? 5001,
+      emulateOptions.emulatorPorts?.firestore ?? 8080,
+      emulateOptions.emulatorPorts?.pubsub ?? 8085,
+      emulateOptions.emulatorPorts?.auth ?? 9099,
+      emulateOptions.emulatorPorts?.storage ?? 9199,
+      emulateOptions.emulatorPorts?.database ?? 9000,
+      emulateOptions.emulatorPorts?.dataconnect ?? 9399,
+      4400,
+      4401,
+      4500,
+      4501,
+    ];
 
     // Generate .env for emulator containing all mode envs (minus service account)
     const env = await getEnvironment(emulateOptions.mode);
@@ -556,26 +637,9 @@ export const emulateCommand = new Command('emulate')
     await generateFirebaseJson({ outputDir, emulateOptions, functionFiles });
 
     if (emulateOptions.force) {
-      const portsToKill = [
-        emulateOptions.emulatorPorts?.ui ?? 4000,
-        emulateOptions.emulatorPorts?.functions ?? 5001,
-        emulateOptions.emulatorPorts?.firestore ?? 8080,
-        emulateOptions.emulatorPorts?.pubsub ?? 8085,
-        emulateOptions.emulatorPorts?.auth ?? 9099,
-        emulateOptions.emulatorPorts?.storage ?? 9199,
-        emulateOptions.emulatorPorts?.database ?? 9000,
-        emulateOptions.emulatorPorts?.dataconnect ?? 9399,
-        4400,
-        4401,
-        4500,
-        4501,
-      ];
-      const killed = await killProcessesOnPorts(portsToKill);
-      if (killed.length > 0) {
-        logger.info(chalk.cyan(`Killed existing processes on ports: ${killed.join(', ')}`));
-      } else {
-        logger.debug('No processes found on emulator ports');
-      }
+      await forceCleanupEmulators(allEmulatorPorts, emulateOptions.projectId);
+    } else {
+      logger.debug('No processes found on emulator ports');
     }
 
     if (cliOptions.dryRun) {
@@ -590,6 +654,14 @@ export const emulateCommand = new Command('emulate')
     }
 
     logger.info(chalk.bold.green('🔥 Starting Firebase emulator...'));
+
+    // Resolve chokidar polling mode (auto-detect or explicit)
+    const polling = resolveChokidarPolling(emulateOptions.polling ?? 'auto');
+    if (polling.warning) {
+      logger.warn(chalk.yellow(`⚠️  ${polling.warning}`));
+    } else if (polling.enabled) {
+      logger.info(chalk.cyan('🔁 Chokidar polling enabled (bypasses inotify limits).'));
+    }
 
     let uiLogged = false;
     let emulatorSubprocess: Subprocess | undefined;
@@ -609,23 +681,8 @@ export const emulateCommand = new Command('emulate')
         }
       }
 
-      // Safety net: kill any leftover processes on the known emulator ports.
-      const allEmulatorPorts = [
-        emulateOptions.emulatorPorts?.ui ?? 4000,
-        emulateOptions.emulatorPorts?.functions ?? 5001,
-        emulateOptions.emulatorPorts?.firestore ?? 8080,
-        emulateOptions.emulatorPorts?.pubsub ?? 8085,
-        emulateOptions.emulatorPorts?.auth ?? 9099,
-        emulateOptions.emulatorPorts?.storage ?? 9199,
-        emulateOptions.emulatorPorts?.database ?? 9000,
-        emulateOptions.emulatorPorts?.dataconnect ?? 9399,
-        4400,
-        4401,
-        4500,
-        4501,
-      ];
       // Fire-and-forget with a timeout so we always exit within 2s
-      void killProcessesOnPorts(allEmulatorPorts).finally(() => exit(0));
+      void forceCleanupEmulators(allEmulatorPorts, emulateOptions.projectId).finally(() => exit(0));
       setTimeout(() => exit(0), 2000);
     };
 
@@ -639,6 +696,7 @@ export const emulateCommand = new Command('emulate')
       packageManager: emulateOptions.packageManager,
       env: {
         ...process.env,
+        ...(polling.enabled ? { CHOKIDAR_USEPOLLING: 'true' } : {}),
         JAVA_OPTS:
           '-XX:+IgnoreUnrecognizedVMOptions --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
       },

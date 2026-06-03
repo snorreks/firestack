@@ -45,6 +45,8 @@ If any step fails, fix it before marking the task complete. Pre-existing unrelat
 | `deploy [mode]` | Build and deploy functions/rules to Firebase | [references/deploy.md](references/deploy.md) |
 | `dataconnect [mode]` | Deploy Data Connect schema and connectors | [references/dataconnect.md](references/dataconnect.md) |
 | `emulate [mode]` | Start Firebase emulators with live reload | [references/emulate.md](references/emulate.md) |
+| `sync [mode]` | Sync Firestore/Storage rules and indexes from Firebase | [references/sync.md](references/sync.md) |
+| `generate` | Generate Data Connect SDKs from local schema | [references/generate.md](references/generate.md) |
 | `create api <name>` | Scaffold a new HTTP function | [references/create.md](references/create.md) |
 | `create callable <name>` | Scaffold a new callable function | [references/create.md](references/create.md) |
 | `create firestore <path> <event>` | Scaffold a Firestore trigger | [references/create.md](references/create.md) |

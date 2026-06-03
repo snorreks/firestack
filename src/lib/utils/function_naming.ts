@@ -3,11 +3,20 @@ import { relative } from 'node:path';
 /**
  * Derives a function name from a file path relative to the controllers directory.
  *
+ * Sanitizes the name to comply with Firebase function naming rules:
+ * - Converts all hyphens (`-`) to underscores (`_`)
+ * - Replaces any other invalid characters with `_`
+ * - Collapses consecutive underscores
+ * - Ensures the name starts with a letter
+ * - Truncates to 63 characters
+ *
  * Examples:
  * - `api/test_api.ts` → `test_api`
+ * - `api/check-email.ts` → `check_email`
  * - `firestore/users/[uid]/created.ts` → `users_created`
  * - `scheduler/daily.ts` → `daily`
  * - `auth/created.ts` → `created` (auth triggers don't get a prefix)
+ * - `api/user.profile.ts` → `user_profile`
  *
  * @param options - The options containing file paths.
  * @returns The derived function name.
@@ -29,9 +38,23 @@ export const deriveFunctionName = (options: {
   // Filter out [id] placeholders and build the name
   const nameParts = pathParts.filter((part) => !part.startsWith('[')).concat(fileName);
 
-  const functionName = nameParts.join('_');
+  const functionName = nameParts
+    .join('_')
+    // Convert hyphens to underscores
+    .replace(/-/g, '_')
+    // Replace any character not valid for Firebase function names with underscore
+    .replace(/[^a-zA-Z0-9_]/g, '_')
+    // Collapse consecutive underscores
+    .replace(/_+/g, '_')
+    // Trim leading/trailing underscores
+    .replace(/^_|_$/g, '');
 
-  return functionName;
+  // Firebase function names must start with a letter
+  if (functionName.length > 0 && !/^[a-zA-Z]/.test(functionName)) {
+    return `fn_${functionName}`.slice(0, 63);
+  }
+
+  return functionName.slice(0, 63) || 'unnamed';
 };
 
 /**

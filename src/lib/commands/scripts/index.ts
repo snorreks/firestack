@@ -38,7 +38,7 @@ const findScripts = async (dir: string): Promise<string[]> => {
 /**
  * Executes a specific script with environment variables and configuration.
  */
-const runScript = async (scriptName: string, options: ScriptsOptions) => {
+const runScript = async (scriptName: string, scriptArgs: string[], options: ScriptsOptions) => {
   const scriptsDirectory = options.scriptsDirectory;
   if (!scriptsDirectory) {
     throw new Error('Scripts directory is required.');
@@ -52,7 +52,10 @@ const runScript = async (scriptName: string, options: ScriptsOptions) => {
 
   const engine = options.engine || 'bun';
   const relativeScriptPath = relative(cwd(), scriptPath);
-  const args = engine === 'bun' ? [relativeScriptPath] : ['run', relativeScriptPath];
+  const args =
+    engine === 'bun'
+      ? [relativeScriptPath, ...scriptArgs]
+      : ['run', relativeScriptPath, ...scriptArgs];
 
   logger.info(chalk.cyan(`🏃 Executing script: ${chalk.bold(scriptName)}`));
   logger.debug(chalk.dim(`Command: ${engine} ${args.join(' ')}`));
@@ -80,45 +83,49 @@ export const scriptsCommand = new Command('scripts')
   .option('--verbose', 'Enable verbose logging.')
   .option('--silent', 'Disable logging.')
   .option('--engine <engine>', 'The engine to use (e.g., "bun", "node").')
+  // Change [scriptName] to allow trailing arguments
   .argument('[scriptName]', 'The name of the script to run.')
-  .action(async (scriptName: string | undefined, cliOptions: ScriptsOptions) => {
-    const options = await getOptions(cliOptions);
-    const scriptsDirectory = options.scriptsDirectory;
-    if (!scriptsDirectory) {
-      throw new Error('Scripts directory is required.');
-    }
-    const scriptsPath = join(cwd(), scriptsDirectory);
+  .argument('[scriptArgs...]', 'Arguments to pass directly to the script.')
+  .action(
+    async (scriptName: string | undefined, scriptArgs: string[], cliOptions: ScriptsOptions) => {
+      const options = await getOptions(cliOptions);
+      const scriptsDirectory = options.scriptsDirectory;
+      if (!scriptsDirectory) {
+        throw new Error('Scripts directory is required.');
+      }
+      const scriptsPath = join(cwd(), scriptsDirectory);
 
-    let selectedScriptName = scriptName;
+      let selectedScriptName = scriptName;
 
-    if (!selectedScriptName) {
-      const scriptFiles = await findScripts(scriptsPath);
+      if (!selectedScriptName) {
+        const scriptFiles = await findScripts(scriptsPath);
 
-      if (scriptFiles.length === 0) {
-        logger.warn(chalk.yellow('⚠️  No scripts found in the scripts directory.'));
+        if (scriptFiles.length === 0) {
+          logger.warn(chalk.yellow('⚠️  No scripts found in the scripts directory.'));
+          return;
+        }
+
+        if (scriptFiles.length === 1) {
+          selectedScriptName = scriptFiles[0];
+          logger.info(chalk.dim(`Selected single available script: ${selectedScriptName}`));
+        } else {
+          const response = await prompts({
+            type: 'select',
+            name: 'script',
+            message: 'Please select a script to run:',
+            choices: scriptFiles.map((s) => ({ title: s, value: s })),
+          });
+
+          if (!response.script) return;
+          selectedScriptName = response.script as string;
+        }
+      }
+
+      if (!selectedScriptName) {
+        logger.error(chalk.red('❌ No script selected.'));
         return;
       }
 
-      if (scriptFiles.length === 1) {
-        selectedScriptName = scriptFiles[0];
-        logger.info(chalk.dim(`Selected single available script: ${selectedScriptName}`));
-      } else {
-        const response = await prompts({
-          type: 'select',
-          name: 'script',
-          message: 'Please select a script to run:',
-          choices: scriptFiles.map((s) => ({ title: s, value: s })),
-        });
-
-        if (!response.script) return;
-        selectedScriptName = response.script as string;
-      }
+      await runScript(selectedScriptName, scriptArgs, options);
     }
-
-    if (!selectedScriptName) {
-      logger.error(chalk.red('❌ No script selected.'));
-      return;
-    }
-
-    await runScript(selectedScriptName, options);
-  });
+  );

@@ -4,6 +4,7 @@ import { dataconnectCommand } from '$commands/dataconnect/index.ts';
 import { deleteCommand } from '$commands/delete/index.ts';
 import { deployCommand } from '$commands/deploy/index.ts';
 import { emulateCommand } from '$commands/emulate/index.ts';
+import { generateCommand } from '$commands/generate/index.ts';
 import { logsCommand } from '$commands/logs/index.ts';
 import { rulesCommand } from '$commands/rules/index.ts';
 import { scriptsCommand } from '$commands/scripts/index.ts';
@@ -14,7 +15,7 @@ const program = new Command();
 
 program
   .name('firestack')
-  .version('0.0.64')
+  .version('0.0.65')
   .description('CLI for building and deploying Firebase Cloud Functions.');
 
 program.addCommand(buildCommand);
@@ -25,6 +26,7 @@ program.addCommand(deleteCommand);
 program.addCommand(emulateCommand);
 program.addCommand(rulesCommand);
 program.addCommand(syncCommand);
+program.addCommand(generateCommand);
 program.addCommand(logsCommand);
 program.addCommand(testRulesCommand);
 

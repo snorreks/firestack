@@ -38,6 +38,8 @@ export type BaseCliOptions = {
   includeFilePath?: string;
   tsconfig?: string;
   dataconnectDirectory?: string;
+  /** Use chokidar polling instead of inotify (bypasses kernel watcher limits). */
+  chokidarPolling?: boolean | 'auto';
 };
 
 export type DeployCliOptions = BaseCliOptions & {
@@ -96,6 +98,8 @@ export type EmulateCliOptions = BaseCliOptions & {
   open?: boolean;
   force?: boolean;
   noForce?: boolean;
+  /** Use chokidar polling instead of inotify. --no-polling forces false. */
+  polling?: boolean;
 };
 
 export type EmulateCommandOptions = {
@@ -126,6 +130,7 @@ export type EmulateCommandOptions = {
   emulators?: FirebaseEmulator[];
   keepNames?: boolean;
   force?: boolean;
+  polling?: boolean | 'auto';
   cloudCacheFileName: string;
   includeFilePath?: string;
   tsconfig?: string;
@@ -257,8 +262,6 @@ export type RulesCliOptions = BaseCliOptions & {
 
 export type SyncCliOptions = BaseCliOptions & {
   only?: string;
-  watch?: boolean;
-  dataconnectDirectory?: string;
 };
 
 export type RulesCommandOptions = {
@@ -315,12 +318,7 @@ export type SyncCommandOptions = {
   emulators?: FirebaseEmulator[];
   emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
-  watch?: boolean;
-  noWatch?: boolean;
-  init?: boolean;
-  noInit?: boolean;
   cloudCacheFileName: string;
-  dataconnectDirectory?: string;
 };
 
 export type BuildCommandOptions = {
@@ -339,6 +337,11 @@ export type TestRulesCliOptions = BaseCliOptions & {
   ci?: boolean;
   only?: string;
   timeout?: number;
+};
+
+export type GenerateCliOptions = BaseCliOptions & {
+  watch?: boolean;
+  dataconnectDirectory?: string;
 };
 
 export type DataconnectCliOptions = BaseCliOptions & {
@@ -383,4 +386,15 @@ export type TestRulesCommandOptions = {
   emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
   keepNames?: boolean;
   cloudCacheFileName: string;
+};
+
+export type GenerateCommandOptions = {
+  mode: string;
+  projectId: string;
+  dataconnectDirectory: string;
+  packageManager: PackageManager;
+  verbose?: boolean;
+  silent?: boolean;
+  debug?: boolean;
+  watch?: boolean;
 };

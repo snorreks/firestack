@@ -11,6 +11,7 @@ import { getSyncOptions } from '$utils/options.ts';
 
 /**
  * Main action for the sync command.
+ * Syncs Firestore rules, Storage rules, and Firestore indexes from Firebase.
  * @param cliOptions - The options provided via CLI
  */
 export const syncAction = async (cliOptions: SyncCliOptions) => {
@@ -34,104 +35,33 @@ export const syncAction = async (cliOptions: SyncCliOptions) => {
     ? syncOptions.only.split(',').map((t) => t.trim())
     : ['firestore', 'storage', 'indexes'];
 
-  const wantsDataconnect = targets.includes('dataconnect');
-  const isWatchMode = syncOptions.watch && wantsDataconnect;
-
-  // Separate dataconnect from other targets — it runs from project root, not rulesDir
-  const ruleTargets = targets.filter((t) => t !== 'dataconnect');
-
   const syncPromises: Promise<void>[] = [];
 
-  if (ruleTargets.includes('firestore')) {
+  if (targets.includes('firestore')) {
     syncPromises.push(syncFirestoreRules({ syncOptions, rulesDir }));
   }
 
-  if (ruleTargets.includes('storage')) {
+  if (targets.includes('storage')) {
     syncPromises.push(syncStorageRules({ syncOptions, rulesDir }));
   }
 
-  if (ruleTargets.includes('indexes')) {
+  if (targets.includes('indexes')) {
     syncPromises.push(syncFirestoreIndexes({ syncOptions, rulesDir }));
   }
 
   await Promise.all(syncPromises);
 
-  // Run dataconnect SDK generation after rules/indexes sync
-  if (wantsDataconnect) {
-    await syncDataConnectSdk({ syncOptions });
+  if (syncPromises.length === 0) {
+    logger.warn(chalk.yellow('⚠️  No valid sync targets specified.'));
+    return;
   }
 
-  if (!isWatchMode) {
-    logger.info(chalk.bold.green('✅ Sync completed.'));
-  }
+  logger.info(chalk.bold.green('✅ Sync completed.'));
 };
 
 type SyncTargetOptions = {
   syncOptions: SyncCommandOptions;
   rulesDir: string;
-};
-
-type SyncDataConnectOptions = {
-  syncOptions: SyncCommandOptions;
-};
-
-/**
- * Generates Data Connect SDKs for client and admin frontends.
- * Runs `firebase dataconnect:sdk:generate` from the project root.
- * Supports watch mode for continuous regeneration during development.
- * @param options - Sync options
- */
-const syncDataConnectSdk = async (options: SyncDataConnectOptions) => {
-  const { syncOptions } = options;
-  const projectRoot = cwd();
-  const dataconnectDir = join(projectRoot, syncOptions.dataconnectDirectory || 'dataconnect');
-
-  if (!(await exists(dataconnectDir))) {
-    logger.warn(
-      chalk.yellow(
-        `⚠️  Data Connect directory not found at ${chalk.bold(syncOptions.dataconnectDirectory || 'dataconnect')}. Skipping SDK generation.`
-      )
-    );
-    return;
-  }
-
-  const isWatchMode = syncOptions.watch;
-  logger.info(chalk.cyan(`🔗 ${isWatchMode ? 'Watching' : 'Generating'} Data Connect SDKs...`));
-
-  const commandArgs = ['dataconnect:sdk:generate'];
-
-  if (isWatchMode) {
-    commandArgs.push('--watch');
-  }
-
-  if (syncOptions.projectId) {
-    commandArgs.push('--project', syncOptions.projectId);
-  }
-
-  logger.debug(`Running: firebase ${commandArgs.join(' ')}`);
-  logger.debug(`Working directory: ${projectRoot}`);
-
-  const result = await executeCommand('firebase', {
-    args: commandArgs,
-    cwd: projectRoot,
-    packageManager: syncOptions.packageManager,
-  });
-
-  if (!result.success) {
-    if (isWatchMode) {
-      logger.error(chalk.red('❌ Data Connect SDK watch ended unexpectedly.'));
-    } else {
-      logger.error(chalk.red('❌ Failed to generate Data Connect SDKs.'));
-      if (result.stderr) {
-        logger.debug(`Error: ${result.stderr}`);
-      }
-    }
-    return;
-  }
-
-  if (!isWatchMode) {
-    logger.info(chalk.bold.green('✅ Data Connect SDKs generated successfully.'));
-  }
 };
 
 /**
@@ -142,7 +72,6 @@ const syncFirestoreRules = async (options: SyncTargetOptions) => {
   const { syncOptions, rulesDir } = options;
   logger.info(`Fetching ${chalk.cyan('Firestore rules')}...`);
 
-  // Try firebase firestore:rules:get (though it might not exist in all versions)
   let result = await executeCommand('firebase', {
     args: ['firestore:rules:get', '--project', syncOptions.projectId],
     packageManager: syncOptions.packageManager,
@@ -150,7 +79,6 @@ const syncFirestoreRules = async (options: SyncTargetOptions) => {
 
   if (!result.success) {
     logger.debug(`Firebase rules:get failed, trying gcloud fallback...`);
-    // Try gcloud fallback
     result = await executeCommand('gcloud', {
       args: [
         'alpha',
@@ -266,21 +194,16 @@ const syncFirestoreIndexes = async (options: SyncTargetOptions) => {
  * The sync command definition.
  */
 export const syncCommand = new Command('sync')
-  .description('Syncs Firestore, Storage rules, indexes, and Data Connect SDKs from Firebase.')
+  .description('Syncs Firestore and Storage rules, and Firestore indexes from Firebase.')
   .option('--mode <mode>', 'The mode to use for syncing.')
   .option('--projectId <projectId>', 'The Firebase project ID to sync from.')
   .option(
     '--only <only>',
-    'Only sync the specified components (e.g., "firestore,storage,indexes,dataconnect").'
+    'Only sync the specified components (e.g., "firestore,storage,indexes").'
   )
   .option('--verbose', 'Whether to run the command with verbose logging.')
-  .option('--watch', 'Watch Data Connect schema files and regenerate SDKs on changes.')
   .option(
     '--packageManager <packageManager>',
     'The package manager to use (npm, yarn, pnpm, bun, global).'
-  )
-  .option(
-    '--dataconnectDirectory <dataconnectDirectory>',
-    'The directory containing the Data Connect configuration.'
   )
   .action(syncAction);

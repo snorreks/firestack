@@ -36,6 +36,20 @@ export type FirestackConfig = {
   watch?: boolean;
   init?: boolean;
   force?: boolean;
+  /**
+   * Use chokidar polling instead of inotify for file watching in the Firebase
+   * emulator subprocess. Polling bypasses kernel inotify limits entirely, which
+   * is useful when the system watcher limit is exhausted (common on NixOS with
+   * Kitty, or in Docker containers with low watcher limits).
+   *
+   * - `true`: Always use polling.
+   * - `false`: Never use polling.
+   * - `"auto"` (default): Check if inotify watches are ≥ 90% consumed and
+   *   auto-enable polling with a warning.
+   *
+   * @default 'auto'
+   */
+  chokidarPolling?: boolean | 'auto';
   cloudCacheFileName?: string;
   /**
    * Relative path to a file that will be auto-imported at the top of every

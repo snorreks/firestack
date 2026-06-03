@@ -294,6 +294,19 @@ For simpler projects, use the JSON format:
 
 ## Commands & Options
 
+### `firestack sync`
+
+Syncs Firestore rules, Storage rules, and Firestore indexes from Firebase into your local project.
+
+- `--only <targets>`: Sync specific components (e.g., `firestore`, `storage`, `indexes`).
+
+### `firestack generate`
+
+Generates Data Connect SDKs from local schema files.
+
+- `--watch`: Watch schema files and regenerate continuously.
+- `--dataconnectDirectory <dir>`: Directory containing Data Connect config (default: `dataconnect`).
+
 ### `firestack deploy`
 
 Builds and deploys functions, rules, and indexes to Firebase.

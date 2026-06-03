@@ -1,7 +1,14 @@
 import type { FunctionsCacheGet, FunctionsCacheUpdate } from '@snorreks/firestack';
 
 const baseURL = 'https://api.jsonbin.io/v3/b';
-const accessKey = '$2a$10$CQ4GBCW8od4zQ8sV7WugXucaGegle0e.kt7XiVNxtsaoJR1BFJMCC';
+
+const getAccessKey = (): string => {
+  const key = process.env.CACHE_ACCESS_KEY;
+  if (!key) {
+    throw new Error('CACHE_ACCESS_KEY environment variable is required');
+  }
+  return key;
+};
 
 const getBinId = (mode: string): string => {
   switch (mode) {
@@ -18,7 +25,7 @@ export const get: FunctionsCacheGet = async ({ mode }) => {
     method: 'GET',
     headers: {
       'X-Bin-Meta': 'false',
-      'X-Access-Key': accessKey,
+      'X-Access-Key': getAccessKey(),
     },
   });
 
@@ -43,7 +50,7 @@ export const update: FunctionsCacheUpdate = async ({ mode, newFunctionsCache }) 
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
-      'X-Access-Key': accessKey,
+      'X-Access-Key': getAccessKey(),
     },
     body: JSON.stringify(mergedFunctionsCache),
   });

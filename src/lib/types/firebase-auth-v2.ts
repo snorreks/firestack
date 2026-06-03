@@ -13,8 +13,8 @@ export type AuthEventContext = {
   data: AuthUserRecord;
 };
 
-export type BeforeCreateResponse = {
-  customClaims?: object;
+export type BeforeCreateResponse<TCustomClaims = never> = {
+  customClaims: [TCustomClaims] extends [never] ? object | undefined : TCustomClaims;
   disabled?: boolean;
   displayName?: string;
   email?: string;
@@ -24,7 +24,7 @@ export type BeforeCreateResponse = {
   photoURL?: string;
 };
 
-export type BeforeSignInResponse = {
-  customClaims?: object;
-  sessionClaims?: object;
+export type BeforeSignInResponse<TCustomClaims = never, TSessionClaims = never> = {
+  customClaims: [TCustomClaims] extends [never] ? object | undefined : TCustomClaims;
+  sessionClaims: [TSessionClaims] extends [never] ? object | undefined : TSessionClaims;
 };

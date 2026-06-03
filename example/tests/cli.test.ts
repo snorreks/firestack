@@ -148,7 +148,9 @@ describe('Firestack CLI', () => {
       const helpResult = Bun.spawnSync(['node', FIRESTACK_BIN, 'sync', '--help'], {
         cwd: FIREBASE_DIR,
       });
-      expect(helpResult.stdout.toString()).toContain('Syncs Firestore, Storage rules, indexes, and Data Connect SDKs');
+      expect(helpResult.stdout.toString()).toContain(
+        'Syncs Firestore and Storage rules, and Firestore indexes from Firebase.'
+      );
 
       // Running sync with a mock project ID to see it attempt execution
       // We use verbose to see the debug logs of what it's trying to do

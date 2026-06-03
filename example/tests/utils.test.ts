@@ -83,6 +83,38 @@ describe('function_naming', () => {
     expect(result).toBe('created');
   });
 
+  test('deriveFunctionName converts hyphens to underscores', () => {
+    const result = deriveFunctionName({
+      functionPath: '/project/src/controllers/api/check-email.ts',
+      functionsDirectoryPath: '/project/src/controllers',
+    });
+    expect(result).toBe('check_email');
+  });
+
+  test('deriveFunctionName converts invalid characters to underscores', () => {
+    const result = deriveFunctionName({
+      functionPath: '/project/src/controllers/api/user.profile.ts',
+      functionsDirectoryPath: '/project/src/controllers',
+    });
+    expect(result).toBe('user_profile');
+  });
+
+  test('deriveFunctionName handles paths with hyphens in directory names', () => {
+    const result = deriveFunctionName({
+      functionPath: '/project/src/controllers/api/check-email/verify-link.ts',
+      functionsDirectoryPath: '/project/src/controllers',
+    });
+    expect(result).toBe('check_email_verify_link');
+  });
+
+  test('deriveFunctionName handles multiple consecutive invalid characters', () => {
+    const result = deriveFunctionName({
+      functionPath: '/project/src/controllers/api/stripe.webhook.ts',
+      functionsDirectoryPath: '/project/src/controllers',
+    });
+    expect(result).toBe('stripe_webhook');
+  });
+
   test('extractDocumentPath for Firestore', () => {
     const result = extractDocumentPath({
       functionPath: '/project/src/controllers/firestore/users/[uid]/created.ts',

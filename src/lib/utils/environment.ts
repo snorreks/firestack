@@ -90,7 +90,32 @@ const parseEnvFile = async (filePath: string): Promise<Record<string, string> | 
 };
 
 /**
- * Step 1: Loads the .env.{mode} file and filters out unsafe keys.
+ * Step 1: Loads the base .env file and filters out unsafe keys.
+ */
+const loadBaseEnv = async (): Promise<Record<string, string>> => {
+  const envPath = join(cwd(), '.env');
+  const rawEnv = await parseEnvFile(envPath);
+
+  if (!rawEnv) {
+    logger.debug('No .env file found.');
+    return {};
+  }
+
+  const safeEnv: Record<string, string> = {};
+  for (const [key, value] of Object.entries(rawEnv)) {
+    if (!isSafeKey(key)) {
+      logger.warn(`Invalid key in .env: ${key}. Skipping.`);
+      continue;
+    }
+    safeEnv[key] = value;
+  }
+
+  logger.debug('Loaded environment variables from .env');
+  return safeEnv;
+};
+
+/**
+ * Step 2: Loads the .env.{mode} file, overrides base values, and filters out unsafe keys.
  */
 const loadModeEnv = async (mode: string): Promise<Record<string, string>> => {
   const envPath = join(cwd(), `.env.${mode}`);
@@ -115,7 +140,7 @@ const loadModeEnv = async (mode: string): Promise<Record<string, string>> => {
 };
 
 /**
- * Step 2: Merges process.env safely, filtering out dangerous keys.
+ * Step 3: Merges process.env safely, filtering out dangerous keys.
  */
 const mergeProcessEnv = (baseEnv: Record<string, string>): Record<string, string> => {
   const finalEnv = { ...baseEnv };
@@ -132,17 +157,22 @@ const mergeProcessEnv = (baseEnv: Record<string, string>): Record<string, string
 /**
  * Gets the environment variables for the given mode.
  *
- * Reads `.env.{mode}` and filters out invalid or system-level keys.
- * Overrides with `process.env` (filtered through `isSafeKey`).
+ * Resolution order (later overrides earlier):
+ * 1. `.env` — base environment (shared across all modes)
+ * 2. `.env.{mode}` — mode-specific overrides
+ * 3. `process.env` — runtime environment (filtered through `isSafeKey`)
  *
  * **Important:** Keys listed in `invalidKeys` (such as `FIREBASE_SERVICE_ACCOUNT`) are
- * intentionally stripped from both the `.env` file and `process.env` to prevent leaking credentials.
+ * intentionally stripped from both the `.env` files and `process.env` to prevent leaking credentials.
  *
  * @param mode - The mode to get the environment variables for.
  * @returns The merged environment variables.
  */
 export const getEnvironment = async (mode: string): Promise<Record<string, string>> => {
-  const modeEnv = await loadModeEnv(mode);
+  const [baseEnv, modeEnv] = await Promise.all([loadBaseEnv(), loadModeEnv(mode)]);
 
-  return mergeProcessEnv(modeEnv);
+  // Mode-specific env overrides base env
+  const merged = { ...baseEnv, ...modeEnv };
+
+  return mergeProcessEnv(merged);
 };
