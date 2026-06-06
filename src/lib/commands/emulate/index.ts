@@ -9,7 +9,7 @@ import { toDeployIndexCode } from '$commands/deploy/utils/create_deploy_index.ts
 import { parseFunctionMetadata } from '$commands/deploy/utils/parse_function_metadata.ts';
 import { DEFAULT_EMULATOR_PROJECT_ID } from '$constants';
 import { logger } from '$logger';
-import type { EmulateCommandOptions } from '$types';
+import type { EmulateCliOptions, EmulateCommandOptions } from '$types';
 import { buildFunction } from '$utils/build_utils.ts';
 import { executeCommand } from '$utils/command.ts';
 import { exists, findProjectRoot, openUrl } from '$utils/common.ts';
@@ -82,8 +82,6 @@ const resolveChokidarPolling = (
   return { enabled: false };
 };
 
-type EmulateOptions = EmulateCommandOptions;
-
 const defaultPorts = {
   ui: 4000,
   auth: 9099,
@@ -99,7 +97,7 @@ const defaultPorts = {
 /**
  * Runs the initialization script for the emulator.
  */
-const runOnEmulate = async (options: EmulateOptions & { env: Record<string, string> }) => {
+const runOnEmulate = async (options: EmulateCommandOptions & { env: Record<string, string> }) => {
   const { env } = options;
   const scriptsDir = options.scriptsDirectory || 'scripts';
   const initScript = options.initScript || 'on_emulate.ts';
@@ -165,7 +163,7 @@ const runOnEmulate = async (options: EmulateOptions & { env: Record<string, stri
 const buildEmulatorFunctions = async (options: {
   functionFiles: string[];
   outputDir: string;
-  emulateOptions: EmulateOptions;
+  emulateOptions: EmulateCommandOptions;
   controllersPath: string;
   env: Record<string, string>;
 }): Promise<void> => {
@@ -275,7 +273,7 @@ const buildEmulatorFunctions = async (options: {
  */
 const generateFirebaseJson = async (options: {
   outputDir: string;
-  emulateOptions: EmulateOptions;
+  emulateOptions: EmulateCommandOptions;
   functionFiles: string[];
 }): Promise<void> => {
   const { outputDir, emulateOptions, functionFiles } = options;
@@ -376,7 +374,7 @@ const generateFirebaseJson = async (options: {
  */
 const copyRulesAndIndexes = async (options: {
   outputDir: string;
-  emulateOptions: EmulateOptions;
+  emulateOptions: EmulateCommandOptions;
   firebaseConfig: Record<string, unknown>;
 }) => {
   const { outputDir, emulateOptions, firebaseConfig } = options;
@@ -446,7 +444,7 @@ const checkHasScheduler = async (functionFiles: string[]): Promise<boolean> => {
  * @returns True if the rules file exists.
  */
 const hasRuleFile = async (
-  emulateOptions: EmulateOptions,
+  emulateOptions: EmulateCommandOptions,
   type: 'firestore' | 'storage'
 ): Promise<boolean> => {
   const filename = `${type}.rules`;
@@ -479,7 +477,7 @@ const watchAndRebuild = (options: {
   functionsPath: string;
   functionFiles: string[];
   outputDir: string;
-  emulateOptions: EmulateOptions;
+  emulateOptions: EmulateCommandOptions;
   controllersPath: string;
   env: Record<string, string>;
 }): void => {
@@ -576,7 +574,7 @@ export const emulateCommand = new Command('emulate')
     '--includeFilePath <includeFilePath>',
     'Relative path to a file that will be auto-imported at the top of every generated function index.'
   )
-  .action(async (cliOptions: EmulateOptions) => {
+  .action(async (cliOptions: EmulateCliOptions) => {
     const emulateOptions = await getEmulateOptions(cliOptions);
 
     if (!emulateOptions.projectId) {
@@ -664,6 +662,7 @@ export const emulateCommand = new Command('emulate')
     }
 
     let uiLogged = false;
+    let emulatorReady = false;
     let emulatorSubprocess: Subprocess | undefined;
 
     const cleanupOnExit = () => {
@@ -704,6 +703,7 @@ export const emulateCommand = new Command('emulate')
         emulatorSubprocess = subprocess;
       },
       onStdout: (data) => {
+        // Log the UI URL when it appears (for user convenience)
         if (!uiLogged && data.includes('Emulator UI at')) {
           const match = data.match(/http:\/\/[^\s/]+/);
           if (match) {
@@ -711,24 +711,23 @@ export const emulateCommand = new Command('emulate')
             logger.info(chalk.bold.cyan(`\n👉 Emulator UI: ${url}\n`));
             uiLogged = true;
 
-            // Trigger open and init when UI is ready
             if (cliOptions.open) {
               openUrl(url).catch((err) => {
                 logger.debug(`Failed to auto-open URL: ${err.message}`);
               });
             }
+          }
+        }
 
-            if (cliOptions.init !== false) {
-              // Give it a tiny bit more time for the services to be fully bound
-              setTimeout(
-                () =>
-                  runOnEmulate({
-                    ...emulateOptions,
-                    env,
-                  }),
-                1000
-              );
-            }
+        // Trigger the init script only after ALL emulators (including functions)
+        // have fully loaded and are ready to accept traffic.
+        // Firebase CLI emits this signal after every emulator has started and
+        // all function source has been compiled and loaded into the functions emulator.
+        if (!emulatorReady && data.includes('All emulators ready')) {
+          emulatorReady = true;
+
+          if (cliOptions.init !== false) {
+            runOnEmulate({ ...emulateOptions, env });
           }
         }
       },

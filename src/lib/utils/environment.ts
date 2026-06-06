@@ -171,8 +171,9 @@ const mergeProcessEnv = (baseEnv: Record<string, string>): Record<string, string
 export const getEnvironment = async (mode: string): Promise<Record<string, string>> => {
   const [baseEnv, modeEnv] = await Promise.all([loadBaseEnv(), loadModeEnv(mode)]);
 
-  // Mode-specific env overrides base env
-  const merged = { ...baseEnv, ...modeEnv };
+  // Mode-specific env overrides base env, and MODE/FIREBASE_MODE are always injected
+  // so functions can use process.env.MODE to know which mode they are running in.
+  const merged = { ...baseEnv, ...modeEnv, MODE: mode, FIREBASE_MODE: mode };
 
   return mergeProcessEnv(merged);
 };

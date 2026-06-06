@@ -17,12 +17,14 @@
     "logs": "moon run firebase:logs --",
     "check": "moon run :check --",
     "fix": "moon run :fix --",
-    "test": "bun test tests",
+    "test": "bun test tests/*.test.ts",
+    "test:rules": "cd apps/firebase && bun run test:rules",
+    "test:all": "bun run test && bun run test:rules",
     "sync": "cd .. && bun run build && cd example/apps/firebase && bun install && cd ../../packages/types && bun install"
   },
   "devDependencies": {
     "typescript": "^6.0.3",
-    "@moonrepo/cli": "^2.2.6",
+    "@moonrepo/cli": "^2.3.2",
     "@biomejs/biome": "^2.4.16"
   },
   "dependencies": {

@@ -8,4 +8,10 @@ export default defineConfig(() => ({
   region: 'us-east1',
   minify: false,
   includeFilePath: 'src/configs/logging.ts',
+  rulesTests: {
+    firestore: {
+      rulesFile: 'firestore.rules',
+      testPattern: 'tests/rules/firestore.rules.test.ts',
+    },
+  },
 }));

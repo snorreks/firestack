@@ -59,3 +59,6 @@ example/apps/functions/pubsub-debug.log
 
 
 .pi
+
+# direnv
+.direnv
