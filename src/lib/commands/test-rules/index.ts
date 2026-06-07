@@ -164,6 +164,7 @@ const startRulesEmulator = async (options: {
 
   const emulatorEnv: Record<string, string> = {
     ...process.env,
+    CHOKIDAR_USEPOLLING: '1',
     JAVA_OPTS:
       '-XX:+IgnoreUnrecognizedVMOptions --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
   };
