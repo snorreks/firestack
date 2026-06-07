@@ -40,6 +40,8 @@ export type BaseCliOptions = {
   dataconnectDirectory?: string;
   /** Use chokidar polling instead of inotify (bypasses kernel watcher limits). */
   chokidarPolling?: boolean | 'auto';
+  /** Number of days to retain container images in Artifact Registry before deletion. */
+  artifactRetentionDays?: number;
 };
 
 export type DeployCliOptions = BaseCliOptions & {
@@ -51,6 +53,7 @@ export type DeployCliOptions = BaseCliOptions & {
   isEmulator?: boolean;
   skipRules?: boolean;
   skipDataconnect?: boolean;
+  artifactRetentionDays?: number;
 };
 
 export type DeployCommandOptions = {
@@ -88,6 +91,7 @@ export type DeployCommandOptions = {
   cloudCacheFileName: string;
   includeFilePath?: string;
   tsconfig?: string;
+  artifactRetentionDays?: number;
 };
 
 export type EmulateCliOptions = BaseCliOptions & {

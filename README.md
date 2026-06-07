@@ -151,6 +151,7 @@ export default onAuthCreate(
 );
 ```
 
+- **`batchConcurrency`**: Max concurrent executions for queued async operations (default: `5`). Every handler receives a `batch` utility — push with `batch.push()` and they execute concurrently after the handler returns. See [Batch Concurrency](#batch-concurrency) below.
 - **`external`**: Listed dependencies are treated as external by `esbuild`. Firestack automatically generates a `package.json` in the function's deployment directory and runs `npm install` before deployment.
 - **`assets`**: Specified files are copied to the function's `dist` directory, making them available at runtime relative to your function code.
 - **`nodeVersion`**: Specific runtime version for this function. Useful if certain triggers have different compatibility requirements.
@@ -234,6 +235,63 @@ Firestack injects the deployed function name as an environment variable. Useful 
 
 ```typescript
 const functionName = process.env.FIRESTACK_FUNCTION_NAME;
+```
+
+## Batch Concurrency
+
+Every trigger wrapper (`onRequest`, `onCall`, `onCreated`, `onAuthCreate`, `onSchedule`, etc.) automatically provides a `batch` utility. Queue async functions and they execute concurrently after the handler returns — no manual commit needed.
+
+```typescript
+import { onUpdated } from "@snorreks/firestack";
+import type { UserData } from "./types";
+
+export default onUpdated<UserData>(({ data, batch }) => {
+  const { before, after } = data;
+
+  if (before.email !== after.email) {
+    batch.push(() => sendEmailNotification(after));
+  }
+  batch.push(() => logAuditTrail(after.id));
+  // All queued functions auto-commit when the handler returns
+});
+```
+
+**Where to access `batch`:**
+
+| Trigger type | Access |
+|---|---|
+| Firestore, Storage, Database | `({ data, batch })` |
+| Auth | `(user, { batch, ...context })` |
+| Scheduler | `({ batch, ...context })` |
+| Callable | `({ data, auth, batch })` |
+| HTTP onRequest | `request.batch.push(...)` |
+
+### Checkpoint Pattern
+
+Call `await batch.commit()` mid-handler to drain the queue before pushing more work. Subsequent `push()` calls auto-commit at handler end:
+
+```typescript
+export default onUpdated<UserData>(async ({ data, batch }) => {
+  batch.push(() => step1());
+  batch.push(() => step2());
+  await batch.commit();  // executes & drains queue
+
+  // These depend on step1/step2 results
+  batch.push(() => step3());
+  batch.push(() => step4());
+  // Auto-committed at handler end
+});
+```
+
+### Concurrency
+
+Default concurrency is **5**. Override per-function:
+
+```typescript
+export default onUpdated<UserData>(
+  ({ data, batch }) => { batch.push(...); },
+  { batchConcurrency: 3 }
+);
 ```
 
 ## Configuration

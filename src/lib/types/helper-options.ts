@@ -41,6 +41,15 @@ export type BaseFunctionOptions<T extends string = string> = GlobalOptions & {
   assets?: string[];
 
   nodeVersion?: NodeVersion;
+
+  /**
+   * Maximum number of concurrent executions for batched async operations.
+   * A Batch instance is always provided to the handler; this controls its
+   * concurrency when committing queued functions.
+   *
+   * @default 5
+   */
+  batchConcurrency?: number;
 };
 
 export type HttpsOptions<T extends string | number | symbol = string> = Omit<

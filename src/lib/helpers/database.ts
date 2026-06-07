@@ -1,7 +1,10 @@
 import type { Change, ParamsOf } from 'firebase-functions/v2/core';
 import type { DatabaseEvent, DataSnapshot } from 'firebase-functions/v2/database';
 import type { ReferenceOptions } from '$types';
+import { type Batch, createBatch } from '$utils/batch.ts';
 import { wrapWithLogContext } from './logging.ts';
+
+const DEFAULT_BATCH_CONCURRENCY = 5;
 
 const buildDatabaseLogContext = (event: DatabaseEvent<unknown, ParamsOf<string>>) => ({
   source: 'functions' as const,
@@ -18,10 +21,21 @@ const buildDatabaseLogContext = (event: DatabaseEvent<unknown, ParamsOf<string>>
  * @returns A Cloud DeployFunction that you can export and deploy.
  */
 export const onValueCreated = <Ref extends string = string>(
-  handler: (event: DatabaseEvent<DataSnapshot, ParamsOf<Ref>>) => PromiseLike<unknown> | unknown,
-  _options: ReferenceOptions
+  handler: (
+    event: DatabaseEvent<DataSnapshot, ParamsOf<Ref>> & { batch: Batch }
+  ) => PromiseLike<unknown> | unknown,
+  options: ReferenceOptions
 ) => {
-  return wrapWithLogContext(handler, buildDatabaseLogContext);
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
+  return wrapWithLogContext(async (event: DatabaseEvent<DataSnapshot, ParamsOf<Ref>>) => {
+    const batch = createBatch({ concurrency });
+    const result = await handler({ ...event, batch });
+    if (!batch.isEmpty) {
+      await batch.commit();
+    }
+    return result;
+  }, buildDatabaseLogContext);
 };
 
 /**
@@ -33,10 +47,21 @@ export const onValueCreated = <Ref extends string = string>(
  * @returns A Cloud DeployFunction that you can export and deploy.
  */
 export const onValueDeleted = <Ref extends string = string>(
-  handler: (event: DatabaseEvent<DataSnapshot, ParamsOf<Ref>>) => PromiseLike<unknown> | unknown,
-  _options: ReferenceOptions
+  handler: (
+    event: DatabaseEvent<DataSnapshot, ParamsOf<Ref>> & { batch: Batch }
+  ) => PromiseLike<unknown> | unknown,
+  options: ReferenceOptions
 ) => {
-  return wrapWithLogContext(handler, buildDatabaseLogContext);
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
+  return wrapWithLogContext(async (event: DatabaseEvent<DataSnapshot, ParamsOf<Ref>>) => {
+    const batch = createBatch({ concurrency });
+    const result = await handler({ ...event, batch });
+    if (!batch.isEmpty) {
+      await batch.commit();
+    }
+    return result;
+  }, buildDatabaseLogContext);
 };
 
 /**
@@ -49,11 +74,20 @@ export const onValueDeleted = <Ref extends string = string>(
  */
 export const onValueUpdated = <Ref extends string = string>(
   handler: (
-    event: DatabaseEvent<Change<DataSnapshot>, ParamsOf<Ref>>
+    event: DatabaseEvent<Change<DataSnapshot>, ParamsOf<Ref>> & { batch: Batch }
   ) => PromiseLike<unknown> | unknown,
-  _options: ReferenceOptions
+  options: ReferenceOptions
 ) => {
-  return wrapWithLogContext(handler, buildDatabaseLogContext);
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
+  return wrapWithLogContext(async (event: DatabaseEvent<Change<DataSnapshot>, ParamsOf<Ref>>) => {
+    const batch = createBatch({ concurrency });
+    const result = await handler({ ...event, batch });
+    if (!batch.isEmpty) {
+      await batch.commit();
+    }
+    return result;
+  }, buildDatabaseLogContext);
 };
 
 /**
@@ -66,9 +100,18 @@ export const onValueUpdated = <Ref extends string = string>(
  */
 export const onValueWritten = <Ref extends string = string>(
   handler: (
-    event: DatabaseEvent<Change<DataSnapshot>, ParamsOf<Ref>>
+    event: DatabaseEvent<Change<DataSnapshot>, ParamsOf<Ref>> & { batch: Batch }
   ) => PromiseLike<unknown> | unknown,
-  _options: ReferenceOptions
+  options: ReferenceOptions
 ) => {
-  return wrapWithLogContext(handler, buildDatabaseLogContext);
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
+  return wrapWithLogContext(async (event: DatabaseEvent<Change<DataSnapshot>, ParamsOf<Ref>>) => {
+    const batch = createBatch({ concurrency });
+    const result = await handler({ ...event, batch });
+    if (!batch.isEmpty) {
+      await batch.commit();
+    }
+    return result;
+  }, buildDatabaseLogContext);
 };

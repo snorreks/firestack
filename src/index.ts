@@ -8,3 +8,4 @@ export * from '$helpers/logging.ts';
 export * from '$helpers/scheduler.ts';
 export * from '$helpers/storage.ts';
 export * from '$types';
+export { Batch, createBatch } from '$utils/batch.ts';

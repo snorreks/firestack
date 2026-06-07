@@ -7,8 +7,11 @@ import type {
 } from 'firebase-functions/v2/firestore';
 import type { z } from 'zod';
 import type { CoreData, DocumentOptions, ZodOptions } from '$types';
+import { type Batch, createBatch } from '$utils/batch.ts';
 import { handleZodError } from '$utils/zod.ts';
 import { wrapWithLogContext } from './logging.ts';
+
+const DEFAULT_BATCH_CONCURRENCY = 5;
 
 const buildFirestoreLogContext = (event: FirestoreEvent<unknown, ParamsOf<string>>) => ({
   source: 'functions' as const,
@@ -19,58 +22,120 @@ const buildFirestoreLogContext = (event: FirestoreEvent<unknown, ParamsOf<string
 /** Respond only to document creations. */
 export const onDocumentCreated = <Document extends string = string>(
   handler: (
-    event: FirestoreEvent<QueryDocumentSnapshot | undefined, ParamsOf<Document>>
+    event: FirestoreEvent<QueryDocumentSnapshot | undefined, ParamsOf<Document>> & { batch: Batch }
   ) => PromiseLike<unknown> | unknown,
-  _options?: DocumentOptions
+  options?: DocumentOptions
 ) => {
-  return wrapWithLogContext(handler, buildFirestoreLogContext);
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
+  return wrapWithLogContext(
+    async (event: FirestoreEvent<QueryDocumentSnapshot | undefined, ParamsOf<Document>>) => {
+      const batch = createBatch({ concurrency });
+      const result = await handler({ ...event, batch });
+      if (!batch.isEmpty) {
+        await batch.commit();
+      }
+      return result;
+    },
+    buildFirestoreLogContext
+  );
 };
 
 /** Respond only to document deletions. */
 export const onDocumentDeleted = <Document extends string = string>(
   handler: (
-    event: FirestoreEvent<QueryDocumentSnapshot | undefined, ParamsOf<Document>>
+    event: FirestoreEvent<QueryDocumentSnapshot | undefined, ParamsOf<Document>> & { batch: Batch }
   ) => PromiseLike<unknown> | unknown,
-  _options?: DocumentOptions
+  options?: DocumentOptions
 ) => {
-  return wrapWithLogContext(handler, buildFirestoreLogContext);
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
+  return wrapWithLogContext(
+    async (event: FirestoreEvent<QueryDocumentSnapshot | undefined, ParamsOf<Document>>) => {
+      const batch = createBatch({ concurrency });
+      const result = await handler({ ...event, batch });
+      if (!batch.isEmpty) {
+        await batch.commit();
+      }
+      return result;
+    },
+    buildFirestoreLogContext
+  );
 };
 
 /** Respond only to document updates. */
 export const onDocumentUpdated = <Document extends string = string>(
   handler: (
-    event: FirestoreEvent<Change<QueryDocumentSnapshot> | undefined, ParamsOf<Document>>
+    event: FirestoreEvent<Change<QueryDocumentSnapshot> | undefined, ParamsOf<Document>> & {
+      batch: Batch;
+    }
   ) => PromiseLike<unknown> | unknown,
-  _options?: DocumentOptions
+  options?: DocumentOptions
 ) => {
-  return wrapWithLogContext(handler, buildFirestoreLogContext);
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
+  return wrapWithLogContext(
+    async (
+      event: FirestoreEvent<Change<QueryDocumentSnapshot> | undefined, ParamsOf<Document>>
+    ) => {
+      const batch = createBatch({ concurrency });
+      const result = await handler({ ...event, batch });
+      if (!batch.isEmpty) {
+        await batch.commit();
+      }
+      return result;
+    },
+    buildFirestoreLogContext
+  );
 };
 
 /** Respond to all document writes (creates, updates, or deletes). */
 export const onDocumentWritten = <Document extends string = string>(
   handler: (
-    event: FirestoreEvent<Change<DocumentSnapshot> | undefined, ParamsOf<Document>>
+    event: FirestoreEvent<Change<DocumentSnapshot> | undefined, ParamsOf<Document>> & {
+      batch: Batch;
+    }
   ) => PromiseLike<unknown> | unknown,
-  _options?: DocumentOptions
+  options?: DocumentOptions
 ) => {
-  return wrapWithLogContext(handler, buildFirestoreLogContext);
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
+  return wrapWithLogContext(
+    async (event: FirestoreEvent<Change<DocumentSnapshot> | undefined, ParamsOf<Document>>) => {
+      const batch = createBatch({ concurrency });
+      const result = await handler({ ...event, batch });
+      if (!batch.isEmpty) {
+        await batch.commit();
+      }
+      return result;
+    },
+    buildFirestoreLogContext
+  );
 };
 
 /** Respond only to document creations. */
 export const onCreated = <T extends CoreData>(
-  handler: (event: FirestoreEvent<T>) => PromiseLike<unknown> | unknown,
-  _options?: DocumentOptions
+  handler: (event: FirestoreEvent<T> & { batch: Batch }) => PromiseLike<unknown> | unknown,
+  options?: DocumentOptions
 ) => {
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
   return wrapWithLogContext(
-    (event: FirestoreEvent<QueryDocumentSnapshot | undefined, ParamsOf<string>>) => {
+    async (event: FirestoreEvent<QueryDocumentSnapshot | undefined, ParamsOf<string>>) => {
       if (!event.data) {
         throw new Error('No data found in event');
       }
 
-      return handler({
+      const batch = createBatch({ concurrency });
+      const result = await handler({
         ...event,
         data: toCoreData<T>(event.data),
+        batch,
       });
+      if (!batch.isEmpty) {
+        await batch.commit();
+      }
+      return result;
     },
     buildFirestoreLogContext
   );
@@ -79,11 +144,13 @@ export const onCreated = <T extends CoreData>(
 /** Respond only to document creations with Zod validation. */
 export const onCreatedZod = <T extends CoreData>(
   schema: z.ZodSchema<T>,
-  handler: (event: FirestoreEvent<T>) => PromiseLike<unknown> | unknown,
+  handler: (event: FirestoreEvent<T> & { batch: Batch }) => PromiseLike<unknown> | unknown,
   options?: DocumentOptions & ZodOptions
 ) => {
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
   return wrapWithLogContext(
-    (event: FirestoreEvent<QueryDocumentSnapshot | undefined, ParamsOf<string>>) => {
+    async (event: FirestoreEvent<QueryDocumentSnapshot | undefined, ParamsOf<string>>) => {
       if (!event.data) {
         throw new Error('No data found in event');
       }
@@ -101,10 +168,16 @@ export const onCreatedZod = <T extends CoreData>(
         }
       }
 
-      return handler({
+      const batch = createBatch({ concurrency });
+      const handlerResult = await handler({
         ...event,
         data: result.success ? result.data : data,
+        batch,
       });
+      if (!batch.isEmpty) {
+        await batch.commit();
+      }
+      return handlerResult;
     },
     buildFirestoreLogContext
   );
@@ -112,19 +185,27 @@ export const onCreatedZod = <T extends CoreData>(
 
 /** Respond only to document deletions. */
 export const onDeleted = <T extends CoreData>(
-  handler: (event: FirestoreEvent<T>) => PromiseLike<unknown> | unknown,
-  _options?: DocumentOptions
+  handler: (event: FirestoreEvent<T> & { batch: Batch }) => PromiseLike<unknown> | unknown,
+  options?: DocumentOptions
 ) => {
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
   return wrapWithLogContext(
-    (event: FirestoreEvent<QueryDocumentSnapshot | undefined, ParamsOf<string>>) => {
+    async (event: FirestoreEvent<QueryDocumentSnapshot | undefined, ParamsOf<string>>) => {
       if (!event.data) {
         throw new Error('No data found in event');
       }
 
-      return handler({
+      const batch = createBatch({ concurrency });
+      const result = await handler({
         ...event,
         data: toCoreData<T>(event.data),
+        batch,
       });
+      if (!batch.isEmpty) {
+        await batch.commit();
+      }
+      return result;
     },
     buildFirestoreLogContext
   );
@@ -133,11 +214,13 @@ export const onDeleted = <T extends CoreData>(
 /** Respond only to document deletions with Zod validation. */
 export const onDeletedZod = <T extends CoreData>(
   schema: z.ZodSchema<T>,
-  handler: (event: FirestoreEvent<T>) => PromiseLike<unknown> | unknown,
+  handler: (event: FirestoreEvent<T> & { batch: Batch }) => PromiseLike<unknown> | unknown,
   options?: DocumentOptions & ZodOptions
 ) => {
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
   return wrapWithLogContext(
-    (event: FirestoreEvent<QueryDocumentSnapshot | undefined, ParamsOf<string>>) => {
+    async (event: FirestoreEvent<QueryDocumentSnapshot | undefined, ParamsOf<string>>) => {
       if (!event.data) {
         throw new Error('No data found in event');
       }
@@ -155,10 +238,16 @@ export const onDeletedZod = <T extends CoreData>(
         }
       }
 
-      return handler({
+      const batch = createBatch({ concurrency });
+      const handlerResult = await handler({
         ...event,
         data: result.success ? result.data : data,
+        batch,
       });
+      if (!batch.isEmpty) {
+        await batch.commit();
+      }
+      return handlerResult;
     },
     buildFirestoreLogContext
   );
@@ -170,23 +259,31 @@ export const onUpdated = <T extends CoreData>(
     event: FirestoreEvent<{
       before: T;
       after: T;
-    }>
+    }> & { batch: Batch }
   ) => PromiseLike<unknown> | unknown,
-  _options?: DocumentOptions
+  options?: DocumentOptions
 ) => {
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
   return wrapWithLogContext(
-    (event: FirestoreEvent<Change<QueryDocumentSnapshot> | undefined, ParamsOf<string>>) => {
+    async (event: FirestoreEvent<Change<QueryDocumentSnapshot> | undefined, ParamsOf<string>>) => {
       if (!event.data?.after || !event.data?.before) {
         throw new Error('No data found in event');
       }
 
-      return handler({
+      const batch = createBatch({ concurrency });
+      const result = await handler({
         ...event,
         data: {
           before: toCoreData<T>(event.data.before),
           after: toCoreData<T>(event.data.after),
         },
+        batch,
       });
+      if (!batch.isEmpty) {
+        await batch.commit();
+      }
+      return result;
     },
     buildFirestoreLogContext
   );
@@ -199,12 +296,14 @@ export const onUpdatedZod = <T extends CoreData>(
     event: FirestoreEvent<{
       before: T;
       after: T;
-    }>
+    }> & { batch: Batch }
   ) => PromiseLike<unknown> | unknown,
   options?: DocumentOptions & ZodOptions
 ) => {
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
   return wrapWithLogContext(
-    (event: FirestoreEvent<Change<QueryDocumentSnapshot> | undefined, ParamsOf<string>>) => {
+    async (event: FirestoreEvent<Change<QueryDocumentSnapshot> | undefined, ParamsOf<string>>) => {
       if (!event.data?.after || !event.data?.before) {
         throw new Error('No data found in event');
       }
@@ -237,13 +336,19 @@ export const onUpdatedZod = <T extends CoreData>(
         return;
       }
 
-      return handler({
+      const batch = createBatch({ concurrency });
+      const handlerResult = await handler({
         ...event,
         data: {
           before: beforeResult.success ? beforeResult.data : before,
           after: afterResult.success ? afterResult.data : after,
         },
+        batch,
       });
+      if (!batch.isEmpty) {
+        await batch.commit();
+      }
+      return handlerResult;
     },
     buildFirestoreLogContext
   );
@@ -255,19 +360,27 @@ export const onWritten = <T extends CoreData>(
     event: FirestoreEvent<{
       before?: T;
       after?: T;
-    }>
+    }> & { batch: Batch }
   ) => PromiseLike<unknown> | unknown,
-  _options?: DocumentOptions
+  options?: DocumentOptions
 ) => {
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
   return wrapWithLogContext(
-    (event: FirestoreEvent<Change<DocumentSnapshot> | undefined, ParamsOf<string>>) => {
-      return handler({
+    async (event: FirestoreEvent<Change<DocumentSnapshot> | undefined, ParamsOf<string>>) => {
+      const batch = createBatch({ concurrency });
+      const result = await handler({
         ...event,
         data: {
           before: event.data?.before ? toCoreData<T>(event.data.before) : undefined,
           after: event.data?.after ? toCoreData<T>(event.data.after) : undefined,
         },
+        batch,
       });
+      if (!batch.isEmpty) {
+        await batch.commit();
+      }
+      return result;
     },
     buildFirestoreLogContext
   );
@@ -280,12 +393,14 @@ export const onWrittenZod = <T extends CoreData>(
     event: FirestoreEvent<{
       before?: T;
       after?: T;
-    }>
+    }> & { batch: Batch }
   ) => PromiseLike<unknown> | unknown,
   options?: DocumentOptions & ZodOptions
 ) => {
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
   return wrapWithLogContext(
-    (event: FirestoreEvent<Change<DocumentSnapshot> | undefined, ParamsOf<string>>) => {
+    async (event: FirestoreEvent<Change<DocumentSnapshot> | undefined, ParamsOf<string>>) => {
       const before = event.data?.before ? toCoreData<T>(event.data.before) : undefined;
       const after = event.data?.after ? toCoreData<T>(event.data.after) : undefined;
 
@@ -324,13 +439,19 @@ export const onWrittenZod = <T extends CoreData>(
         }
       }
 
-      return handler({
+      const batch = createBatch({ concurrency });
+      const handlerResult = await handler({
         ...event,
         data: {
           before: beforeData,
           after: afterData,
         },
+        batch,
       });
+      if (!batch.isEmpty) {
+        await batch.commit();
+      }
+      return handlerResult;
     },
     buildFirestoreLogContext
   );

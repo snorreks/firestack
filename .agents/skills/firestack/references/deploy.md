@@ -47,6 +47,7 @@ firestack deploy --mode <mode>
 
 # With specific flags
 firestack deploy --mode <mode> --force          # Ignore cache, redeploy all
+firestack deploy --mode <mode> --artifactRetentionDays 7  # Set 7-day cleanup policy before deploying
 firestack deploy --mode <mode> --only func1,func2  # Deploy specific functions only
 firestack deploy --mode <mode> --only dataconnect  # Deploy Data Connect only
 firestack deploy --mode <mode> --only rules,dataconnect  # Deploy rules and Data Connect only
@@ -87,4 +88,5 @@ After deployment succeeds:
 | `--concurrency <num>` | Parallel deployments (default: `5`). |
 | `--retryAmount <num>` | Auto-retry failed deployments. |
 | `--tsconfig <path>` | Path to a custom `tsconfig.json` (e.g., `tsconfig.app.json`). |
+| `--artifactRetentionDays <days>` | Number of days to retain container images in Artifact Registry. Runs `functions:artifacts:setpolicy` **before** deployment to prevent Firebase CLI prompts. |
 | `--verbose` | Show full Firebase CLI output. |

@@ -59,6 +59,15 @@ export type FirestackConfig = {
    * @default 'src/logger.ts'
    */
   includeFilePath?: string;
+  /**
+   * Number of days to retain deployed container images in Artifact Registry
+   * before automatic deletion. When set, Firestack runs
+   * `firebase functions:artifacts:setpolicy --days <N>` after deployment for
+   * each region where functions are deployed.
+   *
+   * When unset (default), no cleanup policy is configured automatically.
+   */
+  artifactRetentionDays?: number;
   rulesTests?: {
     firestore?: RulesTestConfig;
     storage?: RulesTestConfig;

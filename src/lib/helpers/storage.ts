@@ -1,6 +1,9 @@
 import type { StorageEvent } from 'firebase-functions/v2/storage';
 import type { ObjectTriggerOptions } from '$types';
+import { type Batch, createBatch } from '$utils/batch.ts';
 import { wrapWithLogContext } from './logging.ts';
+
+const DEFAULT_BATCH_CONCURRENCY = 5;
 
 const buildStorageLogContext = (event: StorageEvent) => ({
   source: 'functions' as const,
@@ -19,11 +22,21 @@ const buildStorageLogContext = (event: StorageEvent) => ({
  * @returns A Cloud DeployFunction which you can export and deploy.
  */
 export const onObjectArchived = (
-  handler: (event: StorageEvent) => PromiseLike<unknown> | unknown,
-  _options?: ObjectTriggerOptions
+  handler: (event: StorageEvent & { batch: Batch }) => PromiseLike<unknown> | unknown,
+  options?: ObjectTriggerOptions
 ) => {
-  return wrapWithLogContext(handler, buildStorageLogContext);
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
+  return wrapWithLogContext(async (event: StorageEvent) => {
+    const batch = createBatch({ concurrency });
+    const result = await handler({ ...event, batch });
+    if (!batch.isEmpty) {
+      await batch.commit();
+    }
+    return result;
+  }, buildStorageLogContext);
 };
+
 /**
  * Event handler which fires every time a Google Cloud Storage deletion occurs.
  *
@@ -38,10 +51,19 @@ export const onObjectArchived = (
  * @returns A Cloud DeployFunction which you can export and deploy.
  */
 export const onObjectDeleted = (
-  handler: (event: StorageEvent) => PromiseLike<unknown> | unknown,
-  _options?: ObjectTriggerOptions
+  handler: (event: StorageEvent & { batch: Batch }) => PromiseLike<unknown> | unknown,
+  options?: ObjectTriggerOptions
 ) => {
-  return wrapWithLogContext(handler, buildStorageLogContext);
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
+  return wrapWithLogContext(async (event: StorageEvent) => {
+    const batch = createBatch({ concurrency });
+    const result = await handler({ ...event, batch });
+    if (!batch.isEmpty) {
+      await batch.commit();
+    }
+    return result;
+  }, buildStorageLogContext);
 };
 
 /**
@@ -57,10 +79,19 @@ export const onObjectDeleted = (
  * @returns A Cloud DeployFunction which you can export and deploy.
  */
 export const onObjectFinalized = (
-  handler: (event: StorageEvent) => PromiseLike<unknown> | unknown,
-  _options?: ObjectTriggerOptions
+  handler: (event: StorageEvent & { batch: Batch }) => PromiseLike<unknown> | unknown,
+  options?: ObjectTriggerOptions
 ) => {
-  return wrapWithLogContext(handler, buildStorageLogContext);
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
+  return wrapWithLogContext(async (event: StorageEvent) => {
+    const batch = createBatch({ concurrency });
+    const result = await handler({ ...event, batch });
+    if (!batch.isEmpty) {
+      await batch.commit();
+    }
+    return result;
+  }, buildStorageLogContext);
 };
 
 /**
@@ -72,8 +103,17 @@ export const onObjectFinalized = (
  * @returns A Cloud DeployFunction which you can export and deploy.
  */
 export const onObjectMetadataUpdated = (
-  handler: (event: StorageEvent) => PromiseLike<unknown> | unknown,
-  _options?: ObjectTriggerOptions
+  handler: (event: StorageEvent & { batch: Batch }) => PromiseLike<unknown> | unknown,
+  options?: ObjectTriggerOptions
 ) => {
-  return wrapWithLogContext(handler, buildStorageLogContext);
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
+  return wrapWithLogContext(async (event: StorageEvent) => {
+    const batch = createBatch({ concurrency });
+    const result = await handler({ ...event, batch });
+    if (!batch.isEmpty) {
+      await batch.commit();
+    }
+    return result;
+  }, buildStorageLogContext);
 };

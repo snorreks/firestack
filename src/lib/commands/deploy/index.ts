@@ -4,8 +4,9 @@ import chalk from 'chalk';
 import { Command } from 'commander';
 import { rulesAction } from '$commands/rules/index.ts';
 import { logger } from '$logger';
-import type { DeployCommandOptions } from '$types';
+import type { DeployCommandOptions, PackageManager } from '$types';
 import { loadChecksums } from '$utils/checksum.ts';
+import { executeCommand } from '$utils/command.ts';
 import { getEnvironment } from '$utils/environment.ts';
 import { findFunctions } from '$utils/find_functions.ts';
 import { getCacheContext, updateRemoteCache } from '$utils/functions_cache.ts';
@@ -25,6 +26,83 @@ import {
 import { retryFailedFunctions } from './utils/retry_failed_functions.ts';
 
 export type ExtendedDeployOptions = DeployCommandOptions;
+
+type SetArtifactRetentionPolicyOptions = {
+  deployOptions: DeployCommandOptions;
+  functionMetadata: FunctionMetadata[];
+};
+
+/**
+ * Sets up an Artifact Registry cleanup policy for each unique region
+ * where functions are deployed. Runs `firebase functions:artifacts:setpolicy`
+ * with --force to automatically configure container image retention.
+ */
+const setArtifactRetentionPolicy = async (
+  options: SetArtifactRetentionPolicyOptions
+): Promise<void> => {
+  const { deployOptions, functionMetadata } = options;
+  const { artifactRetentionDays, projectId, packageManager } = deployOptions;
+
+  if (artifactRetentionDays === undefined || artifactRetentionDays < 0) {
+    return;
+  }
+
+  if (!projectId) {
+    logger.warn(chalk.yellow('⚠️  Skipping artifact retention policy: no project ID configured.'));
+    return;
+  }
+
+  const uniqueRegions = new Set(
+    functionMetadata.map(
+      (m) =>
+        (m.functionOptions.region as string | undefined) || deployOptions.region || 'us-central1'
+    )
+  );
+
+  logger.info(
+    chalk.cyan(
+      `🕐 Setting artifact retention to ${chalk.bold(artifactRetentionDays)} day(s) for ${uniqueRegions.size} region(s)...`
+    )
+  );
+
+  for (const region of uniqueRegions) {
+    try {
+      const result = await executeCommand('firebase', {
+        args: [
+          'functions:artifacts:setpolicy',
+          '--location',
+          region,
+          '--days',
+          String(artifactRetentionDays),
+          '--project',
+          projectId,
+          '--force',
+        ],
+        packageManager: packageManager as PackageManager,
+      });
+
+      if (result.success) {
+        logger.info(
+          chalk.dim(
+            `  ✅ Set cleanup policy for region ${region} (${artifactRetentionDays} day(s)).`
+          )
+        );
+      } else {
+        logger.warn(
+          chalk.yellow(
+            `  ⚠️  Failed to set cleanup policy for region ${region}: ${result.stderr || result.stdout}`
+          )
+        );
+      }
+    } catch (error) {
+      logger.warn(
+        chalk.yellow(
+          `  ⚠️  Could not set cleanup policy for region ${region}: ${(error as Error).message}`
+        )
+      );
+    }
+  }
+};
 
 /**
  * Main deployment action that orchestrates the entire process.
@@ -128,6 +206,11 @@ export const deployAction = async (cliOptions: ExtendedDeployOptions) => {
   }
 
   logger.info(`🔍 Found ${chalk.bold.cyan(functionMetadata.length)} function(s) to deploy.`);
+
+  // 3.5. Configure Artifact Retention Policy (before deploy to prevent Firebase CLI prompts)
+  if (deployOptions.artifactRetentionDays !== undefined) {
+    await setArtifactRetentionPolicy({ deployOptions, functionMetadata });
+  }
 
   // 4. Phase 1: Planning (Build & Check Changes)
   const prepareResults = await runFunctions<PrepareResult>(
@@ -307,5 +390,10 @@ export const deployCommand = new Command('deploy')
   .option(
     '--includeFilePath <includeFilePath>',
     'Relative path to a file that will be auto-imported at the top of every generated function index.'
+  )
+  .option(
+    '--artifactRetentionDays <artifactRetentionDays>',
+    'Number of days to retain container images in Artifact Registry. Sets a cleanup policy via functions:artifacts:setpolicy.',
+    (val) => parseInt(val, 10)
   )
   .action(deployAction);

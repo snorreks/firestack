@@ -187,6 +187,11 @@
       "type": "boolean",
       "default": false,
       "description": "Whether to keep original function names in the bundled code (useful for debugging)."
+    },
+    "artifactRetentionDays": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Number of days to retain deployed container images in Artifact Registry before automatic deletion. Sets a cleanup policy via 'firebase functions:artifacts:setpolicy'. When unset, no cleanup policy is configured automatically."
     }
   },
   "additionalProperties": false

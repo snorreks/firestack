@@ -13,6 +13,7 @@
       devShells.default = pkgs.mkShell {
         packages = with pkgs; [
           bun
+          nodejs
           python3
           direnv
           nix-direnv

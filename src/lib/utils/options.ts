@@ -229,6 +229,7 @@ export const getBaseOptions = async (cliOptions: BaseCliOptions) => {
     dataconnectDirectory:
       cliOptions.dataconnectDirectory || config.dataconnectDirectory || 'dataconnect',
     chokidarPolling: cliOptions.chokidarPolling ?? config.chokidarPolling ?? 'auto',
+    artifactRetentionDays: cliOptions.artifactRetentionDays ?? config.artifactRetentionDays,
   };
 };
 

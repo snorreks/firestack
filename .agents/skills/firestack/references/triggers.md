@@ -368,6 +368,114 @@ if (functionName) {
 }
 ```
 
+## Batch Concurrency
+
+Every trigger wrapper automatically provides a `batch` utility in the handler parameters. Queue async functions with `batch.push(...)` and they execute concurrently after the handler returns — no manual commit needed.
+
+**Default concurrency is 5.** Override per-function with the `batchConcurrency` option.
+
+### Firestore
+
+```typescript
+import { onUpdated } from '@snorreks/firestack';
+import type { UserData } from './types';
+
+export default onUpdated<UserData>(({ data, batch }) => {
+  const { before, after } = data;
+
+  if (before.email !== after.email) {
+    batch.push(() => sendEmailNotification(after));
+  }
+  batch.push(() => logAuditTrail(after.id));
+  // Auto-committed after handler returns
+});
+```
+
+### Auth
+
+```typescript
+import { onAuthCreate } from '@snorreks/firestack';
+
+export default onAuthCreate(async (user, { batch, ...context }) => {
+  batch.push(() => sendWelcomeEmail(user.email));
+  batch.push(() => initializeProfile(user.uid));
+  // Auto-committed
+  return { success: true };
+});
+```
+
+### Scheduler
+
+```typescript
+import { onSchedule } from '@snorreks/firestack';
+
+export default onSchedule(async ({ batch, ...context }) => {
+  batch.push(() => cleanupExpiredSessions());
+  batch.push(() => generateDailyReport());
+  // Auto-committed
+}, { schedule: 'every day 00:00' });
+```
+
+### HTTP & Callable
+
+```typescript
+import { onRequest } from '@snorreks/firestack';
+
+export default onRequest(async (request, response) => {
+  // Queue async side-effects — execute after response is sent
+  request.batch.push(() => trackAnalytics());
+  request.batch.push(() => updateCounters());
+  response.send({ ok: true });
+});
+```
+
+```typescript
+import { onCall } from '@snorreks/firestack';
+
+export default onCall(({ data, auth, batch }) => {
+  batch.push(() => logInvocation(auth?.uid));
+  batch.push(() => updateActivity(auth?.uid));
+  return { success: true };
+});
+```
+
+### Storage
+
+```typescript
+import { onObjectFinalized } from '@snorreks/firestack';
+
+export default onObjectFinalized(({ data, batch }) => {
+  batch.push(() => generateThumbnail(data.name));
+  batch.push(() => extractMetadata(data.name));
+  // Auto-committed
+});
+```
+
+### Checkpoint Pattern
+
+Call `await batch.commit()` mid-handler to drain the current queue before pushing more work. Subsequent `push()` calls are auto-committed at handler end:
+
+```typescript
+export default onUpdated<UserData>(async ({ data, batch }) => {
+  batch.push(() => step1());
+  await batch.commit();  // execute step1, drain queue
+
+  batch.push(() => step2());  // depends on step1's result
+  batch.push(() => step3());
+  // Auto-committed
+});
+```
+
+### Concurrency Control
+
+```typescript
+// Per-function override (default: 5)
+export default onUpdated<UserData>(
+  ({ data, batch }) => { batch.push(...); },
+  { batchConcurrency: 3 }
+);
+```
+
 ## Quick Reference Table
 
 | Category | Triggers | Directory |

@@ -3,29 +3,57 @@ import type { Response } from 'express';
 import type { CallableRequest, Request } from 'firebase-functions/v2/https';
 import type { z } from 'zod';
 import type { CallableFunctions, HttpsOptions, RequestFunctions, ZodOptions } from '$types';
+import { type Batch, createBatch } from '$utils/batch.ts';
 import { handleZodError } from '$utils/zod.ts';
 import { FirestackError, HttpStatusCode, HttpsError } from './errors.ts';
-import { runWithLogContext } from './logging.ts';
+import { wrapWithLogContext } from './logging.ts';
+
+const DEFAULT_BATCH_CONCURRENCY = 5;
 
 export type FirebaseRequest<
   T extends Record<string, string> = Record<string, string>,
   _ResBody = unknown,
   ReqBody = unknown,
 > = Omit<Request, 'body'> & {
-  /** The wire format representation of the request body. */
   rawBody: Buffer;
   body: ReqBody;
   params: T;
 };
 
+/** User-facing handler type (receives batch). */
 export type RequestHandler<
   AllFunctions extends RequestFunctions,
   FunctionName extends keyof AllFunctions,
   Params extends Record<string, string> = Record<string, string>,
 > = (
-  request: FirebaseRequest<Params, AllFunctions[FunctionName][1], AllFunctions[FunctionName][0]>,
+  request: FirebaseRequest<Params, AllFunctions[FunctionName][1], AllFunctions[FunctionName][0]> & {
+    batch: Batch;
+  },
   response: Response<AllFunctions[FunctionName][1]>
 ) => Promise<void> | void;
+
+/** User-facing Zod request handler type (receives batch). */
+export type ZodRequestHandler<
+  Body extends Record<string, unknown> = Record<string, unknown>,
+  ResBody = unknown,
+  Params extends Record<string, string> = Record<string, string>,
+> = (
+  request: FirebaseRequest<Params, ResBody, Body> & { batch: Batch },
+  response: Response<ResBody>
+) => Promise<void> | void;
+
+/** User-facing call handler type (receives batch). */
+export type CallHandler<
+  AllFunctions extends CallableFunctions,
+  FunctionName extends keyof AllFunctions,
+> = (
+  request: CallableRequest<AllFunctions[FunctionName][0]> & { batch: Batch }
+) => Promise<AllFunctions[FunctionName][1]> | AllFunctions[FunctionName][1];
+
+/** User-facing Zod call handler type (receives batch). */
+export type ZodCallHandler<Body = unknown, ResBody = unknown> = (
+  request: CallableRequest<Body> & { batch: Batch }
+) => Promise<ResBody> | ResBody;
 
 /**
  * Builds a log context from an HTTP request.
@@ -85,6 +113,32 @@ const handleHttpsError = <ResBody = unknown>(error: unknown, response: Response<
 };
 
 /**
+ * Creates a wrapped onRequest handler with batch support.
+ * Uses `wrapWithLogContext` to keep the return type opaque (avoids TS2883).
+ */
+const withRequestBatch = <
+  AllFunctions extends RequestFunctions,
+  FunctionName extends keyof AllFunctions,
+  Params extends Record<string, string> = Record<string, string>,
+>(
+  handler: RequestHandler<AllFunctions, FunctionName, Params>,
+  concurrency: number
+) => {
+  return (
+    request: FirebaseRequest<Params, AllFunctions[FunctionName][1], AllFunctions[FunctionName][0]>,
+    response: Response<AllFunctions[FunctionName][1]>
+  ) => {
+    const batch = createBatch({ concurrency });
+    return Promise.resolve(handler({ ...request, batch }, response)).then((result) => {
+      if (!batch.isEmpty) {
+        return batch.commit().then(() => result);
+      }
+      return result;
+    });
+  };
+};
+
+/**
  * Handles HTTPS requests.
  * @param handler - The request handler function.
  * @param _options - Optional configuration for the HTTPS request.
@@ -96,28 +150,76 @@ export const onRequest = <
   Params extends Record<string, string> = Record<string, string>,
 >(
   handler: RequestHandler<AllFunctions, FunctionName, Params>,
-  _options?: HttpsOptions<FunctionName>
-): RequestHandler<AllFunctions, FunctionName, Params> => {
-  return async (request, response) => {
-    const logContext = buildRequestLogContext(request);
-    await runWithLogContext(logContext, async () => {
+  options?: HttpsOptions<FunctionName>
+) => {
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
+  return wrapWithLogContext(
+    async (
+      request: FirebaseRequest<
+        Params,
+        AllFunctions[FunctionName][1],
+        AllFunctions[FunctionName][0]
+      >,
+      response: Response<AllFunctions[FunctionName][1]>
+    ) => {
       try {
-        await handler(request, response);
+        await withRequestBatch(handler, concurrency)(request, response);
       } catch (error) {
         handleHttpsError(error, response);
       }
-    });
-  };
+    },
+    (request) => buildRequestLogContext(request)
+  );
 };
 
-export type ZodRequestHandler<
-  Body extends Record<string, unknown> = Record<string, unknown>,
+/**
+ * Creates a wrapped onRequestZod handler with batch and Zod validation.
+ */
+const withRequestZodBatch = <
+  Body extends Record<string, unknown>,
   ResBody = unknown,
   Params extends Record<string, string> = Record<string, string>,
-> = (
-  request: FirebaseRequest<Params, ResBody, Body>,
-  response: Response<ResBody>
-) => Promise<void> | void;
+>(
+  schema: z.ZodSchema<Body>,
+  handler: ZodRequestHandler<Body, ResBody, Params>,
+  options: (HttpsOptions<string> & ZodOptions) | undefined,
+  concurrency: number
+) => {
+  return async (request: FirebaseRequest<Params, ResBody, Body>, response: Response<ResBody>) => {
+    const result = schema.safeParse(request.body);
+
+    if (!result.success) {
+      handleZodError({ error: result.error, ...options });
+
+      if (options?.validationStrategy === 'ignore') {
+        const batch = createBatch({ concurrency });
+        const handlerResult = await handler({ ...request, batch }, response);
+        if (!batch.isEmpty) {
+          await batch.commit();
+        }
+        return handlerResult;
+      }
+
+      response.status(400).send({
+        error: {
+          message: 'Invalid request body',
+          code: 'invalid-argument',
+          details: result.error.issues,
+        },
+      } as unknown as ResBody);
+      return;
+    }
+
+    const batch = createBatch({ concurrency });
+    request.body = result.data;
+    const handlerResult = await handler({ ...request, batch }, response);
+    if (!batch.isEmpty) {
+      await batch.commit();
+    }
+    return handlerResult;
+  };
+};
 
 /**
  * Handles HTTPS requests with Zod validation.
@@ -133,48 +235,41 @@ export const onRequestZod = <
   schema: z.ZodSchema<Body>,
   handler: ZodRequestHandler<Body, ResBody, Params>,
   options?: HttpsOptions<string> & ZodOptions
-): ZodRequestHandler<Body, ResBody, Params> => {
-  return async (request, response) => {
-    const logContext = buildRequestLogContext(request);
-    await runWithLogContext(logContext, async () => {
+) => {
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+
+  return wrapWithLogContext(
+    async (request: FirebaseRequest<Params, ResBody, Body>, response: Response<ResBody>) => {
       try {
-        const result = schema.safeParse(request.body);
-
-        if (!result.success) {
-          handleZodError({
-            error: result.error,
-            ...options,
-          });
-
-          if (options?.validationStrategy === 'ignore') {
-            return handler(request, response);
-          }
-
-          response.status(400).send({
-            error: {
-              message: 'Invalid request body',
-              code: 'invalid-argument',
-              details: result.error.issues,
-            },
-          } as unknown as ResBody);
-          return;
-        }
-
-        request.body = result.data;
-        return handler(request, response);
+        await withRequestZodBatch(schema, handler, options, concurrency)(request, response);
       } catch (error) {
         handleHttpsError(error, response);
       }
+    },
+    (request) => buildRequestLogContext(request)
+  );
+};
+
+/**
+ * Creates a wrapped onCall handler with batch support.
+ */
+const withCallBatch = <
+  AllFunctions extends CallableFunctions,
+  FunctionName extends keyof AllFunctions,
+>(
+  handler: CallHandler<AllFunctions, FunctionName>,
+  concurrency: number
+) => {
+  return (request: CallableRequest<AllFunctions[FunctionName][0]>) => {
+    const batch = createBatch({ concurrency });
+    return Promise.resolve(handler({ ...request, batch })).then((result) => {
+      if (!batch.isEmpty) {
+        return batch.commit().then(() => result);
+      }
+      return result;
     });
   };
 };
-
-export type CallHandler<
-  AllFunctions extends CallableFunctions,
-  FunctionName extends keyof AllFunctions,
-> = (
-  request: CallableRequest<AllFunctions[FunctionName][0]>
-) => Promise<AllFunctions[FunctionName][1]> | AllFunctions[FunctionName][1];
 
 /**
  * Declares a callable method for clients to call using a Firebase SDK.
@@ -187,13 +282,15 @@ export const onCall = <
   FunctionName extends keyof AllFunctions,
 >(
   handler: CallHandler<AllFunctions, FunctionName>,
-  _options?: HttpsOptions<FunctionName>
-): CallHandler<AllFunctions, FunctionName> => {
-  return async (request) => {
-    const logContext = buildCallLogContext(request);
-    return runWithLogContext(logContext, async () => {
+  options?: HttpsOptions<FunctionName>
+) => {
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+  const wrapped = withCallBatch(handler, concurrency);
+
+  return wrapWithLogContext(
+    async (request: CallableRequest<AllFunctions[FunctionName][0]>) => {
       try {
-        return await handler(request);
+        return await wrapped(request);
       } catch (error) {
         if (error instanceof HttpsError || error instanceof FirestackError) {
           throw error;
@@ -205,13 +302,47 @@ export const onCall = <
           error instanceof Error ? error.message : 'Internal Server Error'
         );
       }
-    });
-  };
+    },
+    (request) => buildCallLogContext(request)
+  );
 };
 
-export type ZodCallHandler<Body = unknown, ResBody = unknown> = (
-  request: CallableRequest<Body>
-) => Promise<ResBody> | ResBody;
+/**
+ * Creates a wrapped onCallZod handler with batch and Zod validation.
+ */
+const withCallZodBatch = <Body, ResBody = unknown>(
+  schema: z.ZodSchema<Body>,
+  handler: ZodCallHandler<Body, ResBody>,
+  options: (HttpsOptions<string> & ZodOptions) | undefined,
+  concurrency: number
+) => {
+  return async (request: CallableRequest<Body>) => {
+    const result = schema.safeParse(request.data);
+
+    if (!result.success) {
+      handleZodError({ error: result.error, ...options });
+
+      if (options?.validationStrategy === 'ignore') {
+        const batch = createBatch({ concurrency });
+        const handlerResult = await handler({ ...request, batch });
+        if (!batch.isEmpty) {
+          await batch.commit();
+        }
+        return handlerResult;
+      }
+
+      throw new HttpsError('invalid-argument', 'Invalid request data', result.error.issues);
+    }
+
+    const batch = createBatch({ concurrency });
+    request.data = result.data;
+    const handlerResult = await handler({ ...request, batch });
+    if (!batch.isEmpty) {
+      await batch.commit();
+    }
+    return handlerResult;
+  };
+};
 
 /**
  * Declares a callable method with Zod validation.
@@ -223,28 +354,14 @@ export const onCallZod = <Body, ResBody = unknown>(
   schema: z.ZodSchema<Body>,
   handler: ZodCallHandler<Body, ResBody>,
   options?: HttpsOptions<string> & ZodOptions
-): ZodCallHandler<Body, ResBody> => {
-  return async (request) => {
-    const logContext = buildCallLogContext(request);
-    return runWithLogContext(logContext, async () => {
+) => {
+  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+  const wrapped = withCallZodBatch(schema, handler, options, concurrency);
+
+  return wrapWithLogContext(
+    async (request: CallableRequest<Body>) => {
       try {
-        const result = schema.safeParse(request.data);
-
-        if (!result.success) {
-          handleZodError({
-            error: result.error,
-            ...options,
-          });
-
-          if (options?.validationStrategy === 'ignore') {
-            return handler(request);
-          }
-
-          throw new HttpsError('invalid-argument', 'Invalid request data', result.error.issues);
-        }
-
-        request.data = result.data;
-        return handler(request);
+        return await wrapped(request);
       } catch (error) {
         if (error instanceof HttpsError || error instanceof FirestackError) {
           throw error;
@@ -256,6 +373,7 @@ export const onCallZod = <Body, ResBody = unknown>(
           error instanceof Error ? error.message : 'Internal Server Error'
         );
       }
-    });
-  };
+    },
+    (request) => buildCallLogContext(request)
+  );
 };
