@@ -62,6 +62,14 @@ export const toDeployIndexCode = async (options: CreateIndexFileOptions): Promis
     });
   }
 
+  if (rootFunctionBuilder === 'alerts') {
+    return toAlertFunctionCode({
+      ...options,
+      importPath,
+      includeImportPath,
+    });
+  }
+
   return toV2FunctionCode({
     ...options,
     importPath,
@@ -161,6 +169,48 @@ export const ${functionName} = ${chain}.${trigger}(functionStart);
 `;
 };
 
+const toAlertFunctionCode = (
+  options: CreateIndexFileOptions & {
+    importPath: string;
+    includeImportPath?: string;
+  }
+): string => {
+  const { functionOptions, importPath, includeImportPath, functionName, deployFunction } = options;
+  const functionCodeType = toFunctionCodeType(deployFunction);
+  const subPackage = toAlertSubPackage(deployFunction);
+  const optionsCode = JSON.stringify(functionOptions, null, 2);
+  const includeImport = includeImportPath ? `import '${includeImportPath}';\n` : '';
+
+  return `
+${includeImport}import { ${functionCodeType} } from 'firebase-functions/${subPackage}';
+import functionStart from '${importPath}';
+
+export const ${functionName} = ${functionCodeType}(${optionsCode}, functionStart);
+`;
+};
+
+const toAlertSubPackage = (deployFunction: DeployFunction): string => {
+  switch (deployFunction) {
+    case 'onPlanUpdatePublished':
+    case 'onPlanAutomatedUpdatePublished':
+      return 'alerts/billing';
+    case 'onNewFatalIssuePublished':
+    case 'onNewNonfatalIssuePublished':
+    case 'onRegressionAlertPublished':
+    case 'onStabilityDigestPublished':
+    case 'onVelocityAlertPublished':
+    case 'onNewAnrIssuePublished':
+      return 'alerts/crashlytics';
+    case 'onThresholdAlertPublished':
+      return 'alerts/performance';
+    case 'onNewTesterIosDevicePublished':
+    case 'onInAppFeedbackPublished':
+      return 'alerts/appDistribution';
+    default:
+      return 'alerts';
+  }
+};
+
 const toRootFunction = (deployFunction: DeployFunction): FunctionBuilder => {
   switch (deployFunction) {
     case 'onCreated':
@@ -198,6 +248,36 @@ const toRootFunction = (deployFunction: DeployFunction): FunctionBuilder => {
     case 'beforeAuthCreate':
     case 'beforeAuthSignIn':
       return 'auth';
+    case 'beforeUserCreated':
+    case 'beforeUserSignedIn':
+    case 'beforeEmailSent':
+    case 'beforeSmsSent':
+      return 'identity';
+    case 'onMessagePublished':
+      return 'pubsub';
+    case 'onTaskDispatched':
+      return 'tasks';
+    case 'onCustomEventPublished':
+      return 'eventarc';
+    case 'onTestMatrixCompleted':
+      return 'testLab';
+    case 'onConfigUpdated':
+      return 'remoteConfig';
+    case 'onPlanUpdatePublished':
+    case 'onPlanAutomatedUpdatePublished':
+    case 'onNewFatalIssuePublished':
+    case 'onNewNonfatalIssuePublished':
+    case 'onRegressionAlertPublished':
+    case 'onStabilityDigestPublished':
+    case 'onVelocityAlertPublished':
+    case 'onNewAnrIssuePublished':
+    case 'onThresholdAlertPublished':
+    case 'onNewTesterIosDevicePublished':
+    case 'onInAppFeedbackPublished':
+      return 'alerts';
+    case 'beforeGenerateContent':
+    case 'afterGenerateContent':
+      return 'ai';
     default:
       throw new Error('Invalid function type');
   }
@@ -253,6 +333,50 @@ const toFunctionCodeType = (deployFunction: DeployFunction): string => {
       return 'beforeCreate';
     case 'beforeAuthSignIn':
       return 'beforeSignIn';
+    case 'beforeUserCreated':
+      return 'beforeUserCreated';
+    case 'beforeUserSignedIn':
+      return 'beforeUserSignedIn';
+    case 'beforeEmailSent':
+      return 'beforeEmailSent';
+    case 'beforeSmsSent':
+      return 'beforeSmsSent';
+    case 'onMessagePublished':
+      return 'onMessagePublished';
+    case 'onTaskDispatched':
+      return 'onTaskDispatched';
+    case 'onCustomEventPublished':
+      return 'onCustomEventPublished';
+    case 'onTestMatrixCompleted':
+      return 'onTestMatrixCompleted';
+    case 'onConfigUpdated':
+      return 'onConfigUpdated';
+    case 'onPlanUpdatePublished':
+      return 'onPlanUpdatePublished';
+    case 'onPlanAutomatedUpdatePublished':
+      return 'onPlanAutomatedUpdatePublished';
+    case 'onNewFatalIssuePublished':
+      return 'onNewFatalIssuePublished';
+    case 'onNewNonfatalIssuePublished':
+      return 'onNewNonfatalIssuePublished';
+    case 'onRegressionAlertPublished':
+      return 'onRegressionAlertPublished';
+    case 'onStabilityDigestPublished':
+      return 'onStabilityDigestPublished';
+    case 'onVelocityAlertPublished':
+      return 'onVelocityAlertPublished';
+    case 'onNewAnrIssuePublished':
+      return 'onNewAnrIssuePublished';
+    case 'onThresholdAlertPublished':
+      return 'onThresholdAlertPublished';
+    case 'onNewTesterIosDevicePublished':
+      return 'onNewTesterIosDevicePublished';
+    case 'onInAppFeedbackPublished':
+      return 'onInAppFeedbackPublished';
+    case 'beforeGenerateContent':
+      return 'beforeGenerateContent';
+    case 'afterGenerateContent':
+      return 'afterGenerateContent';
     default:
       throw new Error(`Unknown function type: ${deployFunction}`);
   }

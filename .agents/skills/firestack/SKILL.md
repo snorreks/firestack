@@ -51,9 +51,17 @@ If any step fails, fix it before marking the task complete. Pre-existing unrelat
 | `create callable <name>` | Scaffold a new callable function | [references/create.md](references/create.md) |
 | `create firestore <path> <event>` | Scaffold a Firestore trigger | [references/create.md](references/create.md) |
 | `create auth <event>` | Scaffold an Auth trigger | [references/create.md](references/create.md) |
+| `create identity <event>` | Scaffold an Identity Platform trigger | [references/create.md](references/create.md) |
 | `create scheduler <name>` | Scaffold a scheduled function | [references/create.md](references/create.md) |
 | `create storage <event>` | Scaffold a Storage trigger | [references/create.md](references/create.md) |
 | `create database <ref> <event>` | Scaffold a Realtime Database trigger | [references/create.md](references/create.md) |
+| `create pubsub <name>` | Scaffold a Pub/Sub trigger | [references/create.md](references/create.md) |
+| `create tasks <name>` | Scaffold a Task Queue trigger | [references/create.md](references/create.md) |
+| `create eventarc <name>` | Scaffold an Eventarc trigger | [references/create.md](references/create.md) |
+| `create testLab <name>` | Scaffold a Test Lab trigger | [references/create.md](references/create.md) |
+| `create remoteConfig <name>` | Scaffold a Remote Config trigger | [references/create.md](references/create.md) |
+| `create alerts <type> <name>` | Scaffold an Alerts trigger | [references/create.md](references/create.md) |
+| `create ai <event>` | Scaffold an AI blocking trigger | [references/create.md](references/create.md) |
 | `test rules` | Run Firestore/Storage security rule tests | [references/test.md](references/test.md) |
 | `setup config` | Create or update `firestack.json` | [references/setup.md](references/setup.md) |
 | `setup testing` | Initialize rules testing infrastructure | [references/setup.md](references/setup.md) |
@@ -72,7 +80,7 @@ When executing any Firestack command, the agent should:
 
 1. Read `firestack.config.ts` (or `firestack.json`) to understand the project configuration.
 2. Read `package.json` to check if `@snorreks/firestack` is installed.
-3. Use the `functionsDirectory` (default: `src/controllers`) as the root for all function scaffolding.
+3. Use the `functionsDirectory` (default: `src/controllers`) as the root for all function scaffolding. Sub-directories map to trigger types: `api/`, `callable/`, `firestore/`, `auth/`, `identity/`, `storage/`, `scheduler/`, `database/`, `pubsub/`, `tasks/`, `eventarc/`, `test_lab/`, `remote_config/`, `alerts/`, `ai/`.
 4. Use the `scriptsDirectory` (default: `scripts`) for custom scripts and `on_emulate.ts`.
 5. Use the `rulesDirectory` (default: `src/rules`) for rules and indexes.
 6. Assume the package manager is `bun` unless `engine` or `packageManager` says otherwise.

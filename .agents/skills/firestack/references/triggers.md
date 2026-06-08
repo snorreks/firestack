@@ -234,6 +234,101 @@ export default beforeAuthSignIn((user, context) => {
 });
 ```
 
+## Identity Platform Triggers (v2)
+
+Place identity triggers in `identity/<event>.ts`. These are **v2 blocking functions** from `firebase-functions/v2/identity` that run before key authentication events and can block, modify, or enrich them.
+
+### `beforeUserCreated`
+
+Blocks user creation and assigns custom claims.
+
+```typescript
+import { beforeUserCreated } from '@snorreks/firestack';
+
+export default beforeUserCreated((user, context) => {
+  // Block users from restricted domains
+  if (user.email?.endsWith('@example.com')) {
+    throw new Error('User registration is restricted for this domain.');
+  }
+
+  return {
+    customClaims: { role: 'user', subscription: 'free' },
+    displayName: user.displayName ?? user.email?.split('@')[0],
+  };
+});
+```
+
+### `beforeUserSignedIn`
+
+Blocks user sign-in and enriches tokens with custom/session claims.
+
+```typescript
+import { beforeUserSignedIn } from '@snorreks/firestack';
+
+type SessionClaims = { lastLoginIp?: string };
+
+export default beforeUserSignedIn((user, context) => {
+  // Block disabled users
+  if (user.disabled) {
+    throw new Error('User account is disabled.');
+  }
+
+  return {
+    customClaims: { role: user.customClaims?.role ?? 'user' },
+    sessionClaims: { lastLoginIp: context.ipAddress },
+  };
+});
+```
+
+### `beforeEmailSent`
+
+Controls email delivery (sign-in emails, password reset emails).
+
+```typescript
+import { beforeEmailSent } from '@snorreks/firestack';
+
+export default beforeEmailSent((user, context) => {
+  // Override reCAPTCHA to allow the email
+  return { recaptchaActionOverride: 'ALLOW' };
+});
+```
+
+### `beforeSmsSent`
+
+Controls SMS delivery (sign-in, MFA enrollment, MFA sign-in).
+
+```typescript
+import { beforeSmsSent } from '@snorreks/firestack';
+
+export default beforeSmsSent((user, context) => {
+  // Override reCAPTCHA to allow the SMS
+  return { recaptchaActionOverride: 'ALLOW' };
+});
+```
+
+### Identity Event Context
+
+Identity handlers receive an enriched `context` with identity-specific fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `ipAddress` | `string` | Client IP address |
+| `userAgent` | `string` | Client user agent string |
+| `locale` | `string?` | Client locale |
+| `emailType` | `EmailType?` | Email type (`EMAIL_SIGN_IN`, `PASSWORD_RESET`) — `beforeEmailSent` only |
+| `smsType` | `SmsType?` | SMS type (`SIGN_IN_OR_SIGN_UP`, `MULTI_FACTOR_SIGN_IN`, `MULTI_FACTOR_ENROLLMENT`) — `beforeSmsSent` only |
+| `additionalUserInfo` | `AdditionalUserInfo?` | Provider profile, reCAPTCHA score, new user flag |
+| `credential` | `Credential?` | Tokens, claims, sign-in method |
+
+### Identity Responses
+
+| Response Type | Used By | Properties |
+|---|---|---|
+| `BeforeCreateResponse` | `beforeUserCreated` | `customClaims`, `displayName`, `disabled`, `emailVerified`, `photoURL`, `recaptchaActionOverride` |
+| `BeforeSignInResponse` | `beforeUserSignedIn` | `BeforeCreateResponse` + `sessionClaims` |
+| `BeforeEmailResponse` | `beforeEmailSent` | `recaptchaActionOverride` |
+| `BeforeSmsResponse` | `beforeSmsSent` | `recaptchaActionOverride` |
+
 ## Storage Triggers
 
 Place storage triggers in `storage/<event>.ts`.
@@ -484,6 +579,14 @@ export default onUpdated<UserData>(
 | Callable | `onCall`, `onCallZod` | `callable/` |
 | Firestore | `onDocumentCreated`, `onDocumentDeleted`, `onDocumentUpdated`, `onDocumentWritten`, `onCreated`, `onDeleted`, `onUpdated`, `onWritten`, `onCreatedZod`, `onDeletedZod`, `onUpdatedZod`, `onWrittenZod` | `firestore/` |
 | Auth | `onAuthCreate`, `onAuthDelete`, `beforeAuthCreate`, `beforeAuthSignIn` | `auth/` |
+| Identity | `beforeUserCreated`, `beforeUserSignedIn`, `beforeEmailSent`, `beforeSmsSent` | `identity/` |
+| Pub/Sub | `onMessagePublished` | `pubsub/` |
+| Tasks | `onTaskDispatched` | `tasks/` |
+| Eventarc | `onCustomEventPublished` | `eventarc/` |
+| Test Lab | `onTestMatrixCompleted` | `test_lab/` |
+| Remote Config | `onConfigUpdated` | `remote_config/` |
+| Alerts | `onNewFatalIssuePublished`, `onNewNonfatalIssuePublished`, `onRegressionAlertPublished`, `onStabilityDigestPublished`, `onVelocityAlertPublished`, `onNewAnrIssuePublished`, `onThresholdAlertPublished`, `onPlanUpdatePublished`, `onPlanAutomatedUpdatePublished`, `onNewTesterIosDevicePublished`, `onInAppFeedbackPublished` | `alerts/` |
+| AI | `beforeGenerateContent`, `afterGenerateContent` | `ai/` |
 | Storage | `onObjectFinalized`, `onObjectDeleted`, `onObjectArchived`, `onObjectMetadataUpdated` | `storage/` |
 | Scheduler | `onSchedule` | `scheduler/` |
 | RTDB | `onValueCreated`, `onValueUpdated`, `onValueDeleted`, `onValueWritten` | `database/` |

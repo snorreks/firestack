@@ -8,4 +8,12 @@ export const functionBuilders = [
   'storage',
   'database',
   'auth',
+  'identity',
+  'pubsub',
+  'tasks',
+  'eventarc',
+  'testLab',
+  'remoteConfig',
+  'alerts',
+  'ai',
 ] as const;

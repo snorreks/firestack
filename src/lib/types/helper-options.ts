@@ -72,6 +72,31 @@ export type ObjectTriggerOptions = Omit<BaseFunctionOptions, 'region'> & Storage
 
 export type AuthTriggerOptions = Omit<BaseFunctionOptions, 'region'>;
 
+export type IdentityTriggerOptions = BaseFunctionOptions;
+
+export type PubsubTriggerOptions = BaseFunctionOptions & {
+  topic: string;
+};
+
+export type TasksTriggerOptions = BaseFunctionOptions;
+
+export type EventarcTriggerOptions = BaseFunctionOptions & {
+  eventType: string;
+  channel?: string;
+  filters?: Record<string, string>;
+};
+
+export type TestLabTriggerOptions = BaseFunctionOptions;
+
+export type RemoteConfigTriggerOptions = BaseFunctionOptions;
+
+export type AlertsTriggerOptions = BaseFunctionOptions & {
+  appId?: string;
+  alertType?: string;
+};
+
+export type AiTriggerOptions = BaseFunctionOptions;
+
 export type AllFunctionOptions = {
   https: HttpsOptions;
   firestore: DocumentOptions;
@@ -79,6 +104,14 @@ export type AllFunctionOptions = {
   storage: ObjectTriggerOptions;
   database: ReferenceOptions;
   auth: AuthTriggerOptions;
+  identity: IdentityTriggerOptions;
+  pubsub: PubsubTriggerOptions;
+  tasks: TasksTriggerOptions;
+  eventarc: EventarcTriggerOptions;
+  testLab: TestLabTriggerOptions;
+  remoteConfig: RemoteConfigTriggerOptions;
+  alerts: AlertsTriggerOptions;
+  ai: AiTriggerOptions;
 };
 
 export type OptionValue = string | boolean | Record<string, unknown>;

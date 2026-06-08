@@ -239,6 +239,7 @@ describe('Firestack CLI Extended Tests', () => {
       const expectedExports = [
         'assets_test_api',
         'test_api',
+        'auth_before_created_renamed',
         'auth_created_renamed',
         'test_callable',
         'users_created',
@@ -249,6 +250,17 @@ describe('Firestack CLI Extended Tests', () => {
         'deleted',
         'finalized',
         'updated',
+        'identity_before_user_created',
+        'identity_before_user_signed_in',
+        'identity_before_email_sent',
+        'identity_before_sms_sent',
+        'pubsub_example',
+        'tasks_example',
+        'eventarc_example',
+        'test_lab_example',
+        'remote_config_example',
+        'alerts_fatal_issue',
+        'ai_before_generate',
       ];
 
       for (const exportName of expectedExports) {
