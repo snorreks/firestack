@@ -23,105 +23,69 @@ import type {
   ThresholdAlertPayload,
 } from 'firebase-functions/alerts/performance';
 import type { AlertsTriggerOptions } from '$types';
-import { type Batch, createBatch } from '$utils/batch.ts';
+import type { Batch } from '$utils/batch.ts';
+import { createBatch } from '$utils/batch.ts';
 import { wrapWithLogContext } from './logging.ts';
 
 const DEFAULT_BATCH_CONCURRENCY = 5;
 
-const wrapAlert = <T>(
-  trigger: string,
-  handler: (event: T & { batch: Batch }) => unknown,
-  options?: AlertsTriggerOptions
-) => {
-  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+const createAlertHandler = <T>(trigger: string) => {
+  return (handler: (event: T & { batch: Batch }) => unknown, options?: AlertsTriggerOptions) => {
+    const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
 
-  return wrapWithLogContext(
-    async (event: T) => {
-      const batch = createBatch({ concurrency });
-      const result = await handler({ ...event, batch });
-      if (!batch.isEmpty) {
-        await batch.commit();
-      }
-      return result;
-    },
-    (event) => ({
-      source: 'functions' as const,
-      trigger,
-      requestId: (event as AlertEvent<unknown>).id,
-    })
-  );
+    return wrapWithLogContext(
+      async (event: T) => {
+        const batch = createBatch({ concurrency });
+        const result = await handler({ ...event, batch });
+        if (!batch.isEmpty) await batch.commit();
+        return result;
+      },
+      (event) => ({
+        source: 'functions' as const,
+        trigger,
+        requestId: (event as AlertEvent<unknown>).id,
+      })
+    );
+  };
 };
 
 // --- Billing ---
-
-/** Handles a billing plan update alert. */
-export const onPlanUpdatePublished = (
-  handler: (event: BillingEvent<PlanUpdatePayload> & { batch: Batch }) => unknown,
-  options?: AlertsTriggerOptions
-) => wrapAlert('alerts.onPlanUpdatePublished', handler, options);
-
-/** Handles an automated billing plan update alert. */
-export const onPlanAutomatedUpdatePublished = (
-  handler: (event: BillingEvent<PlanAutomatedUpdatePayload> & { batch: Batch }) => unknown,
-  options?: AlertsTriggerOptions
-) => wrapAlert('alerts.onPlanAutomatedUpdatePublished', handler, options);
+export const onPlanUpdatePublished = createAlertHandler<BillingEvent<PlanUpdatePayload>>(
+  'alerts.onPlanUpdatePublished'
+);
+export const onPlanAutomatedUpdatePublished = createAlertHandler<
+  BillingEvent<PlanAutomatedUpdatePayload>
+>('alerts.onPlanAutomatedUpdatePublished');
 
 // --- Crashlytics ---
-
-/** Handles a new fatal issue alert from Crashlytics. */
-export const onNewFatalIssuePublished = (
-  handler: (event: CrashlyticsEvent<NewFatalIssuePayload> & { batch: Batch }) => unknown,
-  options?: AlertsTriggerOptions
-) => wrapAlert('alerts.onNewFatalIssuePublished', handler, options);
-
-/** Handles a new non-fatal issue alert from Crashlytics. */
-export const onNewNonfatalIssuePublished = (
-  handler: (event: CrashlyticsEvent<NewNonfatalIssuePayload> & { batch: Batch }) => unknown,
-  options?: AlertsTriggerOptions
-) => wrapAlert('alerts.onNewNonfatalIssuePublished', handler, options);
-
-/** Handles a regression alert from Crashlytics. */
-export const onRegressionAlertPublished = (
-  handler: (event: CrashlyticsEvent<RegressionAlertPayload> & { batch: Batch }) => unknown,
-  options?: AlertsTriggerOptions
-) => wrapAlert('alerts.onRegressionAlertPublished', handler, options);
-
-/** Handles a stability digest alert from Crashlytics. */
-export const onStabilityDigestPublished = (
-  handler: (event: CrashlyticsEvent<StabilityDigestPayload> & { batch: Batch }) => unknown,
-  options?: AlertsTriggerOptions
-) => wrapAlert('alerts.onStabilityDigestPublished', handler, options);
-
-/** Handles a velocity alert from Crashlytics. */
-export const onVelocityAlertPublished = (
-  handler: (event: CrashlyticsEvent<VelocityAlertPayload> & { batch: Batch }) => unknown,
-  options?: AlertsTriggerOptions
-) => wrapAlert('alerts.onVelocityAlertPublished', handler, options);
-
-/** Handles a new ANR issue alert from Crashlytics. */
-export const onNewAnrIssuePublished = (
-  handler: (event: CrashlyticsEvent<NewAnrIssuePayload> & { batch: Batch }) => unknown,
-  options?: AlertsTriggerOptions
-) => wrapAlert('alerts.onNewAnrIssuePublished', handler, options);
+export const onNewFatalIssuePublished = createAlertHandler<CrashlyticsEvent<NewFatalIssuePayload>>(
+  'alerts.onNewFatalIssuePublished'
+);
+export const onNewNonfatalIssuePublished = createAlertHandler<
+  CrashlyticsEvent<NewNonfatalIssuePayload>
+>('alerts.onNewNonfatalIssuePublished');
+export const onRegressionAlertPublished = createAlertHandler<
+  CrashlyticsEvent<RegressionAlertPayload>
+>('alerts.onRegressionAlertPublished');
+export const onStabilityDigestPublished = createAlertHandler<
+  CrashlyticsEvent<StabilityDigestPayload>
+>('alerts.onStabilityDigestPublished');
+export const onVelocityAlertPublished = createAlertHandler<CrashlyticsEvent<VelocityAlertPayload>>(
+  'alerts.onVelocityAlertPublished'
+);
+export const onNewAnrIssuePublished = createAlertHandler<CrashlyticsEvent<NewAnrIssuePayload>>(
+  'alerts.onNewAnrIssuePublished'
+);
 
 // --- Performance ---
-
-/** Handles a performance threshold alert. */
-export const onThresholdAlertPublished = (
-  handler: (event: PerformanceEvent<ThresholdAlertPayload> & { batch: Batch }) => unknown,
-  options?: AlertsTriggerOptions
-) => wrapAlert('alerts.onThresholdAlertPublished', handler, options);
+export const onThresholdAlertPublished = createAlertHandler<
+  PerformanceEvent<ThresholdAlertPayload>
+>('alerts.onThresholdAlertPublished');
 
 // --- App Distribution ---
-
-/** Handles a new tester iOS device alert from App Distribution. */
-export const onNewTesterIosDevicePublished = (
-  handler: (event: AppDistributionEvent<NewTesterDevicePayload> & { batch: Batch }) => unknown,
-  options?: AlertsTriggerOptions
-) => wrapAlert('alerts.onNewTesterIosDevicePublished', handler, options);
-
-/** Handles an in-app feedback alert from App Distribution. */
-export const onInAppFeedbackPublished = (
-  handler: (event: AppDistributionEvent<InAppFeedbackPayload> & { batch: Batch }) => unknown,
-  options?: AlertsTriggerOptions
-) => wrapAlert('alerts.onInAppFeedbackPublished', handler, options);
+export const onNewTesterIosDevicePublished = createAlertHandler<
+  AppDistributionEvent<NewTesterDevicePayload>
+>('alerts.onNewTesterIosDevicePublished');
+export const onInAppFeedbackPublished = createAlertHandler<
+  AppDistributionEvent<InAppFeedbackPayload>
+>('alerts.onInAppFeedbackPublished');

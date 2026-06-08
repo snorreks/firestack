@@ -12,6 +12,7 @@ import {
 import { functions, VALID_FIREBASE_OPTIONS, VALID_FIRESTACK_OPTIONS } from '$constants';
 import { logger } from '$logger';
 import type { DeployFunction, FirestackOptions, FunctionOptions, OptionValue } from '$types';
+import { parseOptionsObject } from '$utils/parse_options_object.ts';
 
 export const extractAndValidateOptions = (options: {
   fileContent: string;
@@ -61,13 +62,8 @@ export const extractAndValidateOptions = (options: {
     return { functionOptions: {}, firestackOptions: {} };
   }
 
-  // 3. Parse options object safely-ish
-  let parsedOptions: Record<string, unknown> = {};
-  try {
-    parsedOptions = new Function(`return ${optionsString}`)();
-  } catch (_e) {
-    logger.warn(`Failed to parse options in ${functionPath}. Using empty options.`);
-  }
+  // 3. Parse options object with safe parser (no eval)
+  const parsedOptions = parseOptionsObject(optionsString) ?? {};
 
   // 4. Apply Default Region (File-level region takes priority)
   if (!parsedOptions.region && defaultRegion) {
@@ -94,7 +90,31 @@ export const extractAndValidateOptions = (options: {
     functionOptions,
   });
 
+  // 6. Enforce one-function-per-file
+  enforceSingleExport({ sourceFile, functionPath });
+
   return { deployFunction, functionOptions, firestackOptions };
+};
+
+/**
+ * Ensures each function file exports exactly one default.
+ * Multiple defaults or mixed named + default exports are errors.
+ */
+const enforceSingleExport = (options: { sourceFile: SourceFile; functionPath: string }): void => {
+  const { sourceFile, functionPath } = options;
+  let defaultCount = 0;
+
+  forEachChild(sourceFile, (node) => {
+    if (isExportAssignment(node)) {
+      defaultCount++;
+    }
+  });
+
+  if (defaultCount > 1) {
+    throw new Error(
+      `[Firestack] Build failed: ${functionPath} has ${defaultCount} default exports. One function per file is required.`
+    );
+  }
 };
 
 /**
@@ -107,11 +127,22 @@ const validateV2Options = (options: {
   functionPath: string;
 }): void => {
   const { deployFunction, functionOptions, functionPath } = options;
-  // 1. Required Trigger Properties
+
+  const fail = (message: string) => {
+    throw new Error(`[Firestack] Build failed: ${message} in ${functionPath}`);
+  };
+
+  // --- Required trigger properties per builder ---
   if (deployFunction === 'onSchedule' && !functionOptions.schedule) {
-    throw new Error(
-      `[Firestack] Build failed: 'onSchedule' in ${functionPath} requires a 'schedule' property.`
-    );
+    fail(`'onSchedule' requires a 'schedule' property`);
+  }
+
+  if (deployFunction === 'onMessagePublished' && !functionOptions.topic) {
+    fail(`'onMessagePublished' requires a 'topic' property`);
+  }
+
+  if (deployFunction === 'onCustomEventPublished' && !functionOptions.eventType) {
+    fail(`'onCustomEventPublished' requires an 'eventType' property`);
   }
 
   // 2. Type Validations for Common V2 Properties

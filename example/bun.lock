@@ -10,7 +10,6 @@
       },
       "devDependencies": {
         "@biomejs/biome": "^2.4.16",
-        "@moonrepo/cli": "^2.3.2",
         "typescript": "^6.0.3",
       },
     },
@@ -219,22 +218,6 @@
     "@jsdevtools/ono": ["@jsdevtools/ono@7.1.3", "", {}, "sha512-4JQNk+3mVzK3xh2rqd6RB4J46qUR19azEHBneZyTZM+c456qOrbbM/5xcR8huNCCcbVt7+UmizG6GuUvPvKUYg=="],
 
     "@modelcontextprotocol/sdk": ["@modelcontextprotocol/sdk@1.27.1", "", { "dependencies": { "@hono/node-server": "^1.19.9", "ajv": "^8.17.1", "ajv-formats": "^3.0.1", "content-type": "^1.0.5", "cors": "^2.8.5", "cross-spawn": "^7.0.5", "eventsource": "^3.0.2", "eventsource-parser": "^3.0.0", "express": "^5.2.1", "express-rate-limit": "^8.2.1", "hono": "^4.11.4", "jose": "^6.1.3", "json-schema-typed": "^8.0.2", "pkce-challenge": "^5.0.0", "raw-body": "^3.0.0", "zod": "^3.25 || ^4.0", "zod-to-json-schema": "^3.25.1" }, "peerDependencies": { "@cfworker/json-schema": "^4.1.1" }, "optionalPeers": ["@cfworker/json-schema"] }, "sha512-sr6GbP+4edBwFndLbM60gf07z0FQ79gaExpnsjMGePXqFcSSb7t6iscpjk9DhFhwd+mTEQrzNafGP8/iGGFYaA=="],
-
-    "@moonrepo/cli": ["@moonrepo/cli@2.3.2", "", { "dependencies": { "detect-libc": "^2.1.2" }, "optionalDependencies": { "@moonrepo/core-linux-arm64-gnu": "2.3.2", "@moonrepo/core-linux-arm64-musl": "2.3.2", "@moonrepo/core-linux-x64-gnu": "2.3.2", "@moonrepo/core-linux-x64-musl": "2.3.2", "@moonrepo/core-macos-arm64": "2.3.2", "@moonrepo/core-macos-x64": "2.3.2", "@moonrepo/core-windows-x64-msvc": "2.3.2" }, "bin": { "moon": "moon.js", "moonx": "moonx.js" } }, "sha512-KSRupv+RlFfXHL2LEYMlNt2AQ1zA6bp6lsnEhjhF6SdCYeOBFKhuJR4mMYBwH5IJi4WPkNRe2IYBXrdHP8T64A=="],
-
-    "@moonrepo/core-linux-arm64-gnu": ["@moonrepo/core-linux-arm64-gnu@2.3.2", "", { "os": "linux", "cpu": "arm64" }, "sha512-TwreP+/ttYAy3j7mtRhGGMaHOOxyL5+HDzL2wUUN1xtvgQcE63QxeR77fgNItzII8tf9Nwxbqy/wWq/Gm3KSsQ=="],
-
-    "@moonrepo/core-linux-arm64-musl": ["@moonrepo/core-linux-arm64-musl@2.3.2", "", { "os": "linux", "cpu": "arm64" }, "sha512-0Tl8e4aR0RWkqinnFll6vchuh829bvcMIojsWLc16zCMeZ7sDT86qPeAObWjtIEfs8agv8QRt4CunyCNOjiM+w=="],
-
-    "@moonrepo/core-linux-x64-gnu": ["@moonrepo/core-linux-x64-gnu@2.3.2", "", { "os": "linux", "cpu": "x64" }, "sha512-K+ccl2xPzYtx/rZOnjkM1RfqXO382Dt8C0Ro/uxE9d5HkFK72O58O+SqnEd2QDfseK6TYkauyG+hqVZm6JB03A=="],
-
-    "@moonrepo/core-linux-x64-musl": ["@moonrepo/core-linux-x64-musl@2.3.2", "", { "os": "linux", "cpu": "x64" }, "sha512-NvIimqjGAa3u6KMLc4RlOsgWe4r508S4jXLhpgRhOUgxgFTBmh5oXKX/w4Veyp6lGioRN1+9LhxMMWg7Fv5ULw=="],
-
-    "@moonrepo/core-macos-arm64": ["@moonrepo/core-macos-arm64@2.3.2", "", { "os": "darwin", "cpu": "arm64" }, "sha512-d79yc4Ng+NOKDRMCBsSWgQ/Qnw8Dp/w95kA/Hltz80QeCBjHmjWZBkMDY7vj+P7LWi9yOILKbp/0H5q/xYx4Tw=="],
-
-    "@moonrepo/core-macos-x64": ["@moonrepo/core-macos-x64@2.3.2", "", { "os": "darwin", "cpu": "x64" }, "sha512-edWeYzdeF6t7F/g67iZfpx/XWn3KdpY40OciCNiQpF5VSF2nsvoaJYZx3UU5BJYY7pCzcftAtmOQweXDNHJTkg=="],
-
-    "@moonrepo/core-windows-x64-msvc": ["@moonrepo/core-windows-x64-msvc@2.3.2", "", { "os": "win32", "cpu": "x64" }, "sha512-T8u5nBgLD4oYL6NDpaoNmxXoXSawD1us1NQnmbYNbND4iSanm3sXf/vUXNz50DTONB5AARGG0HKs9sYuOSSNAQ=="],
 
     "@npmcli/agent": ["@npmcli/agent@4.0.0", "", { "dependencies": { "agent-base": "^7.1.0", "http-proxy-agent": "^7.0.0", "https-proxy-agent": "^7.0.1", "lru-cache": "^11.2.1", "socks-proxy-agent": "^8.0.3" } }, "sha512-kAQTcEN9E8ERLVg5AsGwLNoFb+oEG6engbqAU2P43gD4JEIkNGMHdVQ096FsOAAYpZPB0RSt0zgInKIAS1l5QA=="],
 
@@ -535,8 +518,6 @@
     "depd": ["depd@2.0.0", "", {}, "sha512-g7nH6P6dyDioJogAAGprGpCtVImJhpPk/roCzdb3fIh61/s/nPsfR6onyMwkCAR/OlC3yBC0lESvUoQEAssIrw=="],
 
     "destroy": ["destroy@1.2.0", "", {}, "sha512-2sJGJTaXIIaR1w4iJSNoN0hnMY7Gpc/n8D4qSCJw8QqFWXf7cuAgnEHxBpweaVcPevC2l3KpjYCx3NypQQgaJg=="],
-
-    "detect-libc": ["detect-libc@2.1.2", "", {}, "sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ=="],
 
     "discontinuous-range": ["discontinuous-range@1.0.0", "", {}, "sha512-c68LpLbO+7kP/b1Hr1qs8/BJ09F5khZGTxqxZuhzxpmwJKOgRFHJWIb9/KmqnqHhLdO55aOxFH/EGBvUQbL/RQ=="],
 

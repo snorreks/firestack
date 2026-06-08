@@ -7,16 +7,15 @@
     "packages/*"
   ],
   "scripts": {
-    "moon": "moon",
-    "build": "moon run firebase:build --",
-    "deploy": "moon run firebase:deploy --",
-    "delete": "moon run firebase:delete --",
-    "emulate": "moon run firebase:emulate --",
-    "rules": "moon run firebase:rules --",
-    "scripts": "moon run firebase:scripts --",
-    "logs": "moon run firebase:logs --",
-    "check": "moon run :check --",
-    "fix": "moon run :fix --",
+    "build": "cd apps/firebase && bun run build",
+    "deploy": "cd apps/firebase && bun run deploy",
+    "delete": "cd apps/firebase && bun run delete",
+    "emulate": "cd apps/firebase && bun run emulate",
+    "rules": "cd apps/firebase && bun run rules",
+    "scripts": "cd apps/firebase && bun run scripts",
+    "logs": "cd apps/firebase && bun run logs",
+    "check": "bun run --filter '*' check",
+    "fix": "bun run --filter '*' fix",
     "test": "bun test tests/*.test.ts",
     "test:rules": "cd apps/firebase && bun run test:rules",
     "test:all": "bun run test && bun run test:rules",
@@ -24,7 +23,6 @@
   },
   "devDependencies": {
     "typescript": "^6.0.3",
-    "@moonrepo/cli": "^2.3.2",
     "@biomejs/biome": "^2.4.16"
   },
   "dependencies": {

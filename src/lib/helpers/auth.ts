@@ -8,80 +8,22 @@ import type {
   BeforeSignInResponse,
 } from '$types';
 import { type Batch, createBatch } from '$utils/batch.ts';
+import { createAuthEventHandler } from './factory.ts';
 import { wrapWithLogContext } from './logging.ts';
 
-const DEFAULT_BATCH_CONCURRENCY = 5;
+export const onAuthCreate = createAuthEventHandler<UserRecord, EventContext, AuthTriggerOptions>(
+  'auth.onCreate',
+  (_, context) => context.eventId
+);
 
-/**
- * Responds to the creation of a Firebase Auth user.
- *
- * @param handler Event handler that responds to the creation of a Firebase Auth
- *   user.
- */
-export const onAuthCreate = (
-  handler: (
-    user: UserRecord,
-    context: EventContext & { batch: Batch }
-  ) => PromiseLike<unknown> | unknown,
-  options?: AuthTriggerOptions
-) => {
-  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
-
-  return wrapWithLogContext(
-    async (user: UserRecord, context: EventContext) => {
-      const batch = createBatch({ concurrency });
-      const result = await handler(user, { ...context, batch });
-      if (!batch.isEmpty) {
-        await batch.commit();
-      }
-      return result;
-    },
-    (_user, context) => ({
-      source: 'functions' as const,
-      trigger: 'auth.onCreate',
-      requestId: context.eventId,
-    })
-  );
-};
-
-/**
- * Responds to the deletion of a Firebase Auth user.
- *
- * @param handler Event handler that responds to the deletion of a Firebase Auth
- *   user.
- */
-export const onAuthDelete = (
-  handler: (
-    user: UserRecord,
-    context: EventContext & { batch: Batch }
-  ) => PromiseLike<unknown> | unknown,
-  options?: AuthTriggerOptions
-) => {
-  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
-
-  return wrapWithLogContext(
-    async (user: UserRecord, context: EventContext) => {
-      const batch = createBatch({ concurrency });
-      const result = await handler(user, { ...context, batch });
-      if (!batch.isEmpty) {
-        await batch.commit();
-      }
-      return result;
-    },
-    (_user, context) => ({
-      source: 'functions' as const,
-      trigger: 'auth.onDelete',
-      requestId: context.eventId,
-    })
-  );
-};
+export const onAuthDelete = createAuthEventHandler<UserRecord, EventContext, AuthTriggerOptions>(
+  'auth.onDelete',
+  (_, context) => context.eventId
+);
 
 /**
  * Blocks request to create a Firebase Auth user.
- *
- * @param handler Event handler that blocks creation of a Firebase Auth user.
  * @typeParam TCustomClaims - Optional type for custom claims added to the user token.
- *   When provided, `customClaims` becomes required in the response.
  */
 export const beforeAuthCreate = <TCustomClaims = never>(
   handler: (
@@ -94,15 +36,13 @@ export const beforeAuthCreate = <TCustomClaims = never>(
     | Promise<void>,
   options?: AuthTriggerOptions
 ) => {
-  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+  const concurrency = options?.batchConcurrency ?? 5;
 
   return wrapWithLogContext(
     async (user: AuthUserRecord, context: AuthEventContext) => {
       const batch = createBatch({ concurrency });
       const result = await handler(user, { ...context, batch });
-      if (!batch.isEmpty) {
-        await batch.commit();
-      }
+      if (!batch.isEmpty) await batch.commit();
       return result;
     },
     () => ({
@@ -115,12 +55,6 @@ export const beforeAuthCreate = <TCustomClaims = never>(
 
 /**
  * Blocks request to sign-in a Firebase Auth user.
- *
- * @param handler Event handler that blocks sign-in of a Firebase Auth user.
- * @typeParam TCustomClaims - Optional type for custom claims added to the ID token.
- *   When provided, `customClaims` becomes required in the response.
- * @typeParam TSessionClaims - Optional type for session claims scoped to the current session.
- *   When provided, `sessionClaims` becomes required in the response.
  */
 export const beforeAuthSignIn = <TCustomClaims = never, TSessionClaims = never>(
   handler: (
@@ -133,15 +67,13 @@ export const beforeAuthSignIn = <TCustomClaims = never, TSessionClaims = never>(
     | Promise<void>,
   options?: AuthTriggerOptions
 ) => {
-  const concurrency = options?.batchConcurrency ?? DEFAULT_BATCH_CONCURRENCY;
+  const concurrency = options?.batchConcurrency ?? 5;
 
   return wrapWithLogContext(
     async (user: AuthUserRecord, context: AuthEventContext) => {
       const batch = createBatch({ concurrency });
       const result = await handler(user, { ...context, batch });
-      if (!batch.isEmpty) {
-        await batch.commit();
-      }
+      if (!batch.isEmpty) await batch.commit();
       return result;
     },
     () => ({
