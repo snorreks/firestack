@@ -47,8 +47,11 @@ const installInteractiveFilter = (subprocess: Subprocess): (() => void) => {
 
     // Always capture via the stream (execa result.stdout will still have it)
 
-    // Check for interactive markers in the raw chunk (before line-splitting)
-    const hasPrompt = /\? /.test(data) || data.includes('❯');
+    // Check for interactive markers on ANSI-stripped data.
+    // Firebase/inquirer outputs: \x1b[36m?\x1b[39m prompt text, so
+    // ANSI codes sit between ? and the space — strip them before testing.
+    const stripped = data.replace(ANSI_ESCAPE_RE, '');
+    const hasPrompt = /\? /.test(stripped) || stripped.includes('❯');
 
     if (hasPrompt && !isInInteractive) {
       // Flush recent context so user understands the prompt
