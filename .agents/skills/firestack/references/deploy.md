@@ -85,6 +85,7 @@ After deployment succeeds:
 | `--only <names>` | Comma-separated list. Can include function names, `dataconnect`, `rules`, or a mix. |
 | `--skip-rules` | Skip deploying rules and indexes. |
 | `--skip-dataconnect` | Skip deploying Data Connect. |
+| `--deploy-engine <engine>` | Deployment engine: `firebase-tools` (default) or `gcloud`. Gcloud works for HTTP/callable, Firestore, Storage, RTDB, PubSub, Scheduler, and Tasks triggers. Other triggers fall back to firebase-tools. |
 | `--concurrency <num>` | Parallel deployments (default: `5`). |
 | `--retryAmount <num>` | Auto-retry failed deployments. |
 | `--tsconfig <path>` | Path to a custom `tsconfig.json` (e.g., `tsconfig.app.json`). |

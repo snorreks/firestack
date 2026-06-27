@@ -230,6 +230,7 @@ export const getBaseOptions = async (cliOptions: BaseCliOptions) => {
       cliOptions.dataconnectDirectory || config.dataconnectDirectory || 'dataconnect',
     chokidarPolling: cliOptions.chokidarPolling ?? config.chokidarPolling ?? 'auto',
     artifactRetentionDays: cliOptions.artifactRetentionDays ?? config.artifactRetentionDays,
+    deployEngine: cliOptions.deployEngine ?? config.deployEngine ?? 'firebase-tools',
   };
 };
 

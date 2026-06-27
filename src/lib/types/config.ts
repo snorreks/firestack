@@ -68,6 +68,19 @@ export type FirestackConfig = {
    * When unset (default), no cleanup policy is configured automatically.
    */
   artifactRetentionDays?: number;
+  /**
+   * The deployment engine to use for Cloud Functions.
+   *
+   * - `'firebase-tools'` (default): Use the Firebase CLI to deploy functions.
+   *   This is the most compatible option and works for all trigger types.
+   * - `'gcloud'`: Use `gcloud functions deploy` directly. This is faster and
+   *   avoids firebase-tools CI issues, but some trigger types (AI, Alerts,
+   *   Remote Config, Test Lab) are not supported and will fall back to
+   *   firebase-tools.
+   *
+   * @default 'firebase-tools'
+   */
+  deployEngine?: 'firebase-tools' | 'gcloud';
   rulesTests?: {
     firestore?: RulesTestConfig;
     storage?: RulesTestConfig;

@@ -98,6 +98,32 @@ firestack emulate --mode development --open
 | `sourcemap` | `true` | Generate sourcemaps |
 | `external` | `[]` | Dependencies kept external |
 | `includeFilePath` | `src/logger.ts` | Auto-imported into every function |
+| `artifactRetentionDays` | — | Days to keep container images before cleanup |
+| `deployEngine` | `firebase-tools` | Deployment engine: `firebase-tools` or `gcloud` |
+
+## Deployment Engine
+
+By default, Firestack uses `firebase-tools` to deploy functions. You can optionally switch to `gcloud functions deploy` for HTTP/callable, Firestore, Storage, RTDB, PubSub, Scheduler, and Tasks triggers:
+
+```bash
+firestack deploy --mode production --deploy-engine gcloud
+```
+
+Or in config:
+
+```ts
+export default defineConfig({
+  deployEngine: "gcloud",
+  // ...
+});
+```
+
+| Engine | Pros | Cons |
+|---|---|---|
+| `firebase-tools` **(default)** | All trigger types, emulator, rules, Data Connect | Can crash silently in CI |
+| `gcloud` | Faster, avoids CI issues, works on HTTP/callable/event functions | No Auth v1, Identity blocking, Eventarc, Alerts, AI, TestLab, RemoteConfig triggers |
+
+Triggers unsupported by gcloud automatically fall back to `firebase-tools`.
 
 ## Commands
 

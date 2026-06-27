@@ -42,6 +42,8 @@ export type BaseCliOptions = {
   chokidarPolling?: boolean | 'auto';
   /** Number of days to retain container images in Artifact Registry before deletion. */
   artifactRetentionDays?: number;
+  /** Deployment engine: 'firebase-tools' (default) or 'gcloud'. */
+  deployEngine?: 'firebase-tools' | 'gcloud';
 };
 
 export type DeployCliOptions = BaseCliOptions & {
@@ -54,6 +56,7 @@ export type DeployCliOptions = BaseCliOptions & {
   skipRules?: boolean;
   skipDataconnect?: boolean;
   artifactRetentionDays?: number;
+  deployEngine?: 'firebase-tools' | 'gcloud';
 };
 
 export type DeployCommandOptions = {
@@ -92,6 +95,7 @@ export type DeployCommandOptions = {
   includeFilePath?: string;
   tsconfig?: string;
   artifactRetentionDays?: number;
+  deployEngine?: 'firebase-tools' | 'gcloud';
 };
 
 export type EmulateCliOptions = BaseCliOptions & {

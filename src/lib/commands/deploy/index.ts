@@ -396,4 +396,8 @@ export const deployCommand = new Command('deploy')
     'Number of days to retain container images in Artifact Registry. Sets a cleanup policy via functions:artifacts:setpolicy.',
     (val) => parseInt(val, 10)
   )
+  .option(
+    '--deploy-engine <deployEngine>',
+    'Deployment engine: firebase-tools (default) or gcloud.'
+  )
   .action(deployAction);

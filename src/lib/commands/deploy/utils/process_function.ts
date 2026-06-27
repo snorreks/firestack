@@ -197,7 +197,12 @@ export const executeFunctionDeployment = async (options: {
     if (!installSuccess) return { functionName, status: 'failed' };
 
     // 3. Deploy
-    const deployResult = await deployAction({ functionName, outputDirectory, deployOptions });
+    const deployResult = await deployAction({
+      functionName,
+      outputDirectory,
+      deployOptions,
+      metadata,
+    });
     if (!deployResult.success) return { functionName, status: 'failed' };
 
     // 3. Cache
@@ -381,13 +386,299 @@ const installDependencies = async (options: {
   return true;
 };
 
-const deployAction = async (options: {
+// ── Gcloud deploy helpers ──────────────────────────────────────────────────
+
+/** Trigger types that gcloud functions deploy can handle natively. */
+const GCLOUD_SUPPORTED_TRIGGERS = new Set<DeployFunction>([
+  'onCall',
+  'onCallZod',
+  'onRequest',
+  'onRequestZod',
+  'onCreated',
+  'onCreatedZod',
+  'onDocumentCreated',
+  'onUpdated',
+  'onUpdatedZod',
+  'onDocumentUpdated',
+  'onDeleted',
+  'onDeletedZod',
+  'onDocumentDeleted',
+  'onWritten',
+  'onWrittenZod',
+  'onDocumentWritten',
+  'onObjectArchived',
+  'onObjectDeleted',
+  'onObjectFinalized',
+  'onObjectMetadataUpdated',
+  'onMessagePublished',
+  'onSchedule',
+  'onTaskDispatched',
+  'onValueCreated',
+  'onValueDeleted',
+  'onValueUpdated',
+  'onValueWritten',
+]);
+
+/** Returns true when the trigger can be deployed via gcloud instead of firebase-tools. */
+const isGcloudSupported = (deployFunction: DeployFunction): boolean => {
+  return GCLOUD_SUPPORTED_TRIGGERS.has(deployFunction);
+};
+
+/** Builds a Firestore document path pattern for --trigger-event-filters-path-pattern. */
+const buildFirestoreDocumentPattern = (functionOptions: FunctionOptions): string => {
+  return (functionOptions.document as string) || '{document}';
+};
+
+/**
+ * Builds a Firestore database filter for --trigger-event-filters.
+ * Returns the database name (defaults to '(default)').
+ */
+const buildFirestoreDatabase = (functionOptions: FunctionOptions): string => {
+  return (functionOptions.database as string) || '(default)';
+};
+
+/** Builds a Storage bucket name for --trigger-event-filters. */
+const buildStorageBucket = (functionOptions: FunctionOptions): string => {
+  return (functionOptions.bucket as string) || '';
+};
+
+/** Builds RTDB instance + ref path for trigger-event-filters. */
+const buildDatabaseInstance = (functionOptions: FunctionOptions): string => {
+  return (functionOptions.instance as string) || '';
+};
+
+const buildDatabaseRef = (functionOptions: FunctionOptions): string => {
+  const ref = (functionOptions.ref as string) || 'ref';
+  return ref.startsWith('/') ? ref : `/${ref}`;
+};
+
+/**
+ * Builds the full gcloud functions deploy arguments for a given trigger type.
+ * Returns the complete argument array (everything except the command name).
+ */
+const buildGcloudDeployArgs = (options: {
+  functionName: string;
+  outputDirectory: string;
+  deployFunction: DeployFunction;
+  functionOptions: FunctionOptions;
+  projectId: string;
+  region: string;
+  nodeVersion: string;
+}): string[] => {
+  const {
+    functionName,
+    outputDirectory,
+    deployFunction,
+    functionOptions,
+    projectId,
+    region,
+    nodeVersion,
+  } = options;
+
+  const args = [
+    'functions',
+    'deploy',
+    functionName,
+    '--source',
+    outputDirectory,
+    '--region',
+    region,
+    '--project',
+    projectId,
+    '--entry-point',
+    functionName,
+    '--runtime',
+    `nodejs${nodeVersion}`,
+    '--gen2',
+  ];
+
+  switch (deployFunction) {
+    // ── HTTP / Callable ────────────────────────────────────────────
+    case 'onCall':
+    case 'onCallZod':
+    case 'onRequest':
+    case 'onRequestZod':
+      args.push('--trigger-http', '--allow-unauthenticated');
+      break;
+
+    // ── Firestore ────────────────────────────────────────────────
+    case 'onCreated':
+    case 'onCreatedZod':
+    case 'onDocumentCreated':
+      args.push(
+        `--trigger-event-filters=type=google.cloud.firestore.document.v1.created`,
+        `--trigger-event-filters=database=${buildFirestoreDatabase(functionOptions)}`,
+        `--trigger-event-filters-path-pattern=document=${buildFirestoreDocumentPattern(functionOptions)}`
+      );
+      break;
+    case 'onUpdated':
+    case 'onUpdatedZod':
+    case 'onDocumentUpdated':
+      args.push(
+        `--trigger-event-filters=type=google.cloud.firestore.document.v1.updated`,
+        `--trigger-event-filters=database=${buildFirestoreDatabase(functionOptions)}`,
+        `--trigger-event-filters-path-pattern=document=${buildFirestoreDocumentPattern(functionOptions)}`
+      );
+      break;
+    case 'onDeleted':
+    case 'onDeletedZod':
+    case 'onDocumentDeleted':
+      args.push(
+        `--trigger-event-filters=type=google.cloud.firestore.document.v1.deleted`,
+        `--trigger-event-filters=database=${buildFirestoreDatabase(functionOptions)}`,
+        `--trigger-event-filters-path-pattern=document=${buildFirestoreDocumentPattern(functionOptions)}`
+      );
+      break;
+    case 'onWritten':
+    case 'onWrittenZod':
+    case 'onDocumentWritten':
+      args.push(
+        `--trigger-event-filters=type=google.cloud.firestore.document.v1.written`,
+        `--trigger-event-filters=database=${buildFirestoreDatabase(functionOptions)}`,
+        `--trigger-event-filters-path-pattern=document=${buildFirestoreDocumentPattern(functionOptions)}`
+      );
+      break;
+
+    // ── Storage ──────────────────────────────────────────────────
+    case 'onObjectArchived':
+      args.push(
+        '--trigger-event-filters=type=google.cloud.storage.object.v1.archived',
+        `--trigger-event-filters=bucket=${buildStorageBucket(functionOptions)}`
+      );
+      break;
+    case 'onObjectDeleted':
+      args.push(
+        '--trigger-event-filters=type=google.cloud.storage.object.v1.deleted',
+        `--trigger-event-filters=bucket=${buildStorageBucket(functionOptions)}`
+      );
+      break;
+    case 'onObjectFinalized':
+      args.push(
+        '--trigger-event-filters=type=google.cloud.storage.object.v1.finalized',
+        `--trigger-event-filters=bucket=${buildStorageBucket(functionOptions)}`
+      );
+      break;
+    case 'onObjectMetadataUpdated':
+      args.push(
+        '--trigger-event-filters=type=google.cloud.storage.object.v1.metadataUpdated',
+        `--trigger-event-filters=bucket=${buildStorageBucket(functionOptions)}`
+      );
+      break;
+
+    // ── PubSub ───────────────────────────────────────────────────
+    case 'onMessagePublished': {
+      const topic = functionOptions.topic;
+      if (typeof topic !== 'string') {
+        throw new Error('onMessagePublished requires a topic option');
+      }
+      args.push('--trigger-topic', topic);
+      break;
+    }
+
+    // ── Scheduler & Tasks (HTTP-triggered with external orchestration)
+    case 'onSchedule':
+    case 'onTaskDispatched':
+      args.push('--trigger-http');
+      break;
+
+    // ── Realtime Database ────────────────────────────────────────
+    case 'onValueCreated':
+      args.push(
+        '--trigger-event-filters=type=google.firebase.database.ref.v1.created',
+        `--trigger-event-filters-path-pattern=ref=${buildDatabaseRef(functionOptions)}`
+      );
+      if (buildDatabaseInstance(functionOptions)) {
+        args.push(`--trigger-event-filters=instance=${buildDatabaseInstance(functionOptions)}`);
+      }
+      break;
+    case 'onValueDeleted':
+      args.push(
+        '--trigger-event-filters=type=google.firebase.database.ref.v1.deleted',
+        `--trigger-event-filters-path-pattern=ref=${buildDatabaseRef(functionOptions)}`
+      );
+      if (buildDatabaseInstance(functionOptions)) {
+        args.push(`--trigger-event-filters=instance=${buildDatabaseInstance(functionOptions)}`);
+      }
+      break;
+    case 'onValueUpdated':
+      args.push(
+        '--trigger-event-filters=type=google.firebase.database.ref.v1.updated',
+        `--trigger-event-filters-path-pattern=ref=${buildDatabaseRef(functionOptions)}`
+      );
+      if (buildDatabaseInstance(functionOptions)) {
+        args.push(`--trigger-event-filters=instance=${buildDatabaseInstance(functionOptions)}`);
+      }
+      break;
+    case 'onValueWritten':
+      args.push(
+        '--trigger-event-filters=type=google.firebase.database.ref.v1.written',
+        `--trigger-event-filters-path-pattern=ref=${buildDatabaseRef(functionOptions)}`
+      );
+      if (buildDatabaseInstance(functionOptions)) {
+        args.push(`--trigger-event-filters=instance=${buildDatabaseInstance(functionOptions)}`);
+      }
+      break;
+  }
+
+  return args;
+};
+
+/**
+ * Deploys a function using gcloud functions deploy.
+ */
+const deployViaGcloud = async (options: {
+  functionName: string;
+  outputDirectory: string;
+  deployOptions: DeployCommandOptions;
+  metadata: FunctionMetadata;
+}): Promise<{ success: boolean; cleanupWarning?: string }> => {
+  const { functionName, outputDirectory, deployOptions, metadata } = options;
+  const { deployFunction, functionOptions, firestackOptions } = metadata;
+  const nodeVersion = firestackOptions?.nodeVersion ?? deployOptions.nodeVersion;
+  const region = deployOptions.region || 'europe-west3';
+
+  const args = buildGcloudDeployArgs({
+    functionName,
+    outputDirectory,
+    deployFunction,
+    functionOptions,
+    projectId: deployOptions.projectId || '',
+    region,
+    nodeVersion,
+  });
+
+  logger.debug(`gcloud ${args.join(' ')}`);
+
+  try {
+    const result = await executeCommand('gcloud', {
+      args,
+      packageManager: 'global',
+    });
+
+    if (result.success) {
+      logger.info(chalk.dim(`Successfully deployed ${functionName} via gcloud.`));
+      return { success: true };
+    }
+
+    logger.error(`❌ gcloud deploy failed for ${functionName}:`);
+    logger.error(chalk.red(result.stderr || result.stdout));
+    return { success: false };
+  } catch (deployError) {
+    logger.error(`Failed to deploy ${functionName} via gcloud: ${(deployError as Error).message}`);
+    return { success: false };
+  }
+};
+
+/**
+ * Deploys a function using firebase-tools (fallback for unsupported trigger types).
+ */
+const deployViaFirebase = async (options: {
   functionName: string;
   outputDirectory: string;
   deployOptions: DeployCommandOptions;
 }): Promise<{ success: boolean; cleanupWarning?: string }> => {
   const { functionName, outputDirectory, deployOptions } = options;
-  if (!deployOptions.projectId) throw new Error('Project ID is required.');
+  const projectId = deployOptions.projectId || '';
 
   const deployArgs = [
     'deploy',
@@ -396,7 +687,7 @@ const deployAction = async (options: {
     '--only',
     `functions:${functionName}`,
     '--project',
-    deployOptions.projectId,
+    projectId,
   ];
   if (deployOptions.force) {
     deployArgs.push('--force');
@@ -426,16 +717,38 @@ const deployAction = async (options: {
       return { success: true, cleanupWarning: combinedOutput.trim() };
     }
 
+    // Always surface the full firebase-tools output on failure
     logger.error(`❌ Failed to deploy ${functionName}.`);
     if (result.stderr) {
-      logger.error(chalk.red(result.stderr));
+      logger.error(chalk.red(`firebase-tools stderr:\n${result.stderr}`));
     }
-    if (result.stdout && !deployOptions.verbose) {
-      logger.error(chalk.dim(result.stdout));
+    if (result.stdout) {
+      logger.error(chalk.dim(`firebase-tools stdout:\n${result.stdout}`));
     }
     return { success: false };
   } catch (deployError) {
     logger.error(`Failed to deploy ${functionName}: ${(deployError as Error).message}`);
     return { success: false };
   }
+};
+
+const deployAction = async (options: {
+  functionName: string;
+  outputDirectory: string;
+  deployOptions: DeployCommandOptions;
+  metadata?: FunctionMetadata;
+}): Promise<{ success: boolean; cleanupWarning?: string }> => {
+  const { functionName, outputDirectory, deployOptions, metadata } = options;
+  if (!deployOptions.projectId) throw new Error('Project ID is required.');
+
+  const useGcloud =
+    (deployOptions.deployEngine ?? 'firebase-tools') === 'gcloud' &&
+    metadata?.deployFunction &&
+    isGcloudSupported(metadata.deployFunction);
+
+  if (useGcloud && metadata) {
+    return deployViaGcloud({ functionName, outputDirectory, deployOptions, metadata });
+  }
+
+  return deployViaFirebase({ functionName, outputDirectory, deployOptions });
 };
