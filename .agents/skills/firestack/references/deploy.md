@@ -90,4 +90,12 @@ After deployment succeeds:
 | `--retryAmount <num>` | Auto-retry failed deployments. |
 | `--tsconfig <path>` | Path to a custom `tsconfig.json` (e.g., `tsconfig.app.json`). |
 | `--artifactRetentionDays <days>` | Number of days to retain container images in Artifact Registry. Runs `functions:artifacts:setpolicy` **before** deployment to prevent Firebase CLI prompts. |
+| `--includeFilePath <path>` | Relative path to a file auto-imported into every generated function index (e.g., `src/logger.ts`). |
+| `--functionsDirectory <dir>` | Override the functions directory (from config). |
+| `--rulesDirectory <dir>` | Override the rules directory (from config). |
+| `--external <deps>` | Comma-separated external dependencies installed at deploy time. |
+| `--node-version <version>` | Node.js version (`18`, `20`, `22`, `24`). |
+| `--debug` | Enable debug mode (keeps temporary build files). |
 | `--verbose` | Show full Firebase CLI output. |
+| `--skip-rules` | Skip deploying rules and indexes. |
+| `--skip-dataconnect` | Skip deploying Data Connect. |
