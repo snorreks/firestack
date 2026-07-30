@@ -1,9 +1,10 @@
 import { join } from 'node:path';
-import { cwd } from 'node:process';
+import { cwd, env as processEnv } from 'node:process';
 import { logger } from '$logger';
 import type { CacheContext, FunctionsCache, FunctionsCacheGet, FunctionsCacheUpdate } from '$types';
 import { loadChecksums } from '$utils/checksum.ts';
 import { exists } from '$utils/common.ts';
+import { getEnvironment } from '$utils/environment.ts';
 
 type RemoteCacheModule = {
   get: FunctionsCacheGet;
@@ -21,7 +22,7 @@ export const getCacheContext = async (options: {
 }): Promise<CacheContext> => {
   const { mode, cloudCacheFileName } = options;
   const [remoteUtils, localCache] = await Promise.all([
-    getRemoteCacheUtils(cloudCacheFileName),
+    getRemoteCacheUtils(cloudCacheFileName, mode),
     loadChecksums({
       outputDirectory: join(cwd(), 'dist'),
       mode,
@@ -56,7 +57,8 @@ export const getCacheContext = async (options: {
  * @returns An object containing the get and update functions for the remote cache.
  */
 export const getRemoteCacheUtils = async (
-  cloudCacheFileName: string
+  cloudCacheFileName: string,
+  mode: string
 ): Promise<{
   getCacheCallable: FunctionsCacheGet | undefined;
   updateCacheCallable: FunctionsCacheUpdate | undefined;
@@ -68,6 +70,18 @@ export const getRemoteCacheUtils = async (
     return { getCacheCallable: undefined, updateCacheCallable: undefined };
   }
   logger.debug(`Remote cache user script (${cloudCacheFileName}) found!`);
+
+  // Load environment variables from .env and .env.{mode} before importing
+  // the user's cache script, so it has access to required env vars (e.g. REDIS_URL).
+  try {
+    const env = await getEnvironment(mode);
+    for (const [key, value] of Object.entries(env)) {
+      processEnv[key] = value;
+    }
+    logger.debug(`Injected environment variables for cache script (${cloudCacheFileName})`);
+  } catch (error) {
+    logger.debug('Failed to load environment for cache script:', error);
+  }
 
   try {
     const cacheModule = (await import(cacheFilePath)) as RemoteCacheModule;
