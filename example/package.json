@@ -22,8 +22,8 @@
     "sync": "cd .. && bun run build && cd example/apps/firebase && bun install && cd ../../packages/types && bun install"
   },
   "devDependencies": {
-    "typescript": "^6.0.3",
-    "@biomejs/biome": "^2.5.1"
+    "@biomejs/biome": "^2.5.6",
+    "typescript": "^7.0.2"
   },
   "dependencies": {
     "latest": "^0.2.0",

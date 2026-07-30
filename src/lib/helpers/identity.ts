@@ -11,12 +11,26 @@ import { wrapWithLogContext } from './logging.ts';
 
 const DEFAULT_BATCH_CONCURRENCY = 5;
 
+/**
+ * Blocks an email from being sent to a Firebase Auth user.
+ * Runs before the email is dispatched and can modify or block it.
+ *
+ * @param handler - Handler that receives the user record and event context with a {@link Batch} for queuing async work.
+ * @param options - Optional configuration for the function.
+ */
 export const beforeEmailSent = createAuthEventHandler<
   AuthUserRecord,
   AuthEventContext,
   IdentityTriggerOptions
 >('identity.beforeEmailSent', () => crypto.randomUUID());
 
+/**
+ * Blocks an SMS from being sent to a Firebase Auth user.
+ * Runs before the SMS is dispatched and can modify or block it.
+ *
+ * @param handler - Handler that receives the user record and event context with a {@link Batch} for queuing async work.
+ * @param options - Optional configuration for the function.
+ */
 export const beforeSmsSent = createAuthEventHandler<
   AuthUserRecord,
   AuthEventContext,

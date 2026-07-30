@@ -86,6 +86,11 @@ export const rulesAction = async (
 
   logger.info(`🔍 Found ${chalk.bold.cyan(rulesToDeploy.length)} rule/index file(s) to deploy.`);
 
+  if (cliOptions.dryRun) {
+    logger.info(chalk.blue('📝 Dry run: skipping rules and indexes deployment.'));
+    return;
+  }
+
   // 4. Prepare deployment in a temporary directory
   const tempDirectory = await prepareDeploymentDirectory(rulesToDeploy, rulesDir);
 

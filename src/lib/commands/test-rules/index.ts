@@ -123,12 +123,12 @@ const waitForEmulatorReady = async (
     subprocess.stdout?.on('data', onData);
     subprocess.stderr?.on('data', onData);
 
-    subprocess.on('error', (error) => {
+    subprocess.nodeChildProcess.on('error', (error: Error) => {
       clearTimeout(timeout);
       reject(error);
     });
 
-    subprocess.on('exit', (code) => {
+    subprocess.nodeChildProcess.on('exit', (code: number | null) => {
       if (code !== 0 && code !== undefined) {
         clearTimeout(timeout);
         const recentOutput = outputBuffer.slice(-20).join('\n');
@@ -252,13 +252,13 @@ const killEmulator = async (
   subprocess: ReturnType<typeof execa>,
   type: RulesTestTarget
 ): Promise<void> => {
-  if (subprocess.killed) {
+  if (subprocess.nodeChildProcess.killed) {
     return;
   }
   logger.debug(`Shutting down ${type} emulator...`);
   subprocess.kill('SIGTERM');
   await new Promise((resolve) => setTimeout(resolve, 2000));
-  if (!subprocess.killed) {
+  if (!subprocess.nodeChildProcess.killed) {
     subprocess.kill('SIGKILL');
   }
 };

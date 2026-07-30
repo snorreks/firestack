@@ -266,6 +266,7 @@ export type DeleteCommandOptions = {
 export type RulesCliOptions = BaseCliOptions & {
   only?: string;
   force?: boolean;
+  dryRun?: boolean;
 };
 
 export type SyncCliOptions = BaseCliOptions & {
@@ -276,6 +277,7 @@ export type RulesCommandOptions = {
   mode: string;
   projectId: string;
   functionsDirectory: string;
+  dryRun?: boolean;
   rulesDirectory: string;
   nodeVersion: NodeVersion;
   region: string;

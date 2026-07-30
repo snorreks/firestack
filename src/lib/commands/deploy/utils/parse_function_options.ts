@@ -1,14 +1,4 @@
-import {
-  createSourceFile,
-  forEachChild,
-  isCallExpression,
-  isExportAssignment,
-  isIdentifier,
-  isObjectLiteralExpression,
-  isVariableDeclaration,
-  ScriptTarget,
-  type SourceFile,
-} from 'typescript';
+import ts from 'typescript';
 import { functions, VALID_FIREBASE_OPTIONS, VALID_FIRESTACK_OPTIONS } from '$constants';
 import { logger } from '$logger';
 import type { DeployFunction, FirestackOptions, FunctionOptions, OptionValue } from '$types';
@@ -24,20 +14,20 @@ export const extractAndValidateOptions = (options: {
   firestackOptions: FirestackOptions;
 } => {
   const { fileContent, functionPath, defaultRegion } = options;
-  // Parsing with ScriptTarget.Latest and setParentNodes to false (default) is incredibly fast
-  const sourceFile = createSourceFile(functionPath, fileContent, ScriptTarget.Latest, true);
+  // Parsing with ts.ScriptTarget.Latest and setParentNodes to false (default) is incredibly fast
+  const sourceFile = ts.createSourceFile(functionPath, fileContent, ts.ScriptTarget.Latest, true);
 
   let deployFunction: DeployFunction | undefined;
   let optionsString = '{}';
 
   // 1. Traverse AST to find the export default call
-  forEachChild(sourceFile, (node) => {
-    if (isExportAssignment(node)) {
+  ts.forEachChild(sourceFile, (node) => {
+    if (ts.isExportAssignment(node)) {
       const expression = node.expression;
-      if (isCallExpression(expression)) {
+      if (ts.isCallExpression(expression)) {
         const callee = expression.expression;
 
-        if (isIdentifier(callee) && functions.includes(callee.text as DeployFunction)) {
+        if (ts.isIdentifier(callee) && functions.includes(callee.text as DeployFunction)) {
           deployFunction = callee.text as DeployFunction;
 
           // 2. Get the last argument
@@ -45,10 +35,10 @@ export const extractAndValidateOptions = (options: {
           const lastArg = args[args.length - 1];
 
           if (lastArg) {
-            if (isObjectLiteralExpression(lastArg)) {
+            if (ts.isObjectLiteralExpression(lastArg)) {
               // Scenario A: It's an inline object {...}
               optionsString = lastArg.getText(sourceFile);
-            } else if (isIdentifier(lastArg)) {
+            } else if (ts.isIdentifier(lastArg)) {
               // Scenario B: It's a variable reference. Find it!
               optionsString = findVariableObjectLiteral(sourceFile, lastArg.text) ?? '{}';
             }
@@ -100,12 +90,15 @@ export const extractAndValidateOptions = (options: {
  * Ensures each function file exports exactly one default.
  * Multiple defaults or mixed named + default exports are errors.
  */
-const enforceSingleExport = (options: { sourceFile: SourceFile; functionPath: string }): void => {
+const enforceSingleExport = (options: {
+  sourceFile: ts.SourceFile;
+  functionPath: string;
+}): void => {
   const { sourceFile, functionPath } = options;
   let defaultCount = 0;
 
-  forEachChild(sourceFile, (node) => {
-    if (isExportAssignment(node)) {
+  ts.forEachChild(sourceFile, (node) => {
+    if (ts.isExportAssignment(node)) {
       defaultCount++;
     }
   });
@@ -179,14 +172,21 @@ const validateV2Options = (options: {
  * Searches the AST for a variable declaration matching the given name
  * and extracts its object literal value if it exists.
  */
-const findVariableObjectLiteral = (sourceFile: SourceFile, varName: string): string | undefined => {
+const findVariableObjectLiteral = (
+  sourceFile: ts.SourceFile,
+  varName: string
+): string | undefined => {
   let objectString: string | undefined;
 
-  forEachChild(sourceFile, (node) => {
+  ts.forEachChild(sourceFile, (node) => {
     // Look for variable statements at the top level
-    forEachChild(node, (child) => {
-      if (isVariableDeclaration(child) && isIdentifier(child.name) && child.name.text === varName) {
-        if (child.initializer && isObjectLiteralExpression(child.initializer)) {
+    ts.forEachChild(node, (child) => {
+      if (
+        ts.isVariableDeclaration(child) &&
+        ts.isIdentifier(child.name) &&
+        child.name.text === varName
+      ) {
+        if (child.initializer && ts.isObjectLiteralExpression(child.initializer)) {
           objectString = child.initializer.getText(sourceFile);
         }
       }

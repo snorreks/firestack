@@ -10,6 +10,14 @@ import { wrapWithLogContext } from './logging.ts';
 
 const DEFAULT_BATCH_CONCURRENCY = 5;
 
+/**
+ * Typed HTTP request object for onRequest handlers.
+ * Extends the Firebase {@link Request} with typed body, params, and raw body.
+ *
+ * @typeParam T - The shape of the route parameters.
+ * @typeParam _ResBody - The shape of the response body.
+ * @typeParam ReqBody - The shape of the request body.
+ */
 export type FirebaseRequest<
   T extends Record<string, string> = Record<string, string>,
   _ResBody = unknown,
@@ -20,7 +28,14 @@ export type FirebaseRequest<
   params: T;
 };
 
-/** User-facing handler type (receives batch). */
+/**
+ * Handler type for onRequest functions.
+ * Provides typed request/response plus a {@link Batch} for async work.
+ *
+ * @typeParam AllFunctions - Your request functions type mapping.
+ * @typeParam FunctionName - The name of this specific function.
+ * @typeParam Params - The shape of route parameters.
+ */
 export type RequestHandler<
   AllFunctions extends RequestFunctions,
   FunctionName extends keyof AllFunctions,
@@ -32,7 +47,14 @@ export type RequestHandler<
   response: Response<AllFunctions[FunctionName][1]>
 ) => Promise<void> | void;
 
-/** User-facing Zod request handler type (receives batch). */
+/**
+ * Handler type for onRequestZod functions.
+ * Provides a Zod-typed request body plus a {@link Batch} for async work.
+ *
+ * @typeParam Body - The Zod-inferred request body type.
+ * @typeParam ResBody - The shape of the response body.
+ * @typeParam Params - The shape of route parameters.
+ */
 export type ZodRequestHandler<
   Body extends Record<string, unknown> = Record<string, unknown>,
   ResBody = unknown,
@@ -42,7 +64,13 @@ export type ZodRequestHandler<
   response: Response<ResBody>
 ) => Promise<void> | void;
 
-/** User-facing call handler type (receives batch). */
+/**
+ * Handler type for onCall functions.
+ * Provides typed callable request plus a {@link Batch} for async work.
+ *
+ * @typeParam AllFunctions - Your callable functions type mapping.
+ * @typeParam FunctionName - The name of this specific function.
+ */
 export type CallHandler<
   AllFunctions extends CallableFunctions,
   FunctionName extends keyof AllFunctions,
@@ -50,7 +78,13 @@ export type CallHandler<
   request: CallableRequest<AllFunctions[FunctionName][0]> & { batch: Batch }
 ) => Promise<AllFunctions[FunctionName][1]> | AllFunctions[FunctionName][1];
 
-/** User-facing Zod call handler type (receives batch). */
+/**
+ * Handler type for onCallZod functions.
+ * Provides a Zod-typed callable request data plus a {@link Batch} for async work.
+ *
+ * @typeParam Body - The Zod-inferred request body type.
+ * @typeParam ResBody - The return type of the callable function.
+ */
 export type ZodCallHandler<Body = unknown, ResBody = unknown> = (
   request: CallableRequest<Body> & { batch: Batch }
 ) => Promise<ResBody> | ResBody;

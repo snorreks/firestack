@@ -68,9 +68,9 @@ export type ReferenceOptions = Omit<BaseFunctionOptions, 'enforceAppCheck'> &
 
 export type ScheduleOptions = Omit<BaseFunctionOptions, 'enforceAppCheck'> & FBScheduleOptions;
 
-export type ObjectTriggerOptions = Omit<BaseFunctionOptions, 'region'> & StorageOptions;
+export type ObjectTriggerOptions = BaseFunctionOptions & StorageOptions;
 
-export type AuthTriggerOptions = Omit<BaseFunctionOptions, 'region'>;
+export type AuthTriggerOptions = BaseFunctionOptions;
 
 export type IdentityTriggerOptions = BaseFunctionOptions;
 

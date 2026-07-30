@@ -11,11 +11,23 @@ import { type Batch, createBatch } from '$utils/batch.ts';
 import { createAuthEventHandler } from './factory.ts';
 import { wrapWithLogContext } from './logging.ts';
 
+/**
+ * Handles the creation of a new Firebase Auth user.
+ *
+ * @param handler - Handler that receives the user record and event context with a {@link Batch} for queuing async work.
+ * @param options - Optional configuration including region for the function.
+ */
 export const onAuthCreate = createAuthEventHandler<UserRecord, EventContext, AuthTriggerOptions>(
   'auth.onCreate',
   (_, context) => context.eventId
 );
 
+/**
+ * Handles the deletion of a Firebase Auth user.
+ *
+ * @param handler - Handler that receives the user record and event context with a {@link Batch} for queuing async work.
+ * @param options - Optional configuration including region for the function.
+ */
 export const onAuthDelete = createAuthEventHandler<UserRecord, EventContext, AuthTriggerOptions>(
   'auth.onDelete',
   (_, context) => context.eventId

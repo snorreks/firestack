@@ -666,7 +666,7 @@ export const emulateCommand = new Command('emulate')
     let emulatorSubprocess: Subprocess | undefined;
 
     const cleanupOnExit = () => {
-      if (emulatorSubprocess && !emulatorSubprocess.killed) {
+      if (emulatorSubprocess?.nodeChildProcess && !emulatorSubprocess.nodeChildProcess.killed) {
         const pid = emulatorSubprocess.pid;
         if (pid !== undefined) {
           try {

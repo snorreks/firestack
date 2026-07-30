@@ -19,7 +19,13 @@ const buildFirestoreLogContext = (event: FirestoreEvent<unknown, ParamsOf<string
   requestId: event.id,
 });
 
-/** Respond only to document creations. */
+/**
+ * Responds only to document creations.
+ * Provides a raw {@link QueryDocumentSnapshot} without type coercion.
+ *
+ * @param handler - Handler that receives the Firestore event and a {@link Batch} for queuing async work.
+ * @param options - Optional configuration including document path.
+ */
 export const onDocumentCreated = <Document extends string = string>(
   handler: (
     event: FirestoreEvent<QueryDocumentSnapshot | undefined, ParamsOf<Document>> & { batch: Batch }
@@ -41,7 +47,13 @@ export const onDocumentCreated = <Document extends string = string>(
   );
 };
 
-/** Respond only to document deletions. */
+/**
+ * Responds only to document deletions.
+ * Provides a raw {@link QueryDocumentSnapshot} without type coercion.
+ *
+ * @param handler - Handler that receives the Firestore event and a {@link Batch} for queuing async work.
+ * @param options - Optional configuration including document path.
+ */
 export const onDocumentDeleted = <Document extends string = string>(
   handler: (
     event: FirestoreEvent<QueryDocumentSnapshot | undefined, ParamsOf<Document>> & { batch: Batch }
@@ -63,7 +75,13 @@ export const onDocumentDeleted = <Document extends string = string>(
   );
 };
 
-/** Respond only to document updates. */
+/**
+ * Responds only to document updates.
+ * Provides a raw {@link Change<QueryDocumentSnapshot>} without type coercion.
+ *
+ * @param handler - Handler that receives the Firestore event with before/after data and a {@link Batch} for queuing async work.
+ * @param options - Optional configuration including document path.
+ */
 export const onDocumentUpdated = <Document extends string = string>(
   handler: (
     event: FirestoreEvent<Change<QueryDocumentSnapshot> | undefined, ParamsOf<Document>> & {
@@ -89,7 +107,13 @@ export const onDocumentUpdated = <Document extends string = string>(
   );
 };
 
-/** Respond to all document writes (creates, updates, or deletes). */
+/**
+ * Responds to all document writes (creates, updates, or deletes).
+ * Provides a raw {@link Change<DocumentSnapshot>} without type coercion.
+ *
+ * @param handler - Handler that receives the Firestore event with optional before/after data and a {@link Batch} for queuing async work.
+ * @param options - Optional configuration including document path.
+ */
 export const onDocumentWritten = <Document extends string = string>(
   handler: (
     event: FirestoreEvent<Change<DocumentSnapshot> | undefined, ParamsOf<Document>> & {
@@ -113,7 +137,14 @@ export const onDocumentWritten = <Document extends string = string>(
   );
 };
 
-/** Respond only to document creations. */
+/**
+ * Responds only to document creations.
+ * Coerces the document data into a typed object with an `id` field.
+ *
+ * @typeParam T - The shape of the document data (extends {@link CoreData}).
+ * @param handler - Handler that receives the typed event data and a {@link Batch} for queuing async work.
+ * @param options - Optional configuration including document path.
+ */
 export const onCreated = <T extends CoreData>(
   handler: (event: FirestoreEvent<T> & { batch: Batch }) => PromiseLike<unknown> | unknown,
   options?: DocumentOptions
@@ -141,7 +172,15 @@ export const onCreated = <T extends CoreData>(
   );
 };
 
-/** Respond only to document creations with Zod validation. */
+/**
+ * Responds only to document creations with Zod validation.
+ * Coerces the document data into a typed object and validates against the schema.
+ *
+ * @typeParam T - The shape of the document data (extends {@link CoreData}).
+ * @param schema - Zod schema to validate the document data against.
+ * @param handler - Handler that receives the typed (and validated) event data and a {@link Batch} for queuing async work.
+ * @param options - Optional configuration including document path and Zod validation strategy.
+ */
 export const onCreatedZod = <T extends CoreData>(
   schema: z.ZodSchema<T>,
   handler: (event: FirestoreEvent<T> & { batch: Batch }) => PromiseLike<unknown> | unknown,
@@ -183,7 +222,14 @@ export const onCreatedZod = <T extends CoreData>(
   );
 };
 
-/** Respond only to document deletions. */
+/**
+ * Responds only to document deletions.
+ * Coerces the document data into a typed object with an `id` field.
+ *
+ * @typeParam T - The shape of the document data (extends {@link CoreData}).
+ * @param handler - Handler that receives the typed event data and a {@link Batch} for queuing async work.
+ * @param options - Optional configuration including document path.
+ */
 export const onDeleted = <T extends CoreData>(
   handler: (event: FirestoreEvent<T> & { batch: Batch }) => PromiseLike<unknown> | unknown,
   options?: DocumentOptions
@@ -211,7 +257,15 @@ export const onDeleted = <T extends CoreData>(
   );
 };
 
-/** Respond only to document deletions with Zod validation. */
+/**
+ * Responds only to document deletions with Zod validation.
+ * Coerces the document data into a typed object and validates against the schema.
+ *
+ * @typeParam T - The shape of the document data (extends {@link CoreData}).
+ * @param schema - Zod schema to validate the document data against.
+ * @param handler - Handler that receives the typed (and validated) event data and a {@link Batch} for queuing async work.
+ * @param options - Optional configuration including document path and Zod validation strategy.
+ */
 export const onDeletedZod = <T extends CoreData>(
   schema: z.ZodSchema<T>,
   handler: (event: FirestoreEvent<T> & { batch: Batch }) => PromiseLike<unknown> | unknown,
@@ -253,7 +307,14 @@ export const onDeletedZod = <T extends CoreData>(
   );
 };
 
-/** Respond only to document updates. */
+/**
+ * Responds only to document updates.
+ * Coerces the before/after document data into typed objects with `id` fields.
+ *
+ * @typeParam T - The shape of the document data (extends {@link CoreData}).
+ * @param handler - Handler that receives the typed before/after event data and a {@link Batch} for queuing async work.
+ * @param options - Optional configuration including document path.
+ */
 export const onUpdated = <T extends CoreData>(
   handler: (
     event: FirestoreEvent<{
@@ -289,7 +350,15 @@ export const onUpdated = <T extends CoreData>(
   );
 };
 
-/** Respond only to document updates with Zod validation. */
+/**
+ * Responds only to document updates with Zod validation.
+ * Coerces the before/after document data into typed objects and validates against the schema.
+ *
+ * @typeParam T - The shape of the document data (extends {@link CoreData}).
+ * @param schema - Zod schema to validate the document data against.
+ * @param handler - Handler that receives the typed (and validated) before/after event data and a {@link Batch} for queuing async work.
+ * @param options - Optional configuration including document path and Zod validation strategy.
+ */
 export const onUpdatedZod = <T extends CoreData>(
   schema: z.ZodSchema<T>,
   handler: (
@@ -354,7 +423,14 @@ export const onUpdatedZod = <T extends CoreData>(
   );
 };
 
-/** Respond to all document writes (creates, updates, or deletes). */
+/**
+ * Responds to all document writes (creates, updates, or deletes).
+ * Coerces the before/after document data into typed objects with `id` fields.
+ *
+ * @typeParam T - The shape of the document data (extends {@link CoreData}).
+ * @param handler - Handler that receives the typed before/after event data and a {@link Batch} for queuing async work.
+ * @param options - Optional configuration including document path.
+ */
 export const onWritten = <T extends CoreData>(
   handler: (
     event: FirestoreEvent<{
@@ -386,7 +462,15 @@ export const onWritten = <T extends CoreData>(
   );
 };
 
-/** Respond to all document writes with Zod validation. */
+/**
+ * Responds to all document writes with Zod validation.
+ * Coerces the before/after document data into typed objects and validates against the schema.
+ *
+ * @typeParam T - The shape of the document data (extends {@link CoreData}).
+ * @param schema - Zod schema to validate the document data against.
+ * @param handler - Handler that receives the typed (and validated) before/after event data and a {@link Batch} for queuing async work.
+ * @param options - Optional configuration including document path and Zod validation strategy.
+ */
 export const onWrittenZod = <T extends CoreData>(
   schema: z.ZodSchema<T>,
   handler: (
