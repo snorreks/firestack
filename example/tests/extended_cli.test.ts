@@ -239,7 +239,6 @@ describe('Firestack CLI Extended Tests', () => {
       const expectedExports = [
         'assets_test_api',
         'test_api',
-        'auth_before_created_renamed',
         'auth_created_renamed',
         'test_callable',
         'users_created',

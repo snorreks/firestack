@@ -1,9 +1,11 @@
 #!/usr/bin/env bun
 
 import { spawn } from 'node:child_process';
+import { createWriteStream } from 'node:fs';
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import archiver from 'archiver';
 import esbuild from 'esbuild';
 
 const __dirname = join(fileURLToPath(import.meta.url), '..');
@@ -26,7 +28,9 @@ await mkdir(join(__dirname, 'dist'), { recursive: true });
 
 /**
  * Compiles the firestack skill directory into a zip file.
- * Skips compilation when running in CI or when no zip tool is available.
+ * Uses archiver (pure JavaScript), so no external python/zip tools are required
+ * and it works identically on Windows, macOS, and Linux.
+ * Skips compilation when running in CI.
  * @returns A promise that resolves when compilation is complete
  */
 const compileSkill = async (): Promise<void> => {
@@ -40,78 +44,26 @@ const compileSkill = async (): Promise<void> => {
 
   console.log('📦 Compiling firestack.skill...');
 
-  const compileWithPython = (): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const proc = spawn(
-        'python3',
-        [
-          '-c',
-          `import zipfile, os
-skill_dir = os.sys.argv[1]
-skill_file = os.sys.argv[2]
-with zipfile.ZipFile(skill_file, 'w', zipfile.ZIP_DEFLATED) as zf:
-    for root, dirs, files in os.walk(skill_dir):
-        for file in files:
-            file_path = os.path.join(root, file)
-            arcname = os.path.relpath(file_path, skill_dir)
-            zf.write(file_path, arcname)
-        for dir in dirs:
-            dir_path = os.path.join(root, dir)
-            if not os.listdir(dir_path):
-                arcname = os.path.relpath(dir_path, skill_dir) + '/'
-                zf.write(dir_path, arcname)
-print(f"Created {skill_file}")`,
-          skillDir,
-          skillFile,
-        ],
-        {
-          cwd: __dirname,
-          stdio: 'inherit',
-        }
-      );
-      proc.on('close', (code) => {
-        if (code === 0) resolve();
-        else reject(new Error(`python3 failed with code ${code}`));
-      });
+  await new Promise<void>((resolve, reject) => {
+    const output = createWriteStream(skillFile);
+    const archive = archiver('zip', { zlib: { level: 9 } });
+
+    output.on('close', () => resolve());
+    output.on('error', reject);
+    archive.on('error', reject);
+    archive.on('warning', (error) => {
+      if (error.code !== 'ENOENT') {
+        reject(error);
+      }
     });
-  };
 
-  const compileWithZip = (): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const proc = spawn('sh', ['-c', `cd "${skillDir}" && zip -r "${skillFile}" .`], {
-        cwd: __dirname,
-        stdio: 'inherit',
-      });
-      proc.on('close', (code) => {
-        if (code === 0) resolve();
-        else reject(new Error(`zip failed with code ${code}`));
-      });
-    });
-  };
+    archive.pipe(output);
+    // `false` keeps entries relative to the skill dir, so SKILL.md sits at the zip root
+    archive.directory(skillDir, false);
+    archive.finalize().catch(reject);
+  });
 
-  const hasCommand = (command: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      const proc = spawn('which', [command], { stdio: 'ignore' });
-      proc.on('close', (code) => resolve(code === 0));
-    });
-  };
-
-  if (await hasCommand('python3')) {
-    await compileWithPython();
-    console.log('✅ firestack.skill compiled');
-    return;
-  }
-
-  if (await hasCommand('zip')) {
-    await compileWithZip();
-    console.log('✅ firestack.skill compiled');
-    return;
-  }
-
-  console.warn(
-    '⚠️  Neither python3 nor zip command found. Skipping firestack.skill compilation.\n' +
-      '   Install python3 or zip to enable automatic skill compilation on build.'
-  );
+  console.log('✅ firestack.skill compiled');
 };
 
 await Promise.all([

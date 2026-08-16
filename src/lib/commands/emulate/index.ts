@@ -1,5 +1,7 @@
+import { spawn } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, watch } from 'node:fs';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
 import { exit } from 'node:process';
 import chalk from 'chalk';
@@ -9,7 +11,7 @@ import { toDeployIndexCode } from '$commands/deploy/utils/create_deploy_index.ts
 import { parseFunctionMetadata } from '$commands/deploy/utils/parse_function_metadata.ts';
 import { DEFAULT_EMULATOR_PROJECT_ID } from '$constants';
 import { logger } from '$logger';
-import type { EmulateCliOptions, EmulateCommandOptions } from '$types';
+import type { EmulateCliOptions, EmulateCommandOptions, FirebaseEmulator } from '$types';
 import { buildFunction } from '$utils/build_utils.ts';
 import { executeCommand } from '$utils/command.ts';
 import { exists, findProjectRoot, openUrl } from '$utils/common.ts';
@@ -31,6 +33,11 @@ const resolveChokidarPolling = (
 ): { enabled: boolean; warning?: string } => {
   if (pollingMode !== 'auto') {
     return { enabled: pollingMode };
+  }
+
+  // Inotify is Linux-only; macOS uses kqueue and Windows uses ReadDirectoryChangesW.
+  if (process.platform !== 'linux') {
+    return { enabled: false };
   }
 
   try {
@@ -84,6 +91,7 @@ const resolveChokidarPolling = (
 
 const defaultPorts = {
   ui: 4000,
+  hub: 4400,
   auth: 9099,
   functions: 5001,
   firestore: 8080,
@@ -119,11 +127,13 @@ const runOnEmulate = async (options: EmulateCommandOptions & { env: Record<strin
 
   // Pass emulator environment variables - start with fresh object to avoid inheriting any creds
   // Use the actual project ID for the emulator - it's fine as long as FIRESTORE_EMULATOR_HOST is set
+  const homeDirectory = homedir();
   const emulatorEnv: Record<string, string> = {
     PATH: process.env.PATH || '',
-    HOME: process.env.HOME || '',
-    USER: process.env.USER || '',
-    SHELL: process.env.SHELL || '',
+    HOME: homeDirectory,
+    ...(process.platform === 'win32'
+      ? { USERPROFILE: homeDirectory }
+      : { USER: process.env.USER || '', SHELL: process.env.SHELL || '' }),
     GCP_PROJECT_ID: projectId,
     FIREBASE_PROJECT_ID: projectId,
     GCLOUD_PROJECT: projectId,
@@ -250,9 +260,15 @@ const buildEmulatorFunctions = async (options: {
 
   await writeFile(join(outputDir, 'package.json'), packageJson);
 
+  // firebase-tools rejects .env keys starting with reserved prefixes
+  // (X_GOOGLE_, FIREBASE_, EXT_, KIT_) — including FIREBASE_MODE — and a
+  // single rejected key fails the WHOLE .env load, which in turn prevents
+  // function definitions from loading in the emulator. Filter them out; the
+  // emulator injects its own FIREBASE_* variables at runtime.
+  const RESERVED_ENV_PREFIXES = ['X_GOOGLE_', 'FIREBASE_', 'EXT_', 'KIT_'];
   const emulatorEnv: Record<string, string> = {};
   for (const [key, value] of Object.entries(env)) {
-    if (key !== 'FIREBASE_SERVICE_ACCOUNT') {
+    if (!RESERVED_ENV_PREFIXES.some((prefix) => key.startsWith(prefix))) {
       emulatorEnv[key] = value;
     }
   }
@@ -265,6 +281,35 @@ const buildEmulatorFunctions = async (options: {
   if (!emulateOptions.debug) {
     await rm(tempDir, { recursive: true, force: true }).catch(() => {});
   }
+};
+
+/**
+ * Resolves the Firebase emulator hub port for THIS suite.
+ *
+ * Precedence: `FIRESTACK_EMULATOR_HUB_PORT` env override → explicit
+ * `emulatorHub` key (legacy name used by Aikami's constant set) → `hub`
+ * → firebase-tools' default 4400. Keeping this offset-aware is what lets
+ * multiple emulator suites (e.g. a contract + a manual run) coexist.
+ */
+const resolveHubPort = (
+  emulatorPorts: Partial<Record<FirebaseEmulator, number>> | undefined
+): number => {
+  const envPort = Number(process.env.FIRESTACK_EMULATOR_HUB_PORT);
+  if (Number.isInteger(envPort) && envPort > 0) return envPort;
+  return emulatorPorts?.emulatorHub ?? emulatorPorts?.hub ?? defaultPorts.hub;
+};
+
+/**
+ * Resolves the emulator UI port for THIS suite.
+ * Precedence: `FIRESTACK_EMULATOR_UI_PORT` env override → `emulatorPorts.ui`
+ * → firebase-tools' default 4000.
+ */
+const resolveUiPort = (
+  emulatorPorts: Partial<Record<FirebaseEmulator, number>> | undefined
+): number => {
+  const envPort = Number(process.env.FIRESTACK_EMULATOR_UI_PORT);
+  if (Number.isInteger(envPort) && envPort > 0) return envPort;
+  return emulatorPorts?.ui ?? defaultPorts.ui;
 };
 
 /**
@@ -324,7 +369,8 @@ const generateFirebaseJson = async (options: {
   const firebaseConfig: Record<string, unknown> = {
     emulators: {
       singleProjectMode: true,
-      ui: { enabled: true, port: emulateOptions.emulatorPorts?.ui || defaultPorts.ui },
+      ui: { enabled: true, port: resolveUiPort(emulateOptions.emulatorPorts) },
+      hub: { port: resolveHubPort(emulateOptions.emulatorPorts) },
     },
   };
 
@@ -584,20 +630,22 @@ export const emulateCommand = new Command('emulate')
       process.exit(1);
     }
 
-    // Safety net: kill any leftover processes on the known emulator ports.
+    // Safety net: kill leftover processes ONLY on the ports this suite is
+    // about to bind (offset-aware). Never touch shared/reserved ports
+    // (4000/4400/4401/4500/4501) unless they are this suite's own hub/UI —
+    // other emulator suites (e.g. a concurrent contract's) may own them, and
+    // killing them would take down unrelated work.
     const allEmulatorPorts = [
-      emulateOptions.emulatorPorts?.ui ?? 4000,
-      emulateOptions.emulatorPorts?.functions ?? 5001,
-      emulateOptions.emulatorPorts?.firestore ?? 8080,
-      emulateOptions.emulatorPorts?.pubsub ?? 8085,
-      emulateOptions.emulatorPorts?.auth ?? 9099,
-      emulateOptions.emulatorPorts?.storage ?? 9199,
-      emulateOptions.emulatorPorts?.database ?? 9000,
-      emulateOptions.emulatorPorts?.dataconnect ?? 9399,
-      4400,
-      4401,
-      4500,
-      4501,
+      resolveUiPort(emulateOptions.emulatorPorts),
+      emulateOptions.emulatorPorts?.functions ?? defaultPorts.functions,
+      emulateOptions.emulatorPorts?.firestore ?? defaultPorts.firestore,
+      emulateOptions.emulatorPorts?.pubsub ?? defaultPorts.pubsub,
+      emulateOptions.emulatorPorts?.auth ?? defaultPorts.auth,
+      emulateOptions.emulatorPorts?.storage ?? defaultPorts.storage,
+      emulateOptions.emulatorPorts?.database ?? defaultPorts.database,
+      emulateOptions.emulatorPorts?.dataconnect ?? defaultPorts.dataconnect,
+      emulateOptions.emulatorPorts?.hosting ?? defaultPorts.hosting,
+      resolveHubPort(emulateOptions.emulatorPorts),
     ];
 
     // Generate .env for emulator containing all mode envs (minus service account)
@@ -670,8 +718,13 @@ export const emulateCommand = new Command('emulate')
         const pid = emulatorSubprocess.pid;
         if (pid !== undefined) {
           try {
-            // Kill the entire process group so grandchildren (Java emulators) also stop.
-            process.kill(-pid, 'SIGTERM');
+            if (process.platform === 'win32') {
+              // Kill the entire process tree (Java emulators are children of the CLI).
+              spawn('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore' });
+            } else {
+              // Kill the entire process group so grandchildren (Java emulators) also stop.
+              process.kill(-pid, 'SIGTERM');
+            }
           } catch {
             emulatorSubprocess.kill('SIGTERM');
           }

@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process';
 import { copyFile, glob, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { exit } from 'node:process';
@@ -182,6 +183,12 @@ const startRulesEmulator = async (options: {
     stderr: 'pipe',
   });
 
+  // The subprocess promise rejects when the emulator is killed during shutdown
+  // (see killEmulator). Attach a no-op catch so the expected rejection does not
+  // crash the CLI as an unhandled rejection — failures are already surfaced via
+  // the 'exit'/'error' handlers in waitForEmulatorReady.
+  subprocess.catch(() => {});
+
   await waitForEmulatorReady(subprocess, port, timeoutMs);
 
   logger.debug(`${type} emulator ready on port ${port}`);
@@ -245,6 +252,9 @@ const runTests = async (options: {
 
 /**
  * Kills the emulator subprocess gracefully, then forcefully if needed.
+ * On Windows, TerminateProcess only kills the firebase CLI, orphaning the
+ * Java emulator children (which hold the rules files in dist), so the whole
+ * process tree is killed via taskkill instead.
  * @param subprocess - The execa subprocess to kill.
  * @param type - The emulator type (for logging).
  */
@@ -256,7 +266,12 @@ const killEmulator = async (
     return;
   }
   logger.debug(`Shutting down ${type} emulator...`);
-  subprocess.kill('SIGTERM');
+  const pid = subprocess.pid;
+  if (pid !== undefined && process.platform === 'win32') {
+    spawn('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore' });
+  } else {
+    subprocess.kill('SIGTERM');
+  }
   await new Promise((resolve) => setTimeout(resolve, 2000));
   if (!subprocess.nodeChildProcess.killed) {
     subprocess.kill('SIGKILL');

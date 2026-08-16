@@ -6,7 +6,10 @@ import { exists } from '$utils/common.ts';
 
 const PROJECT_FIREBASE_PATHS = [
   'node_modules/firebase-tools/lib/bin/firebase.js',
-  'node_modules/.bin/firebase',
+  // .bin shims differ per platform: bun creates firebase.exe, npm/yarn create .cmd on Windows.
+  ...(process.platform === 'win32'
+    ? ['node_modules/.bin/firebase.exe', 'node_modules/.bin/firebase.cmd']
+    : ['node_modules/.bin/firebase']),
 ];
 
 /**
@@ -102,6 +105,42 @@ type ResolveFirebaseOptions = {
 };
 
 /**
+ * Resolves the project-local firebase-tools package directory (walking up
+ * from cwd), regardless of package manager. Works for hoisted installs
+ * (npm/yarn/bun) and pnpm's symlinked layout alike.
+ * @returns The firebase-tools package directory, or undefined.
+ */
+export const resolveProjectFirebaseToolsPackageDir = async (): Promise<string | undefined> => {
+  const tools = await resolveProjectFirebaseTools();
+  if (!tools) {
+    return undefined;
+  }
+  if (tools.path.endsWith('.js')) {
+    // <pkg>/lib/bin/firebase.js → package dir is two levels up
+    return join(dirname(tools.path), '..', '..');
+  }
+  // .bin shim (firebase.exe / firebase.cmd) → package dir sits next to .bin
+  return join(dirname(tools.path), 'firebase-tools');
+};
+
+/**
+ * Builds the command and args used to launch a resolved firebase-tools path.
+ * Handles .js entries (run via node), Windows .cmd shims (run via cmd.exe),
+ * and direct executables (firebase.exe on Windows, shell shims elsewhere).
+ * @param firebasePath - The resolved firebase-tools path.
+ * @returns The command and args to spawn.
+ */
+const getLaunchCommand = (firebasePath: string): { cmd: string; args: string[] } => {
+  if (firebasePath.endsWith('.js')) {
+    return { cmd: 'node', args: [firebasePath] };
+  }
+  if (firebasePath.endsWith('.cmd')) {
+    return { cmd: 'cmd.exe', args: ['/d', '/s', '/c', firebasePath] };
+  }
+  return { cmd: firebasePath, args: [] };
+};
+
+/**
  * Resolves the user's firebase-tools installation.
  * Tries, in order:
  * 1. Project-local firebase-tools (searched upward from cwd)
@@ -121,10 +160,10 @@ export const resolveFirebaseCommand = async (
   const projectTools = await resolveProjectFirebaseTools();
   if (projectTools) {
     logger.debug(`Using project firebase-tools v${projectTools.version}`);
-    const isJsFile = projectTools.path.endsWith('.js');
+    const launch = getLaunchCommand(projectTools.path);
     return {
-      cmd: isJsFile ? 'node' : projectTools.path,
-      args: isJsFile ? [projectTools.path] : [],
+      cmd: launch.cmd,
+      args: launch.args,
       version: projectTools.version,
     };
   }

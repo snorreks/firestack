@@ -1,7 +1,12 @@
+import { dirname, join } from 'node:path';
 import { type ExecaError, execa, type Subprocess } from 'execa';
 import { logger } from '$logger';
 import type { PackageManager } from '$types';
-import { resolveFirebaseCommand } from '$utils/firebase_tools.ts';
+import {
+  resolveFirebaseCommand,
+  resolveProjectFirebaseToolsPackageDir,
+} from '$utils/firebase_tools.ts';
+import { ensureFunctionsBinaryPatch } from '$utils/firebase_tools_patch.ts';
 
 const ANSI_ESCAPE_RE = new RegExp(`${String.fromCharCode(0x1b)}\\[[0-9;]*[A-Za-z]`, 'g');
 
@@ -151,6 +156,16 @@ export const executeCommand = async (
       const resolved = await resolveFirebaseCommand();
       finalCmd = resolved.cmd;
       finalArgs = [...resolved.args, ...args];
+
+      // On Windows, ensure the resolved firebase-tools carries the
+      // findFunctionsBinary patch (bun shims / extensionless-spawn bug).
+      // The .js entry sits at <pkg>/lib/bin/firebase.js, so the package
+      // directory is two levels up. Idempotent and skipped on non-Windows.
+      const firebaseScript = resolved.args.length === 1 ? resolved.args[0] : undefined;
+      if (firebaseScript?.endsWith('.js')) {
+        const firebasePackageDir = join(dirname(firebaseScript), '..', '..');
+        await ensureFunctionsBinaryPatch({ firebasePackageDir });
+      }
     } else {
       switch (packageManager) {
         case 'bun':
@@ -169,6 +184,13 @@ export const executeCommand = async (
           finalCmd = 'npx';
           finalArgs = ['firebase', ...args];
           break;
+      }
+
+      // npx/bunx/pnpm dlx/yarn dlx launch firebase-tools from the project's
+      // node_modules — patch that instance too (idempotent, Windows only).
+      const projectPackageDir = await resolveProjectFirebaseToolsPackageDir();
+      if (projectPackageDir) {
+        await ensureFunctionsBinaryPatch({ firebasePackageDir: projectPackageDir });
       }
     }
   }

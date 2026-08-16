@@ -1,6 +1,7 @@
 import { exec } from 'node:child_process';
 import { unlink } from 'node:fs/promises';
-import { platform } from 'node:os';
+import { platform, tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { logger } from '$logger';
 
@@ -32,7 +33,8 @@ const killOnPort = async (port: number): Promise<boolean> => {
       const { stdout } = await execAsync(`netstat -ano | findstr :${port}`);
       const match = stdout.match(/LISTENING\s+(\d+)/);
       if (match) {
-        await execAsync(`taskkill /F /PID ${match[1]}`);
+        // /T kills child processes too (Java emulators are children of the CLI)
+        await execAsync(`taskkill /F /T /PID ${match[1]}`);
       }
     }
     return true;
@@ -109,7 +111,7 @@ export const forceCleanupEmulators = async (ports: number[], projectId?: string)
   // 3. Remove hub locator file (otherwise firebase-tools complains about
   //    "port is already in use for another project")
   if (projectId) {
-    const hubPath = `/tmp/hub-${projectId}.json`;
+    const hubPath = join(tmpdir(), `hub-${projectId}.json`);
     try {
       await unlink(hubPath);
       logger.debug(`Removed hub locator: ${hubPath}`);

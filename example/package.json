@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.6",
-    "typescript": "^7.0.2"
+    "typescript": "6.0.3"
   },
   "dependencies": {
     "latest": "^0.2.0",
