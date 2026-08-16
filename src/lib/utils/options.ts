@@ -114,10 +114,10 @@ const loadJsonConfig = async (configPath: string): Promise<ConfigLoaderResult | 
 const _resolveConfigForMode = async (
   configPath: string,
   mode: string
-): Promise<FirestackConfig> => {
+): Promise<FirestackConfig | undefined> => {
   if (!configPath.endsWith('.ts')) {
     // JSON config doesn't need re-resolution
-    return {};
+    return undefined;
   }
 
   try {
@@ -146,26 +146,29 @@ const _resolveConfigForMode = async (
  *
  * For TS configs that use the defineConfig callback pattern, this loads the
  * base structure (with mode=undefined) to extract default values like modes.
- * Call `resolveConfigForMode` separately when the actual mode is known.
+ * Callers that know the resolved mode re-evaluate the factory via
+ * `_resolveConfigForMode` so mode-dependent values (emulatorPorts, region,
+ * project IDs) take effect.
+ * @returns The loaded config and the path it was loaded from.
  */
-export const getFirestackConfig = async (): Promise<FirestackConfig> => {
+export const getFirestackConfig = async (): Promise<ConfigLoaderResult> => {
   const tsConfigPath = join(cwd(), 'firestack.config.ts');
   const jsonConfigPath = join(cwd(), 'firestack.json');
 
   // 1. Try TypeScript config first
   const tsResult = await loadTsConfig(tsConfigPath);
   if (tsResult) {
-    return tsResult.config;
+    return tsResult;
   }
 
   // 2. Fall back to JSON config
   const jsonResult = await loadJsonConfig(jsonConfigPath);
   if (jsonResult) {
-    return jsonResult.config;
+    return jsonResult;
   }
 
   logger.debug('No firestack.config.ts or firestack.json found, using default options.');
-  return {};
+  return { config: {}, configPath: '' };
 };
 
 const getFirstMode = (config: FirestackConfig): string | undefined => {
@@ -174,11 +177,44 @@ const getFirstMode = (config: FirestackConfig): string | undefined => {
 };
 
 /**
+ * Re-evaluates a TypeScript firestack config with the resolved mode so
+ * mode-dependent values (emulatorPorts, region, project IDs) take effect.
+ * Falls back to the base config when the re-resolution fails, so a broken
+ * mode branch never takes the whole command down.
+ * @param baseConfig - The config loaded with mode=undefined.
+ * @param configPath - The path the base config was loaded from.
+ * @param mode - The resolved mode.
+ * @returns The mode-resolved config, or the base config on failure.
+ */
+const resolveConfigForMode = async (
+  baseConfig: FirestackConfig,
+  configPath: string,
+  mode: string
+): Promise<FirestackConfig> => {
+  if (!configPath.endsWith('.ts')) {
+    return baseConfig;
+  }
+
+  try {
+    const resolvedConfig = await _resolveConfigForMode(configPath, mode);
+    if (resolvedConfig && Object.keys(resolvedConfig).length > 0) {
+      return resolvedConfig;
+    }
+  } catch (error) {
+    logger.warn(
+      `Failed to resolve config for mode '${mode}'; using base config: ${(error as Error).message}`
+    );
+  }
+
+  return baseConfig;
+};
+
+/**
  * Gets base options by merging CLI options with firestack configuration.
  */
 export const getBaseOptions = async (cliOptions: BaseCliOptions) => {
-  const config = await getFirestackConfig();
-  const firstMode = getFirstMode(config);
+  const { config: baseConfig, configPath } = await getFirestackConfig();
+  const firstMode = getFirstMode(baseConfig);
   const mode = cliOptions.mode ?? firstMode;
 
   if (!mode) {
@@ -186,6 +222,10 @@ export const getBaseOptions = async (cliOptions: BaseCliOptions) => {
       'Mode is required. Please provide a mode via CLI or configure in firestack config.'
     );
   }
+
+  // The base load evaluates factory configs with mode=undefined; re-evaluate
+  // with the resolved mode so defineConfig(({ mode }) => ...) branches apply.
+  const config = await resolveConfigForMode(baseConfig, configPath, mode);
 
   // Handle boolean flags with no- prefix correctly
   // Priority: CLI flag (true) -> CLI no-flag (false) -> Config -> Default
@@ -438,9 +478,13 @@ export const getGenerateOptions = async (
 };
 
 export const getBuildOptions = async (cliOptions: BaseCliOptions) => {
-  const config = await getFirestackConfig();
-  const firstMode = getFirstMode(config);
+  const { config: baseConfig, configPath } = await getFirestackConfig();
+  const firstMode = getFirstMode(baseConfig);
   const mode = cliOptions.mode ?? firstMode;
+
+  // Re-evaluate factory configs with the resolved mode (see getBaseOptions).
+  const config =
+    mode !== undefined ? await resolveConfigForMode(baseConfig, configPath, mode) : baseConfig;
 
   const minify = cliOptions.noMinify ? false : (cliOptions.minify ?? config.minify ?? true);
   const sourcemap = cliOptions.noSourcemap

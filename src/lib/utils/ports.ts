@@ -4,11 +4,133 @@ import { platform, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { logger } from '$logger';
+import type { FirebaseEmulator } from '$types';
 
 const execAsync = promisify(exec);
 
 const isLinux = platform() === 'linux';
 const isMacos = platform() === 'darwin';
+
+/**
+ * Default port for each emulator, matching firebase-tools' defaults.
+ */
+export const defaultPorts: Partial<Record<FirebaseEmulator, number>> = {
+  ui: 4000,
+  hub: 4400,
+  auth: 9099,
+  functions: 5001,
+  firestore: 8080,
+  pubsub: 8085,
+  storage: 9199,
+  database: 9000,
+  hosting: 5000,
+  dataconnect: 9399,
+};
+
+/**
+ * Environment variable per emulator that overrides its port. Lets a second
+ * emulator suite run from the same project directory with per-process env
+ * (e.g. herdr/overmind) without touching the shared firestack config.
+ */
+const EMULATOR_PORT_ENV_KEYS: Record<string, string> = {
+  ui: 'FIRESTACK_EMULATOR_UI_PORT',
+  hub: 'FIRESTACK_EMULATOR_HUB_PORT',
+  auth: 'FIRESTACK_EMULATOR_AUTH_PORT',
+  functions: 'FIRESTACK_EMULATOR_FUNCTIONS_PORT',
+  firestore: 'FIRESTACK_EMULATOR_FIRESTORE_PORT',
+  pubsub: 'FIRESTACK_EMULATOR_PUBSUB_PORT',
+  storage: 'FIRESTACK_EMULATOR_STORAGE_PORT',
+  database: 'FIRESTACK_EMULATOR_DATABASE_PORT',
+  hosting: 'FIRESTACK_EMULATOR_HOSTING_PORT',
+  dataconnect: 'FIRESTACK_EMULATOR_DATACONNECT_PORT',
+};
+
+type ResolveEmulatorPortOptions = {
+  emulatorName: FirebaseEmulator;
+  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
+};
+
+/**
+ * Resolves the port for a single emulator.
+ * Precedence: `FIRESTACK_EMULATOR_<NAME>_PORT` env override → explicit
+ * `emulatorPorts.<name>` config → firebase-tools' default port.
+ * @param options - Emulator name and optional explicit port map.
+ * @returns The resolved port, or undefined when neither config nor default
+ * exists for the emulator (e.g. `eventarc`).
+ */
+export const resolveEmulatorPort = (options: ResolveEmulatorPortOptions): number | undefined => {
+  const { emulatorName, emulatorPorts } = options;
+
+  const envKey = EMULATOR_PORT_ENV_KEYS[emulatorName];
+  if (envKey) {
+    const envPort = Number(process.env[envKey]);
+    if (Number.isInteger(envPort) && envPort > 0) {
+      return envPort;
+    }
+  }
+
+  return emulatorPorts?.[emulatorName] ?? defaultPorts[emulatorName];
+};
+
+type ResolveHubPortOptions = {
+  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
+};
+
+/**
+ * Resolves the emulator hub port for this suite.
+ * Precedence: `FIRESTACK_EMULATOR_HUB_PORT` env override → explicit
+ * `emulatorHub` key (legacy alias) → `hub` → firebase-tools' default 4400.
+ * @param options - Optional explicit port map.
+ * @returns The resolved hub port.
+ */
+export const resolveHubPort = (options: ResolveHubPortOptions): number => {
+  const { emulatorPorts } = options;
+
+  const envPort = Number(process.env.FIRESTACK_EMULATOR_HUB_PORT);
+  if (Number.isInteger(envPort) && envPort > 0) {
+    return envPort;
+  }
+
+  const legacyPort = emulatorPorts?.emulatorHub;
+  if (typeof legacyPort === 'number' && legacyPort > 0) {
+    return legacyPort;
+  }
+
+  return resolveEmulatorPort({ emulatorName: 'hub', emulatorPorts }) ?? defaultPorts.hub ?? 4400;
+};
+
+type ResolveCleanupPortsOptions = {
+  enabledEmulators: Set<FirebaseEmulator>;
+  emulatorPorts?: Partial<Record<FirebaseEmulator, number>>;
+};
+
+/**
+ * Computes the ports this suite is actually about to bind: the UI, every
+ * enabled emulator, and the hub. Used for `--force` cleanup and shutdown so
+ * firestack never kills processes on ports it is not going to use — other
+ * emulator suites (e.g. a concurrent contract run) may own those ports, and
+ * killing them would take down unrelated work.
+ * @param options - The emulators enabled for this suite and the explicit port map.
+ * @returns The list of ports to free.
+ */
+export const resolveCleanupPorts = (options: ResolveCleanupPortsOptions): number[] => {
+  const { enabledEmulators, emulatorPorts } = options;
+
+  const ports: number[] = [
+    resolveEmulatorPort({ emulatorName: 'ui', emulatorPorts }) ?? defaultPorts.ui ?? 4000,
+  ];
+
+  for (const emulatorName of enabledEmulators) {
+    const port = resolveEmulatorPort({ emulatorName, emulatorPorts });
+    if (port !== undefined) {
+      ports.push(port);
+    }
+  }
+
+  ports.push(resolveHubPort({ emulatorPorts }));
+
+  return ports;
+};
 
 /**
  * Kills any process using the specified port.

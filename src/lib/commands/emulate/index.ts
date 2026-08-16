@@ -19,7 +19,13 @@ import { getEnvironment } from '$utils/environment';
 import { findFunctions } from '$utils/find_functions.ts';
 import { createPackageJson, toDotEnvironmentCode } from '$utils/firebase_utils.ts';
 import { getEmulateOptions } from '$utils/options.ts';
-import { forceCleanupEmulators } from '$utils/ports.ts';
+import {
+  defaultPorts,
+  forceCleanupEmulators,
+  resolveCleanupPorts,
+  resolveEmulatorPort,
+  resolveHubPort,
+} from '$utils/ports.ts';
 
 /**
  * Resolves the chokidar polling mode.
@@ -89,18 +95,65 @@ const resolveChokidarPolling = (
   return { enabled: false };
 };
 
-const defaultPorts = {
-  ui: 4000,
-  hub: 4400,
-  auth: 9099,
-  functions: 5001,
-  firestore: 8080,
-  pubsub: 8085,
-  storage: 9199,
-  database: 9000,
-  hosting: 5000,
-  dataconnect: 9399,
-} as const satisfies Record<string, number>;
+/**
+ * Resolves which emulators this suite should run, mirroring the set written
+ * into firebase.json.
+ *
+ * When `emulateOptions.emulators` is provided it is used as-is. Otherwise the
+ * set is auto-detected from the project contents: Data Connect config, function
+ * files (functions + auth + firestore, plus pubsub when schedulers are used),
+ * and Firestore/Storage rule files.
+ * @param options - Emulate options and the discovered function files.
+ * @returns The set of emulators to enable.
+ */
+export const resolveEnabledEmulators = async (options: {
+  emulateOptions: EmulateCommandOptions;
+  functionFiles: string[];
+}): Promise<Set<FirebaseEmulator>> => {
+  const { emulateOptions, functionFiles } = options;
+  const emulatorsToEnable = new Set<FirebaseEmulator>();
+
+  if (emulateOptions.emulators) {
+    // User provided explicit list — use it as-is
+    for (const emulator of emulateOptions.emulators) {
+      emulatorsToEnable.add(emulator);
+    }
+    return emulatorsToEnable;
+  }
+
+  // Auto-detect which emulators are needed based on project contents
+  const projectRoot = process.cwd();
+  const dataconnectDir = join(projectRoot, emulateOptions.dataconnectDirectory || 'dataconnect');
+  const dataconnectYamlPath = join(dataconnectDir, 'dataconnect.yaml');
+
+  // Dataconnect: check if dataconnect.yaml exists
+  if (existsSync(dataconnectYamlPath)) {
+    emulatorsToEnable.add('dataconnect');
+  }
+
+  // Functions + Auth + Firestore: enabled when there are function files
+  if (functionFiles.length > 0) {
+    emulatorsToEnable.add('functions');
+    emulatorsToEnable.add('auth');
+    emulatorsToEnable.add('firestore');
+
+    if (await checkHasScheduler(functionFiles)) {
+      emulatorsToEnable.add('pubsub');
+    }
+  }
+
+  // Firestore rules
+  if (await hasRuleFile(emulateOptions, 'firestore')) {
+    emulatorsToEnable.add('firestore');
+  }
+
+  // Storage rules
+  if (await hasRuleFile(emulateOptions, 'storage')) {
+    emulatorsToEnable.add('storage');
+  }
+
+  return emulatorsToEnable;
+};
 
 /**
  * Runs the initialization script for the emulator.
@@ -117,10 +170,18 @@ const runOnEmulate = async (options: EmulateCommandOptions & { env: Record<strin
   }
 
   const ports = {
-    auth: options.emulatorPorts?.auth || defaultPorts.auth,
-    firestore: options.emulatorPorts?.firestore || defaultPorts.firestore,
-    storage: options.emulatorPorts?.storage || defaultPorts.storage,
-    database: options.emulatorPorts?.database || defaultPorts.database,
+    auth:
+      resolveEmulatorPort({ emulatorName: 'auth', emulatorPorts: options.emulatorPorts }) ??
+      defaultPorts.auth,
+    firestore:
+      resolveEmulatorPort({ emulatorName: 'firestore', emulatorPorts: options.emulatorPorts }) ??
+      defaultPorts.firestore,
+    storage:
+      resolveEmulatorPort({ emulatorName: 'storage', emulatorPorts: options.emulatorPorts }) ??
+      defaultPorts.storage,
+    database:
+      resolveEmulatorPort({ emulatorName: 'database', emulatorPorts: options.emulatorPorts }) ??
+      defaultPorts.database,
   };
 
   const projectId = options.projectId || DEFAULT_EMULATOR_PROJECT_ID;
@@ -284,35 +345,6 @@ const buildEmulatorFunctions = async (options: {
 };
 
 /**
- * Resolves the Firebase emulator hub port for THIS suite.
- *
- * Precedence: `FIRESTACK_EMULATOR_HUB_PORT` env override → explicit
- * `emulatorHub` key (legacy name used by Aikami's constant set) → `hub`
- * → firebase-tools' default 4400. Keeping this offset-aware is what lets
- * multiple emulator suites (e.g. a contract + a manual run) coexist.
- */
-const resolveHubPort = (
-  emulatorPorts: Partial<Record<FirebaseEmulator, number>> | undefined
-): number => {
-  const envPort = Number(process.env.FIRESTACK_EMULATOR_HUB_PORT);
-  if (Number.isInteger(envPort) && envPort > 0) return envPort;
-  return emulatorPorts?.emulatorHub ?? emulatorPorts?.hub ?? defaultPorts.hub;
-};
-
-/**
- * Resolves the emulator UI port for THIS suite.
- * Precedence: `FIRESTACK_EMULATOR_UI_PORT` env override → `emulatorPorts.ui`
- * → firebase-tools' default 4000.
- */
-const resolveUiPort = (
-  emulatorPorts: Partial<Record<FirebaseEmulator, number>> | undefined
-): number => {
-  const envPort = Number(process.env.FIRESTACK_EMULATOR_UI_PORT);
-  if (Number.isInteger(envPort) && envPort > 0) return envPort;
-  return emulatorPorts?.ui ?? defaultPorts.ui;
-};
-
-/**
  * Generates firebase.json for the emulator inside the output directory.
  * Also copies rules and index files to the output directory.
  */
@@ -324,53 +356,20 @@ const generateFirebaseJson = async (options: {
   const { outputDir, emulateOptions, functionFiles } = options;
 
   // 1. Collect potential emulators to enable
-  const emulatorsToEnable = new Set<string>();
-
-  // Compute dataconnect paths once (used for detection + config)
-  const projectRoot = process.cwd();
-  const dataconnectDir = join(projectRoot, emulateOptions.dataconnectDirectory || 'dataconnect');
-  const dataconnectYamlPath = join(dataconnectDir, 'dataconnect.yaml');
-
-  if (emulateOptions.emulators) {
-    // User provided explicit list — use it as-is
-    for (const e of emulateOptions.emulators) {
-      emulatorsToEnable.add(e);
-    }
-  } else {
-    // Auto-detect which emulators are needed based on project contents
-
-    // Dataconnect: check if dataconnect.yaml exists
-    if (existsSync(dataconnectYamlPath)) {
-      emulatorsToEnable.add('dataconnect');
-    }
-
-    // Functions + Auth + Firestore: enabled when there are function files
-    if (functionFiles.length > 0) {
-      emulatorsToEnable.add('functions');
-      emulatorsToEnable.add('auth');
-      emulatorsToEnable.add('firestore');
-
-      if (await checkHasScheduler(functionFiles)) {
-        emulatorsToEnable.add('pubsub');
-      }
-    }
-
-    // Firestore rules
-    if (await hasRuleFile(emulateOptions, 'firestore')) {
-      emulatorsToEnable.add('firestore');
-    }
-
-    // Storage rules
-    if (await hasRuleFile(emulateOptions, 'storage')) {
-      emulatorsToEnable.add('storage');
-    }
-  }
+  const emulatorsToEnable = await resolveEnabledEmulators({ emulateOptions, functionFiles });
 
   const firebaseConfig: Record<string, unknown> = {
     emulators: {
       singleProjectMode: true,
-      ui: { enabled: true, port: resolveUiPort(emulateOptions.emulatorPorts) },
-      hub: { port: resolveHubPort(emulateOptions.emulatorPorts) },
+      ui: {
+        enabled: true,
+        port:
+          resolveEmulatorPort({
+            emulatorName: 'ui',
+            emulatorPorts: emulateOptions.emulatorPorts,
+          }) ?? defaultPorts.ui,
+      },
+      hub: { port: resolveHubPort({ emulatorPorts: emulateOptions.emulatorPorts }) },
     },
   };
 
@@ -386,16 +385,17 @@ const generateFirebaseJson = async (options: {
 
   const emulators = firebaseConfig.emulators as Record<string, unknown>;
 
-  const ports = { ...defaultPorts, ...emulateOptions.emulatorPorts };
-
-  if (emulatorsToEnable.has('auth')) emulators.auth = { port: ports.auth };
-  if (emulatorsToEnable.has('functions')) emulators.functions = { port: ports.functions };
-  if (emulatorsToEnable.has('firestore')) emulators.firestore = { port: ports.firestore };
-  if (emulatorsToEnable.has('pubsub')) emulators.pubsub = { port: ports.pubsub };
-  if (emulatorsToEnable.has('storage')) emulators.storage = { port: ports.storage };
-  if (emulatorsToEnable.has('database')) emulators.database = { port: ports.database };
-  if (emulatorsToEnable.has('hosting')) emulators.hosting = { port: ports.hosting };
-  if (emulatorsToEnable.has('dataconnect')) emulators.dataconnect = { port: ports.dataconnect };
+  for (const emulatorName of emulatorsToEnable) {
+    // ui/hub are written explicitly above with their own shapes
+    // ({ enabled: true, port } / { port }); never overwrite them.
+    if (emulatorName === 'ui' || emulatorName === 'hub') {
+      continue;
+    }
+    const port = resolveEmulatorPort({ emulatorName, emulatorPorts: emulateOptions.emulatorPorts });
+    if (port !== undefined) {
+      emulators[emulatorName] = { port };
+    }
+  }
 
   // 2. Rules and Indexes Handling
   await copyRulesAndIndexes({ outputDir, emulateOptions, firebaseConfig });
@@ -404,6 +404,8 @@ const generateFirebaseJson = async (options: {
   if (emulatorsToEnable.has('dataconnect')) {
     // Copy the dataconnect source directory into dist/emulator so Firebase CLI
     // can access it (relative paths going above the firebase.json directory are rejected).
+    const projectRoot = process.cwd();
+    const dataconnectDir = join(projectRoot, emulateOptions.dataconnectDirectory || 'dataconnect');
     const dataconnectOutputDir = join(outputDir, 'dataconnect');
     await copyDataconnectDirectory(dataconnectDir, dataconnectOutputDir);
 
@@ -630,24 +632,6 @@ export const emulateCommand = new Command('emulate')
       process.exit(1);
     }
 
-    // Safety net: kill leftover processes ONLY on the ports this suite is
-    // about to bind (offset-aware). Never touch shared/reserved ports
-    // (4000/4400/4401/4500/4501) unless they are this suite's own hub/UI —
-    // other emulator suites (e.g. a concurrent contract's) may own them, and
-    // killing them would take down unrelated work.
-    const allEmulatorPorts = [
-      resolveUiPort(emulateOptions.emulatorPorts),
-      emulateOptions.emulatorPorts?.functions ?? defaultPorts.functions,
-      emulateOptions.emulatorPorts?.firestore ?? defaultPorts.firestore,
-      emulateOptions.emulatorPorts?.pubsub ?? defaultPorts.pubsub,
-      emulateOptions.emulatorPorts?.auth ?? defaultPorts.auth,
-      emulateOptions.emulatorPorts?.storage ?? defaultPorts.storage,
-      emulateOptions.emulatorPorts?.database ?? defaultPorts.database,
-      emulateOptions.emulatorPorts?.dataconnect ?? defaultPorts.dataconnect,
-      emulateOptions.emulatorPorts?.hosting ?? defaultPorts.hosting,
-      resolveHubPort(emulateOptions.emulatorPorts),
-    ];
-
     // Generate .env for emulator containing all mode envs (minus service account)
     const env = await getEnvironment(emulateOptions.mode);
 
@@ -664,6 +648,18 @@ export const emulateCommand = new Command('emulate')
         logger.info(chalk.dim(`Found ${functionFiles.length} functions to build.`));
       }
     }
+
+    // Safety net: kill leftover processes ONLY on the ports this suite is
+    // about to bind — the UI, the enabled emulators, and the hub. Never touch
+    // default ports for emulators this suite does not run (e.g. 9099/8080/9199
+    // for a suite that only offsets auth) — other emulator suites (e.g. a
+    // concurrent contract run) may own them, and killing them would take down
+    // unrelated work.
+    const enabledEmulators = await resolveEnabledEmulators({ emulateOptions, functionFiles });
+    const allEmulatorPorts = resolveCleanupPorts({
+      enabledEmulators,
+      emulatorPorts: emulateOptions.emulatorPorts,
+    });
 
     const outputDir = join(process.cwd(), 'dist', 'emulator');
     await mkdir(outputDir, { recursive: true });

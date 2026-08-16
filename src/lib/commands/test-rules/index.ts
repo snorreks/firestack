@@ -339,7 +339,7 @@ const runTargetTests = async (options: {
  */
 export const testRulesAction = async (cliOptions: TestRulesCliOptions) => {
   const testRulesOptions = await getTestRulesOptions(cliOptions);
-  const config = await getFirestackConfig();
+  const { config } = await getFirestackConfig();
 
   if (!config.rulesTests) {
     logger.error(
